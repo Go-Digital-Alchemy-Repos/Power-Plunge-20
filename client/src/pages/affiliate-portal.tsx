@@ -88,7 +88,7 @@ export default function AffiliatePortal() {
   });
 
   const { data: vipData } = useQuery<VipData>({
-    queryKey: ["/api/vip/customer-status"],
+    queryKey: ["/api/customer/orders/vip-status"],
     queryFn: async () => {
       const res = await fetch("/api/customer/orders/vip-status", { 
         headers: { ...getAuthHeader() }
@@ -121,16 +121,30 @@ export default function AffiliatePortal() {
       });
       if (!res.ok) {
         const err = await res.json();
+        if (res.status === 503) {
+          throw new Error("Stripe is not currently available. Please try again later or contact support.");
+        }
         throw new Error(err.message || "Failed to start Stripe Connect");
       }
       return res.json();
     },
     onSuccess: (data: { url: string }) => {
       window.open(data.url, "_blank");
-      toast({ title: "Stripe onboarding opened in new tab" });
+      toast({ 
+        title: "Stripe onboarding opened", 
+        description: "Complete the steps in the new tab to set up your payout account." 
+      });
     },
     onError: (error: any) => {
-      toast({ title: error.message, variant: "destructive" });
+      const errorMessage = error.message || "Something went wrong";
+      const isNetworkError = errorMessage.toLowerCase().includes("network") || errorMessage.toLowerCase().includes("fetch");
+      toast({ 
+        title: isNetworkError ? "Connection error" : "Setup failed", 
+        description: isNetworkError 
+          ? "Please check your internet connection and try again."
+          : errorMessage,
+        variant: "destructive" 
+      });
     },
   });
 
@@ -160,6 +174,50 @@ export default function AffiliatePortal() {
       toast({ title: error.message, variant: "destructive" });
     },
   });
+
+  const requestPayoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/customer/affiliate-portal/payout-request", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeader() 
+        },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || err.message || "Failed to request payout");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/affiliate-portal"] });
+      toast({ 
+        title: "Payout requested!", 
+        description: `Payout of $${(data.amount / 100).toFixed(2)} has been submitted for processing.` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Payout request failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const getApprovalDaysRemaining = (createdAt: string, approvalDays: number) => {
+    const created = new Date(createdAt);
+    const approvalDate = new Date(created);
+    approvalDate.setDate(approvalDate.getDate() + approvalDays);
+    const now = new Date();
+    const daysRemaining = Math.ceil((approvalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, daysRemaining);
+  };
+
+  const canRequestPayout = () => {
+    if (!affiliateData?.affiliate || !connectStatus?.payoutsEnabled) return false;
+    const approvedBalance = affiliateData.affiliate.approvedEarnings || 0;
+    const minimumPayout = affiliateData.minimumPayout || 5000;
+    return approvedBalance >= minimumPayout;
+  };
 
   const getNextPayoutDate = () => {
     const now = new Date();
@@ -361,32 +419,32 @@ export default function AffiliatePortal() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="p-4 bg-muted rounded-lg text-center">
-                  <DollarSign className="w-6 h-6 text-primary mx-auto mb-2" />
-                  <p className="text-2xl font-bold">${(affiliateData.affiliate.totalEarnings / 100).toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Total Earnings</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+                <div className="p-3 md:p-4 bg-muted rounded-lg text-center">
+                  <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-primary mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold">${(affiliateData.affiliate.totalEarnings / 100).toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total Earnings</p>
                 </div>
-                <div className="p-4 bg-yellow-500/10 rounded-lg text-center border border-yellow-500/20">
-                  <Clock className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-yellow-600">${(affiliateData.affiliate.pendingEarnings / 100).toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Pending</p>
-                  <p className="text-xs text-muted-foreground mt-1">{affiliateData.approvalDays} day hold</p>
+                <div className="p-3 md:p-4 bg-yellow-500/10 rounded-lg text-center border border-yellow-500/20">
+                  <Clock className="w-5 h-5 md:w-6 md:h-6 text-yellow-500 mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold text-yellow-600">${(affiliateData.affiliate.pendingEarnings / 100).toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
+                  <p className="text-[10px] md:text-xs text-muted-foreground mt-1">{affiliateData.approvalDays} day hold</p>
                 </div>
-                <div className="p-4 bg-blue-500/10 rounded-lg text-center border border-blue-500/20">
-                  <CheckCircle className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-blue-600">${((affiliateData.affiliate.approvedEarnings || 0) / 100).toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Ready to Pay</p>
+                <div className="p-3 md:p-4 bg-blue-500/10 rounded-lg text-center border border-blue-500/20">
+                  <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-blue-500 mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold text-blue-600">${((affiliateData.affiliate.approvedEarnings || 0) / 100).toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Ready to Pay</p>
                 </div>
-                <div className="p-4 bg-green-500/10 rounded-lg text-center border border-green-500/20">
-                  <CheckCircle className="w-6 h-6 text-green-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-green-600">${(affiliateData.affiliate.paidEarnings / 100).toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Paid Out</p>
+                <div className="p-3 md:p-4 bg-green-500/10 rounded-lg text-center border border-green-500/20">
+                  <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-green-500 mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold text-green-600">${(affiliateData.affiliate.paidEarnings / 100).toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Paid Out</p>
                 </div>
-                <div className="p-4 bg-muted rounded-lg text-center">
-                  <Users className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold">{affiliateData.affiliate.totalConversions}</p>
-                  <p className="text-sm text-muted-foreground">Conversions</p>
+                <div className="p-3 md:p-4 bg-muted rounded-lg text-center col-span-2 sm:col-span-1">
+                  <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-500 mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold">{affiliateData.affiliate.totalConversions}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Conversions</p>
                 </div>
               </div>
               
@@ -625,35 +683,62 @@ export default function AffiliatePortal() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {affiliateData.referrals.map((referral) => (
-                    <div key={referral.id} className="flex items-center justify-between p-4 bg-muted rounded-lg" data-testid={`referral-${referral.id}`}>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(referral.createdAt).toLocaleDateString()}
-                        </p>
-                        <p className="font-medium">Order total: ${(referral.orderTotal / 100).toFixed(2)}</p>
-                        {referral.approvedAt && (
-                          <p className="text-xs text-muted-foreground">
-                            Approved: {new Date(referral.approvedAt).toLocaleDateString()}
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Commissions are held for {affiliateData.approvalDays} days before they become available for payout.
+                  </p>
+                  {affiliateData.referrals.map((referral) => {
+                    const daysRemaining = referral.status === "pending" 
+                      ? getApprovalDaysRemaining(referral.createdAt, affiliateData.approvalDays) 
+                      : 0;
+                    return (
+                      <div key={referral.id} className="flex items-center justify-between p-4 bg-muted rounded-lg" data-testid={`referral-${referral.id}`}>
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(referral.createdAt).toLocaleDateString()}
                           </p>
-                        )}
+                          <p className="font-medium">Order total: ${(referral.orderTotal / 100).toFixed(2)}</p>
+                          {referral.status === "pending" && daysRemaining > 0 && (
+                            <p className="text-xs text-yellow-600 flex items-center gap-1 mt-1">
+                              <Clock className="w-3 h-3" />
+                              Approves in {daysRemaining} day{daysRemaining !== 1 ? "s" : ""}
+                            </p>
+                          )}
+                          {referral.status === "pending" && daysRemaining === 0 && (
+                            <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
+                              <Clock className="w-3 h-3" />
+                              Approving soon...
+                            </p>
+                          )}
+                          {referral.approvedAt && (
+                            <p className="text-xs text-muted-foreground">
+                              Approved: {new Date(referral.approvedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                          {referral.paidAt && (
+                            <p className="text-xs text-green-600">
+                              Paid: {new Date(referral.paidAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <Badge className={
+                            referral.status === "paid" 
+                              ? "bg-green-500/20 text-green-500" 
+                              : referral.status === "approved"
+                              ? "bg-blue-500/20 text-blue-500"
+                              : referral.status === "void"
+                              ? "bg-gray-500/20 text-gray-500"
+                              : referral.status === "flagged"
+                              ? "bg-orange-500/20 text-orange-500"
+                              : "bg-yellow-500/20 text-yellow-500"
+                          }>
+                            {referral.status === "flagged" ? "Under Review" : referral.status}
+                          </Badge>
+                          <p className="font-bold text-primary mt-1">+${(referral.commission / 100).toFixed(2)}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <Badge className={
-                          referral.status === "paid" 
-                            ? "bg-green-500/20 text-green-500" 
-                            : referral.status === "approved"
-                            ? "bg-blue-500/20 text-blue-500"
-                            : referral.status === "void"
-                            ? "bg-gray-500/20 text-gray-500"
-                            : "bg-yellow-500/20 text-yellow-500"
-                        }>
-                          {referral.status}
-                        </Badge>
-                        <p className="font-bold text-primary mt-1">+${(referral.commission / 100).toFixed(2)}</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -661,13 +746,40 @@ export default function AffiliatePortal() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <CardTitle className="text-lg">Payout History</CardTitle>
-                {affiliateData.minimumPayout && (
-                  <p className="text-sm text-muted-foreground">
-                    Minimum payout: ${(affiliateData.minimumPayout / 100).toFixed(2)}
-                  </p>
-                )}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                  {affiliateData.minimumPayout && (
+                    <p className="text-sm text-muted-foreground">
+                      Minimum: ${(affiliateData.minimumPayout / 100).toFixed(2)}
+                    </p>
+                  )}
+                  {canRequestPayout() && (
+                    <Button 
+                      onClick={() => requestPayoutMutation.mutate()}
+                      disabled={requestPayoutMutation.isPending}
+                      className="gap-2"
+                      data-testid="button-request-payout"
+                    >
+                      {requestPayoutMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <DollarSign className="w-4 h-4" />
+                      )}
+                      Request Payout (${((affiliateData.affiliate.approvedEarnings || 0) / 100).toFixed(2)})
+                    </Button>
+                  )}
+                  {!canRequestPayout() && connectStatus?.payoutsEnabled && (affiliateData.affiliate.approvedEarnings || 0) < (affiliateData.minimumPayout || 5000) && (
+                    <p className="text-xs text-muted-foreground">
+                      Need ${(((affiliateData.minimumPayout || 5000) - (affiliateData.affiliate.approvedEarnings || 0)) / 100).toFixed(2)} more to request payout
+                    </p>
+                  )}
+                  {!connectStatus?.payoutsEnabled && (affiliateData.affiliate.approvedEarnings || 0) >= (affiliateData.minimumPayout || 5000) && (
+                    <p className="text-xs text-yellow-600">
+                      Complete Stripe setup to request payout
+                    </p>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>

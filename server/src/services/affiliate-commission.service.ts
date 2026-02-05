@@ -14,7 +14,8 @@ const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 function cleanupIdempotencyCache() {
   const now = Date.now();
-  for (const [key, value] of processedCommissions.entries()) {
+  const entries = Array.from(processedCommissions.entries());
+  for (const [key, value] of entries) {
     if (now - value.timestamp > IDEMPOTENCY_TTL_MS) {
       processedCommissions.delete(key);
     }

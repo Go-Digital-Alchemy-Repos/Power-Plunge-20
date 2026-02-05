@@ -236,6 +236,9 @@ class StripeService {
   ): Promise<Stripe.Event> {
     // Use the configured Stripe client to ensure correct test/live mode
     const client = await this.getClient();
+    if (!client) {
+      throw new Error("Stripe client is not configured");
+    }
     return client.webhooks.constructEvent(payload, signature, secret);
   }
 }

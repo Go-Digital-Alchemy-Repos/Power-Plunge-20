@@ -3174,8 +3174,8 @@ export async function registerRoutes(
       }
 
       // Get the OpenAI service
-      const openaiService = await import("./integrations/openai/OpenAIService");
-      const openai = openaiService.default;
+      const { openaiService } = await import("./src/integrations/openai/OpenAIService");
+      const openai = openaiService;
 
       // Build a contextual prompt
       const systemPrompt = `You are a marketing copywriter for Power Plunge, a premium cold plunge/ice bath company. 
@@ -3291,13 +3291,14 @@ Respond with ONLY the generated text - no quotes, no explanations, no formatting
   app.get("/api/site-settings", async (req, res) => {
     try {
       const settings = await storage.getSiteSettings();
+      const themeSettings = await storage.getThemeSettings();
       res.json({
         featuredProductId: settings?.featuredProductId || null,
-        heroTitle: settings?.heroTitle || null,
-        heroSubtitle: settings?.heroSubtitle || null,
-        heroImage: settings?.heroImage || null,
-        ctaText: settings?.ctaText || null,
-        ctaLink: settings?.ctaLink || null,
+        heroTitle: themeSettings?.heroTitle || null,
+        heroSubtitle: themeSettings?.heroSubtitle || null,
+        heroImage: themeSettings?.heroImage || null,
+        ctaText: null, // Not in current schema
+        ctaLink: null, // Not in current schema
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch site settings" });
