@@ -4407,9 +4407,20 @@ async function sendOrderNotification(orderId: string) {
       console.log(`Failed to send customer confirmation email: ${customerEmailResult.error}`);
     }
 
-    // Send admin notification email
-    if (!settings?.orderNotificationEmail) {
-      console.log("No admin notification email configured");
+    // Build recipient list: fulfillment team members + configured notification email
+    const allAdminUsers = await storage.getAdminUsers();
+    const fulfillmentEmails = allAdminUsers
+      .filter(u => u.role === "fulfillment")
+      .map(u => u.email);
+
+    const recipientSet = new Set<string>(fulfillmentEmails);
+    if (settings?.orderNotificationEmail) {
+      recipientSet.add(settings.orderNotificationEmail);
+    }
+
+    const recipients = Array.from(recipientSet);
+    if (recipients.length === 0) {
+      console.log("No fulfillment team members or admin notification email configured — skipping order notification");
       return;
     }
 
@@ -4531,15 +4542,15 @@ async function sendOrderNotification(orderId: string) {
 
       await mg.messages.create(process.env.MAILGUN_DOMAIN, {
         from: `${companyName} Orders <orders@${process.env.MAILGUN_DOMAIN}>`,
-        to: [settings.orderNotificationEmail],
+        to: recipients,
         subject: `New Order #${order.id.slice(0, 8).toUpperCase()} — ${formatCents(order.totalAmount)} — ${customer?.name || "Unknown"}`,
         html,
       });
 
-      console.log("Order notification email sent via Mailgun");
+      console.log(`Order notification email sent via Mailgun to: ${recipients.join(", ")}`);
     } else {
       console.log("Mailgun not configured, skipping admin email notification");
-      console.log(`Order ${orderId} notification would be sent to: ${settings.orderNotificationEmail}`);
+      console.log(`Order ${orderId} notification would be sent to: ${recipients.join(", ")}`);
     }
   } catch (error) {
     console.error("Failed to send order notification:", error);
