@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CreditCard, Loader2, ShoppingBag, Lock, Shield, CheckCircle, XCircle, Users } from "lucide-react";
@@ -226,6 +227,14 @@ export default function Checkout() {
     name: "",
     email: "",
     phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+  });
+  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
+  const [billingData, setBillingData] = useState({
+    name: "",
     address: "",
     city: "",
     state: "",
@@ -516,6 +525,78 @@ export default function Checkout() {
                     </div>
 
                     <div className="pt-4 border-t border-border">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <Checkbox
+                          id="billingSame"
+                          checked={billingSameAsShipping}
+                          onCheckedChange={(checked) => setBillingSameAsShipping(checked === true)}
+                          data-testid="checkbox-billing-same"
+                        />
+                        <Label htmlFor="billingSame" className="text-sm font-normal cursor-pointer">
+                          Billing address same as shipping address
+                        </Label>
+                      </div>
+
+                      {!billingSameAsShipping && (
+                        <div className="space-y-4 mb-4 p-4 bg-muted/30 rounded-lg">
+                          <h4 className="font-medium text-sm">Billing Address</h4>
+                          <div className="space-y-2">
+                            <Label htmlFor="billingName">Full Name</Label>
+                            <Input
+                              id="billingName"
+                              value={billingData.name}
+                              onChange={(e) => setBillingData({ ...billingData, name: e.target.value })}
+                              required={!billingSameAsShipping}
+                              data-testid="input-billing-name"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="billingAddress">Street Address</Label>
+                            <Input
+                              id="billingAddress"
+                              value={billingData.address}
+                              onChange={(e) => setBillingData({ ...billingData, address: e.target.value })}
+                              required={!billingSameAsShipping}
+                              data-testid="input-billing-address"
+                            />
+                          </div>
+                          <div className="grid sm:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="billingCity">City</Label>
+                              <Input
+                                id="billingCity"
+                                value={billingData.city}
+                                onChange={(e) => setBillingData({ ...billingData, city: e.target.value })}
+                                required={!billingSameAsShipping}
+                                data-testid="input-billing-city"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="billingState">State</Label>
+                              <Input
+                                id="billingState"
+                                value={billingData.state}
+                                onChange={(e) => setBillingData({ ...billingData, state: e.target.value })}
+                                required={!billingSameAsShipping}
+                                data-testid="input-billing-state"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="billingZip">ZIP Code</Label>
+                              <Input
+                                id="billingZip"
+                                value={billingData.zipCode}
+                                onChange={(e) => setBillingData({ ...billingData, zipCode: e.target.value })}
+                                required={!billingSameAsShipping}
+                                data-testid="input-billing-zip"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-4 border-t border-border">
                       <div className="space-y-2">
                         <Label htmlFor="referralCode" className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-muted-foreground" />
@@ -615,6 +696,17 @@ export default function Checkout() {
                     <p className="text-sm text-muted-foreground">{formData.email}</p>
                   </div>
 
+                  {/* Billing Summary - only shown if different from shipping */}
+                  {!billingSameAsShipping && (
+                    <div className="bg-muted/30 rounded-lg p-4 mb-6">
+                      <p className="text-sm text-muted-foreground mb-1">Billing to:</p>
+                      <p className="font-medium">{billingData.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {billingData.address}, {billingData.city}, {billingData.state} {billingData.zipCode}
+                      </p>
+                    </div>
+                  )}
+
                   {stripePromise && clientSecret ? (
                     <Elements
                       stripe={stripePromise}
@@ -638,7 +730,15 @@ export default function Checkout() {
                         orderId={orderId!}
                         cartTotal={cartTotal}
                         totalWithTax={taxInfo?.total ?? cartTotal}
-                        billingDetails={formData}
+                        billingDetails={billingSameAsShipping ? formData : {
+                          name: billingData.name,
+                          email: formData.email,
+                          phone: formData.phone,
+                          address: billingData.address,
+                          city: billingData.city,
+                          state: billingData.state,
+                          zipCode: billingData.zipCode,
+                        }}
                       />
                     </Elements>
                   ) : (
