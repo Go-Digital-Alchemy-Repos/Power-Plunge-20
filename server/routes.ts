@@ -70,6 +70,7 @@ import alertsRoutes from "./src/routes/alerts.routes";
 import orderTrackingRoutes from "./src/routes/customer/order-tracking.routes";
 import customerAuthRoutes from "./src/routes/customer/auth.routes";
 import publicOrderStatusRoutes from "./src/routes/public/order-status.routes";
+import { isCmsV2Enabled } from "./src/config/env";
 import { affiliateCommissionService } from "./src/services/affiliate-commission.service";
 import { couponAnalyticsService } from "./src/services/coupon-analytics.service";
 import { checkoutRecoveryService } from "./src/services/checkout-recovery.service";
@@ -130,6 +131,10 @@ export async function registerRoutes(
   app.use("/api/customer/orders", orderTrackingRoutes);
   app.use("/api/customer/auth", customerAuthRoutes);
   app.use("/api/orders", publicOrderStatusRoutes);
+
+  app.get("/api/health/config", (req, res) => {
+    res.json({ cmsV2Enabled: isCmsV2Enabled() });
+  });
 
   // ==================== PUBLIC ROUTES ====================
   // Note: /api/products routes have been migrated to layered architecture above

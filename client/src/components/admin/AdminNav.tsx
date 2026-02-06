@@ -1,10 +1,12 @@
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Home,
@@ -26,6 +28,7 @@ import {
   Palette,
   Layers,
   ImageIcon,
+  FlaskConical,
 } from "lucide-react";
 
 interface AdminNavProps {
@@ -36,6 +39,16 @@ interface AdminNavProps {
 export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps) {
   const [, navigate] = useLocation();
 
+  const { data: healthConfig } = useQuery<{ cmsV2Enabled: boolean }>({
+    queryKey: ["/api/health/config"],
+    queryFn: async () => {
+      const res = await fetch("/api/health/config");
+      if (!res.ok) return { cmsV2Enabled: false };
+      return res.json();
+    },
+    staleTime: 60000,
+  });
+
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
     navigate("/admin");
@@ -43,7 +56,7 @@ export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps)
 
   const isActive = (page: string) => currentPage === page;
   const isClientManagement = currentPage === "customers" || currentPage === "affiliates" || currentPage === "support" || currentPage === "affiliate-invite-sender";
-  const isCms = currentPage === "pages" || currentPage === "page-builder" || currentPage === "theme" || currentPage === "sections" || currentPage === "media";
+  const isCms = currentPage === "pages" || currentPage === "page-builder" || currentPage === "theme" || currentPage === "sections" || currentPage === "media" || currentPage === "cms-v2";
   const isSettings = currentPage === "settings" || currentPage === "team" || currentPage === "email-templates" || currentPage === "integrations" || currentPage === "docs";
 
   const hasFullAccess = role === "admin" || role === "store_manager";
@@ -129,6 +142,17 @@ export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps)
                       Theme
                     </Link>
                   </DropdownMenuItem>
+                  {healthConfig?.cmsV2Enabled && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/cms-v2" className="flex items-center gap-2 cursor-pointer" data-testid="link-cms-v2">
+                          <FlaskConical className="w-4 h-4" />
+                          CMS v2 (Preview)
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
