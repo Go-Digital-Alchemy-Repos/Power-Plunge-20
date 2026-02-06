@@ -4463,7 +4463,7 @@ async function sendOrderNotification(orderId: string) {
   <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
     <div style="background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
       <!-- Header -->
-      <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 32px; text-align: center;">
+      <div style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); padding: 32px; text-align: center;">
         <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">New Order Received</h1>
         <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Order #${order.id.slice(0, 8).toUpperCase()} needs fulfillment</p>
       </div>
@@ -4471,19 +4471,19 @@ async function sendOrderNotification(orderId: string) {
       <!-- Content -->
       <div style="padding: 32px;">
         <!-- Order Summary -->
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-          <h3 style="margin: 0 0 12px; color: #92400e; font-size: 16px; font-weight: 600;">Order Summary</h3>
+        <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+          <h3 style="margin: 0 0 12px; color: #111827; font-size: 16px; font-weight: 600;">Order Summary</h3>
           <div style="margin-bottom: 8px;">
-            <span style="color: #92400e; font-size: 14px;">Order Number: </span>
-            <span style="color: #78350f; font-weight: 600; font-size: 14px;">#${order.id.slice(0, 8).toUpperCase()}</span>
+            <span style="color: #6b7280; font-size: 14px;">Order Number: </span>
+            <span style="color: #111827; font-weight: 600; font-size: 14px;">#${order.id.slice(0, 8).toUpperCase()}</span>
           </div>
           <div style="margin-bottom: 8px;">
-            <span style="color: #92400e; font-size: 14px;">Date: </span>
-            <span style="color: #78350f; font-size: 14px;">${orderDate} at ${orderTime}</span>
+            <span style="color: #6b7280; font-size: 14px;">Date: </span>
+            <span style="color: #111827; font-size: 14px;">${orderDate} at ${orderTime}</span>
           </div>
           <div>
-            <span style="color: #92400e; font-size: 14px;">Total: </span>
-            <span style="color: #78350f; font-weight: 700; font-size: 16px;">${formatCents(order.totalAmount)}</span>
+            <span style="color: #6b7280; font-size: 14px;">Total: </span>
+            <span style="color: #111827; font-weight: 700; font-size: 16px;">${formatCents(order.totalAmount)}</span>
           </div>
         </div>
 
@@ -4526,7 +4526,7 @@ async function sendOrderNotification(orderId: string) {
 
         <!-- View in Admin Button -->
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${adminOrderUrl}" style="display: inline-block; background: #f59e0b; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">View Order in Admin</a>
+          <a href="${adminOrderUrl}" style="display: inline-block; background: #0891b2; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">View Order in Admin</a>
         </div>
       </div>
 
