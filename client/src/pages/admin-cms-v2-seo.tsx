@@ -1,11 +1,9 @@
 import { useAdmin } from "@/hooks/use-admin";
-import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import AdminNav from "@/components/admin/AdminNav";
-import { Search, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import CmsV2Layout from "@/components/admin/CmsV2Layout";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 
 export default function AdminCmsV2Seo() {
   const { hasFullAccess, isLoading: adminLoading } = useAdmin();
@@ -17,97 +15,111 @@ export default function AdminCmsV2Seo() {
 
   if (adminLoading || !hasFullAccess) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white">
-        <AdminNav currentPage="cms-v2" />
-        <div className="p-8 text-center text-gray-400">
-          {adminLoading ? "Loading..." : "Access Denied"}
-        </div>
-      </div>
+      <CmsV2Layout activeNav="seo" breadcrumbs={[{ label: "SEO" }]}>
+        <div className="p-8 text-center text-gray-400">{adminLoading ? "Loading..." : "Access Denied"}</div>
+      </CmsV2Layout>
     );
   }
 
+  const pagesWithScores = (pages || []).map((page: any) => {
+    const hasTitle = !!page.metaTitle;
+    const hasDesc = !!page.metaDescription;
+    const hasOg = !!page.ogTitle || !!page.ogImage;
+    return { ...page, hasTitle, hasDesc, hasOg, score: [hasTitle, hasDesc, hasOg].filter(Boolean).length };
+  });
+
+  const avgScore = pagesWithScores.length > 0
+    ? (pagesWithScores.reduce((s: number, p: any) => s + p.score, 0) / pagesWithScores.length).toFixed(1)
+    : "0";
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white" data-testid="admin-cms-v2-seo-page">
-      <AdminNav currentPage="cms-v2" />
-
-      <div className="max-w-6xl mx-auto p-8">
+    <CmsV2Layout activeNav="seo" breadcrumbs={[{ label: "SEO" }]}>
+      <div className="max-w-5xl mx-auto" data-testid="admin-cms-v2-seo-page">
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/admin/cms-v2">
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="link-back-dashboard">
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Dashboard
-            </Button>
-          </Link>
+          <h1 className="text-xl font-bold text-white">SEO Overview</h1>
+          <Badge variant="outline" className="border-gray-700 text-gray-500 text-xs">Preview</Badge>
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
-          <Search className="w-7 h-7 text-cyan-400" />
-          <h1 className="text-2xl font-bold text-white">SEO Overview</h1>
-          <Badge variant="outline" className="border-cyan-700 text-cyan-400 text-xs">Preview</Badge>
-        </div>
+        {!isLoading && pagesWithScores.length > 0 && (
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <Card className="bg-gray-900/60 border-gray-800/60">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-white">{pagesWithScores.length}</p>
+                <p className="text-xs text-gray-500">Pages Audited</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gray-900/60 border-gray-800/60">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-cyan-400">{avgScore}/3</p>
+                <p className="text-xs text-gray-500">Avg Score</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gray-900/60 border-gray-800/60">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-green-400">{pagesWithScores.filter((p: any) => p.score === 3).length}</p>
+                <p className="text-xs text-gray-500">Fully Optimized</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {isLoading ? (
-          <p className="text-gray-400">Loading...</p>
-        ) : !pages || pages.length === 0 ? (
-          <Card className="bg-gray-900 border-gray-800">
-            <CardContent className="p-8 text-center text-gray-400">
-              No pages to audit.
-            </CardContent>
+          <p className="text-gray-400 text-sm">Loading...</p>
+        ) : pagesWithScores.length === 0 ? (
+          <Card className="bg-gray-900/60 border-gray-800/60">
+            <CardContent className="p-8 text-center text-gray-400 text-sm">No pages to audit.</CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {pages.map((page: any) => {
-              const hasTitle = !!page.metaTitle;
-              const hasDesc = !!page.metaDescription;
-              const hasOg = !!page.ogTitle || !!page.ogImage;
-              const score = [hasTitle, hasDesc, hasOg].filter(Boolean).length;
-
-              return (
-                <Card key={page.id} className="bg-gray-900 border-gray-800" data-testid={`card-seo-${page.id}`}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-white">{page.title}</span>
-                      <p className="text-xs text-gray-500 mt-0.5">/{page.slug}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        {hasTitle ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                        ) : (
-                          <AlertCircle className="w-3.5 h-3.5 text-yellow-400" />
-                        )}
-                        <span className={hasTitle ? "text-green-400" : "text-yellow-400"}>Title</span>
+          <div className="border border-gray-800/60 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-800/60 text-[11px] text-gray-500 uppercase tracking-wider">
+                  <th className="text-left px-4 py-2.5 font-medium">Page</th>
+                  <th className="text-center px-4 py-2.5 font-medium">Title</th>
+                  <th className="text-center px-4 py-2.5 font-medium">Description</th>
+                  <th className="text-center px-4 py-2.5 font-medium">OG Tags</th>
+                  <th className="text-center px-4 py-2.5 font-medium">Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagesWithScores.map((page: any) => (
+                  <tr key={page.id} className="border-b border-gray-800/30 hover:bg-gray-900/40 transition-colors" data-testid={`card-seo-${page.id}`}>
+                    <td className="px-4 py-3">
+                      <div>
+                        <span className="text-sm text-white font-medium">{page.title}</span>
+                        <p className="text-[11px] text-gray-500 font-mono">/{page.slug}</p>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs">
-                        {hasDesc ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                        ) : (
-                          <AlertCircle className="w-3.5 h-3.5 text-yellow-400" />
-                        )}
-                        <span className={hasDesc ? "text-green-400" : "text-yellow-400"}>Description</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs">
-                        {hasOg ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                        ) : (
-                          <AlertCircle className="w-3.5 h-3.5 text-yellow-400" />
-                        )}
-                        <span className={hasOg ? "text-green-400" : "text-yellow-400"}>OG</span>
-                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {page.hasTitle
+                        ? <CheckCircle2 className="w-4 h-4 text-green-400 mx-auto" />
+                        : <AlertCircle className="w-4 h-4 text-yellow-400 mx-auto" />}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {page.hasDesc
+                        ? <CheckCircle2 className="w-4 h-4 text-green-400 mx-auto" />
+                        : <AlertCircle className="w-4 h-4 text-yellow-400 mx-auto" />}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {page.hasOg
+                        ? <CheckCircle2 className="w-4 h-4 text-green-400 mx-auto" />
+                        : <AlertCircle className="w-4 h-4 text-yellow-400 mx-auto" />}
+                    </td>
+                    <td className="px-4 py-3 text-center">
                       <Badge
                         variant="outline"
-                        className={score === 3 ? "border-green-700 text-green-400" : score >= 1 ? "border-yellow-700 text-yellow-400" : "border-red-700 text-red-400"}
+                        className={page.score === 3 ? "border-green-800/60 text-green-400 text-xs" : page.score >= 1 ? "border-yellow-800/60 text-yellow-400 text-xs" : "border-red-800/60 text-red-400 text-xs"}
                       >
-                        {score}/3
+                        {page.score}/3
                       </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
-    </div>
+    </CmsV2Layout>
   );
 }

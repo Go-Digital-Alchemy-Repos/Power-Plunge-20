@@ -51,6 +51,7 @@ import AdminCmsV2Sections from "@/pages/admin-cms-v2-sections";
 import AdminCmsV2Templates from "@/pages/admin-cms-v2-templates";
 import AdminCmsV2Themes from "@/pages/admin-cms-v2-themes";
 import AdminCmsV2Seo from "@/pages/admin-cms-v2-seo";
+import AdminCmsV2Settings from "@/pages/admin-cms-v2-settings";
 import AdminCmsV2Builder from "@/pages/admin-cms-v2-builder";
 import PageView from "@/pages/page-view";
 import Shop from "@/pages/shop";
@@ -114,6 +115,7 @@ function Router() {
       <Route path="/admin/cms-v2/templates" component={AdminCmsV2Templates} />
       <Route path="/admin/cms-v2/themes" component={AdminCmsV2Themes} />
       <Route path="/admin/cms-v2/seo" component={AdminCmsV2Seo} />
+      <Route path="/admin/cms-v2/settings" component={AdminCmsV2Settings} />
       <Route path="/admin/cms-v2" component={AdminCmsV2} />
       <Route component={NotFound} />
     </Switch>

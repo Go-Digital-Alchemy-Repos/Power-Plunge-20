@@ -1,51 +1,55 @@
 import { useAdmin } from "@/hooks/use-admin";
-import { Link } from "wouter";
-import AdminNav from "@/components/admin/AdminNav";
-import { BookTemplate, ArrowLeft } from "lucide-react";
+import CmsV2Layout from "@/components/admin/CmsV2Layout";
+import { BookTemplate, FileText, Layers, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+const templatePreviews = [
+  { name: "Blank Page", description: "Start from scratch with an empty canvas", icon: FileText, blocks: 0 },
+  { name: "Landing Page", description: "Hero + features + CTA + testimonials", icon: Sparkles, blocks: 5 },
+  { name: "Product Showcase", description: "Product highlight + comparison + trust bar", icon: Layers, blocks: 4 },
+];
 
 export default function AdminCmsV2Templates() {
   const { hasFullAccess, isLoading: adminLoading } = useAdmin();
 
   if (adminLoading || !hasFullAccess) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white">
-        <AdminNav currentPage="cms-v2" />
-        <div className="p-8 text-center text-gray-400">
-          {adminLoading ? "Loading..." : "Access Denied"}
-        </div>
-      </div>
+      <CmsV2Layout activeNav="templates" breadcrumbs={[{ label: "Templates" }]}>
+        <div className="p-8 text-center text-gray-400">{adminLoading ? "Loading..." : "Access Denied"}</div>
+      </CmsV2Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white" data-testid="admin-cms-v2-templates-page">
-      <AdminNav currentPage="cms-v2" />
-
-      <div className="max-w-6xl mx-auto p-8">
+    <CmsV2Layout activeNav="templates" breadcrumbs={[{ label: "Templates" }]}>
+      <div className="max-w-5xl mx-auto" data-testid="admin-cms-v2-templates-page">
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/admin/cms-v2">
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="link-back-dashboard">
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Dashboard
-            </Button>
-          </Link>
+          <h1 className="text-xl font-bold text-white">Templates</h1>
+          <Badge variant="outline" className="border-gray-700 text-gray-500 text-xs">Coming Soon</Badge>
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
-          <BookTemplate className="w-7 h-7 text-cyan-400" />
-          <h1 className="text-2xl font-bold text-white">Templates</h1>
-          <Badge variant="outline" className="border-cyan-700 text-cyan-400 text-xs">Preview</Badge>
-        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Templates provide pre-built page layouts with configured blocks. Select a template when creating a new page to get started quickly.
+        </p>
 
-        <Card className="bg-gray-900 border-gray-800">
-          <CardContent className="p-8 text-center text-gray-400" data-testid="text-templates-placeholder">
-            Page layout templates will be managed here.
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {templatePreviews.map((tmpl) => (
+            <Card key={tmpl.name} className="bg-gray-900/60 border-gray-800/60 hover:border-gray-700 transition-colors" data-testid={`card-template-${tmpl.name.toLowerCase().replace(/\s+/g, "-")}`}>
+              <CardContent className="p-5">
+                <div className="p-2.5 rounded-lg bg-gray-800/60 w-fit mb-3">
+                  <tmpl.icon className="w-5 h-5 text-cyan-400" />
+                </div>
+                <h3 className="font-medium text-white text-sm mb-1">{tmpl.name}</h3>
+                <p className="text-xs text-gray-500 mb-3">{tmpl.description}</p>
+                <Badge variant="outline" className="border-gray-700/60 text-gray-600 text-[10px]">
+                  {tmpl.blocks} blocks
+                </Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
-    </div>
+    </CmsV2Layout>
   );
 }
