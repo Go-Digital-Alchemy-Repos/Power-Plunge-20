@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Section, Container } from "@/cms/layout";
 import { Heading, Text } from "@/cms/typography";
+import { CmsButton } from "@/cms/ui";
 import type { BlockRenderProps } from "./types";
 
 export default function CallToActionBlock({ data, settings }: BlockRenderProps) {
@@ -37,28 +37,23 @@ export default function CallToActionBlock({ data, settings }: BlockRenderProps) 
             )}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {primaryCtaText && (
-                <Button
+                <CmsButton
+                  variant="primary"
                   size="lg"
-                  className="glow-ice text-lg px-10 py-6"
-                  onClick={() => {
-                    if (primaryCtaHref) window.location.href = primaryCtaHref;
-                  }}
+                  href={primaryCtaHref}
                   data-testid="cta-primary-button"
                 >
                   {primaryCtaText}
-                </Button>
+                </CmsButton>
               )}
               {secondaryCtaText && (
-                <Button
-                  size="lg"
+                <CmsButton
                   variant="outline"
-                  className="text-lg px-8"
-                  onClick={() => {
-                    if (secondaryCtaHref) window.location.href = secondaryCtaHref;
-                  }}
+                  size="lg"
+                  href={secondaryCtaHref}
                 >
                   {secondaryCtaText}
-                </Button>
+                </CmsButton>
               )}
             </div>
           </motion.div>

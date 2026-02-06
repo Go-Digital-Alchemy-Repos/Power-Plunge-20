@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Container } from "@/cms/layout";
 import { Heading, Text } from "@/cms/typography";
+import { CmsButton } from "@/cms/ui";
 import type { BlockRenderProps } from "./types";
 
 export default function HeroBlock({ data, settings }: BlockRenderProps) {
@@ -77,16 +77,14 @@ export default function HeroBlock({ data, settings }: BlockRenderProps) {
                     : "justify-start"
                 )}
               >
-                <Button
+                <CmsButton
+                  variant="primary"
                   size="lg"
-                  className="glow-ice-sm text-lg px-8"
-                  onClick={() => {
-                    if (ctaHref) window.location.href = ctaHref;
-                  }}
+                  href={ctaHref}
                   data-testid="button-hero-primary"
                 >
                   {ctaText}
-                </Button>
+                </CmsButton>
               </div>
             )}
           </motion.div>
