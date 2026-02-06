@@ -536,8 +536,9 @@ router.post("/connect/start", requireCustomerAuth, async (req: AuthenticatedRequ
         ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
         : 'http://localhost:5000';
     
-    const returnUrl = `${baseUrl}/affiliate-portal?connect=complete`;
-    const refreshUrl = `${baseUrl}/affiliate-portal?connect=refresh`;
+    const returnPath = req.body?.returnPath || "/affiliate-portal";
+    const returnUrl = `${baseUrl}${returnPath}${returnPath.includes('?') ? '&' : '?'}connect=complete`;
+    const refreshUrl = `${baseUrl}${returnPath}${returnPath.includes('?') ? '&' : '?'}connect=refresh`;
     
     if (!payoutAccount) {
       // Create new Stripe Express account

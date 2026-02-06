@@ -145,6 +145,8 @@ router.post("/", async (req: Request, res: Response) => {
       
       const sessionToken = createSessionToken(existingCustomer.id, email);
       
+      const payoutAccount = await storage.getAffiliatePayoutAccountByAffiliateId(affiliate.id);
+      
       return res.json({
         success: true,
         sessionToken,
@@ -156,6 +158,12 @@ router.post("/", async (req: Request, res: Response) => {
         affiliate: {
           id: affiliate.id,
           code: affiliate.affiliateCode,
+        },
+        onboarding: {
+          requiresStripeSetup: !payoutAccount?.payoutsEnabled,
+          hasPayoutAccount: !!payoutAccount,
+          canCustomizeCode: true,
+          nextRecommendedStep: !payoutAccount?.payoutsEnabled ? "stripe" : "code",
         },
       });
     }
@@ -201,6 +209,12 @@ router.post("/", async (req: Request, res: Response) => {
       affiliate: {
         id: affiliate.id,
         code: affiliate.affiliateCode,
+      },
+      onboarding: {
+        requiresStripeSetup: true,
+        hasPayoutAccount: false,
+        canCustomizeCode: true,
+        nextRecommendedStep: "stripe",
       },
     });
   } catch (error: any) {
