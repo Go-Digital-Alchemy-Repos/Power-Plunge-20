@@ -204,16 +204,6 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img src={logoImage} alt="Power Plunge" className="h-10" data-testid="img-logo" />
-            {isAuthenticated && isAffiliate && (
-              <a 
-                href="/affiliate-portal" 
-                className="hidden sm:flex items-center gap-2 hover:opacity-80 transition-opacity"
-                data-testid="link-header-affiliate-dashboard"
-              >
-                <Link2 className="w-5 h-5 text-primary" />
-                <span className="font-semibold">Affiliate Portal</span>
-              </a>
-            )}
           </div>
           <div className="flex items-center gap-3">
             
