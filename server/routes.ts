@@ -2748,35 +2748,22 @@ export async function registerRoutes(
         const recipientName = targetName || targetEmail.split("@")[0];
         emailResult = await emailService.sendEmail({
           to: targetEmail,
-          subject: "You're Invited to Join the Power Plunge Affiliate Program!",
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: #0891b2; margin-bottom: 16px;">You're Invited!</h2>
-              <p style="font-size: 16px; color: #333;">Hi ${recipientName},</p>
-              <p style="font-size: 16px; color: #333;">
-                You've been personally invited to join the <strong>Power Plunge Affiliate Program</strong>.
-                Earn commissions on every sale you refer!
-              </p>
-              <div style="margin: 32px 0; text-align: center;">
-                <a href="${inviteUrl}" 
-                   style="background-color: #0891b2; color: white; padding: 14px 32px; 
-                          text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold;
-                          display: inline-block;">
-                  Accept Invitation
-                </a>
-              </div>
-              <p style="font-size: 14px; color: #666;">
-                Or copy this link into your browser:<br />
-                <a href="${inviteUrl}" style="color: #0891b2; word-break: break-all;">${inviteUrl}</a>
-              </p>
-              ${expirationDate ? `<p style="font-size: 13px; color: #999;">This invite expires on ${expirationDate.toLocaleDateString()}.</p>` : ""}
-              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-              <p style="font-size: 12px; color: #999;">
-                Power Plunge Affiliate Program
-              </p>
-            </div>
-          `,
-          text: `Hi ${recipientName},\n\nYou've been invited to join the Power Plunge Affiliate Program! Earn commissions on every sale you refer.\n\nAccept your invitation here: ${inviteUrl}\n\n${expirationDate ? `This invite expires on ${expirationDate.toLocaleDateString()}.` : ""}\n\nPower Plunge Affiliate Program`,
+          subject: `${recipientName}, you're invited to partner with Power Plunge`,
+          html: `<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+<p>Hi ${recipientName},</p>
+
+<p>I wanted to reach out personally — we'd love to have you as a Power Plunge affiliate partner.</p>
+
+<p>You can sign up and get started here:<br>
+<a href="${inviteUrl}">${inviteUrl}</a></p>
+
+${expirationDate ? `<p style="color: #666; font-size: 13px;">This link expires on ${expirationDate.toLocaleDateString()}.</p>` : ""}
+
+<p>Let us know if you have any questions.</p>
+
+<p>Thanks,<br>The Power Plunge Team</p>
+</div>`,
+          text: `Hi ${recipientName},\n\nI wanted to reach out personally — we'd love to have you as a Power Plunge affiliate partner.\n\nYou can sign up and get started here:\n${inviteUrl}\n\n${expirationDate ? `This link expires on ${expirationDate.toLocaleDateString()}.\n\n` : ""}Let us know if you have any questions.\n\nThanks,\nThe Power Plunge Team`,
         });
       } catch (emailError: any) {
         console.error("Failed to send affiliate invite email:", emailError);
