@@ -3,7 +3,7 @@ import { useAdmin } from "@/hooks/use-admin";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminNav from "@/components/admin/AdminNav";
-import { ArrowLeft, Save, Globe, Layers, Unlink, Search, X } from "lucide-react";
+import { ArrowLeft, Save, Globe, Layers, Unlink, Search, X, Monitor, Tablet, Smartphone, ChevronUp, ChevronDown, Copy, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,9 +36,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 registerAllBlocks();
 registerCmsV1Blocks();
+
+const CATEGORY_MAP: Record<string, { label: string; description: string }> = {
+  layout: { label: "Layout & Marketing", description: "Hero sections, CTAs, and page structure" },
+  content: { label: "Content", description: "Rich text, features, and FAQ blocks" },
+  media: { label: "Media", description: "Images, galleries, and visual content" },
+  commerce: { label: "E-commerce", description: "Products, pricing, and comparison tables" },
+  social: { label: "Trust & Social Proof", description: "Testimonials, trust bars, and reviews" },
+  utility: { label: "Utility", description: "Sections, dividers, and layout helpers" },
+};
+
+const QUICK_INSERT_BLOCKS = [
+  { type: "hero", label: "Hero", icon: "🏔" },
+  { type: "callToAction", label: "CTA", icon: "📢" },
+  { type: "productGrid", label: "Products", icon: "🛒" },
+  { type: "faq", label: "FAQ", icon: "❓" },
+  { type: "testimonials", label: "Reviews", icon: "⭐" },
+];
 
 function buildPuckConfig(): Config {
   const legacyEntries = getAllBlocks();
@@ -47,6 +70,8 @@ function buildPuckConfig(): Config {
   const deduped = legacyEntries.filter((e) => !cmsTypes.has(e.type));
   const entries = [...deduped, ...cmsEntries];
   const components: Config["components"] = {};
+
+  const categoryComponents: Record<string, string[]> = {};
 
   for (const entry of entries) {
     if (entry.type === "sectionRef") continue;
@@ -85,6 +110,10 @@ function buildPuckConfig(): Config {
       if (converted) puckFields[key] = converted;
     }
 
+    const cat = entry.category || "utility";
+    if (!categoryComponents[cat]) categoryComponents[cat] = [];
+    categoryComponents[cat].push(entry.type);
+
     components[entry.type] = {
       label: entry.label,
       defaultProps: entry.defaultProps,
@@ -116,8 +145,23 @@ function buildPuckConfig(): Config {
     ),
   };
 
+  if (!categoryComponents["utility"]) categoryComponents["utility"] = [];
+  categoryComponents["utility"].push("sectionRef");
+
+  const categories: Config["categories"] = {};
+  for (const [catId, meta] of Object.entries(CATEGORY_MAP)) {
+    if (categoryComponents[catId]?.length) {
+      categories[catId] = {
+        title: meta.label,
+        components: categoryComponents[catId],
+        defaultExpanded: catId === "layout",
+      };
+    }
+  }
+
   return {
     components,
+    categories,
     root: {
       defaultProps: { title: "" },
       fields: {
@@ -646,6 +690,95 @@ function PublishButton({ pageId, pageTitle, seoData, onDone }: { pageId: string;
   );
 }
 
+function QuickInsertBar() {
+  const { dispatch, appState } = usePuck();
+
+  const handleQuickInsert = (blockType: string) => {
+    dispatch({
+      type: "insert",
+      componentType: blockType,
+      destinationIndex: appState.data.content.length,
+      destinationZone: "root:default-zone",
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-1" data-testid="quick-insert-bar">
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="text-gray-500 text-xs mr-1 flex items-center gap-1">
+              <Zap className="w-3 h-3" />
+              Quick:
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-gray-800 border-gray-700 text-white text-xs">
+            One-click insert common blocks
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {QUICK_INSERT_BLOCKS.map((block) => (
+        <TooltipProvider key={block.type} delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-gray-400 hover:text-white hover:bg-gray-800 h-7 px-2 text-xs gap-1"
+                onClick={() => handleQuickInsert(block.type)}
+                data-testid={`quick-insert-${block.type}`}
+              >
+                <span>{block.icon}</span>
+                <span className="hidden sm:inline">{block.label}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="bg-gray-800 border-gray-700 text-white text-xs">
+              Insert {block.label}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ))}
+    </div>
+  );
+}
+
+type ViewportMode = "desktop" | "tablet" | "mobile";
+const VIEWPORTS: Record<ViewportMode, { width: string; label: string; icon: typeof Monitor }> = {
+  desktop: { width: "100%", label: "Desktop", icon: Monitor },
+  tablet: { width: "768px", label: "Tablet", icon: Tablet },
+  mobile: { width: "375px", label: "Mobile", icon: Smartphone },
+};
+
+function ViewportSwitcher({ mode, onChange }: { mode: ViewportMode; onChange: (mode: ViewportMode) => void }) {
+  return (
+    <div className="flex items-center gap-0.5 bg-gray-800/60 rounded-md p-0.5" data-testid="viewport-switcher">
+      {(Object.entries(VIEWPORTS) as [ViewportMode, typeof VIEWPORTS["desktop"]][]).map(([key, vp]) => {
+        const Icon = vp.icon;
+        return (
+          <TooltipProvider key={key} delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant={mode === key ? "default" : "ghost"}
+                  className={`h-7 w-7 p-0 ${mode === key ? "bg-gray-700 text-white" : "text-gray-500 hover:text-white"}`}
+                  onClick={() => onChange(key)}
+                  data-testid={`viewport-${key}`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-gray-800 border-gray-700 text-white text-xs">
+                {vp.label} ({vp.width})
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function AdminCmsV2Builder() {
   const { hasFullAccess, isLoading: adminLoading } = useAdmin();
   const [, params] = useRoute("/admin/cms-v2/pages/:id/builder");
@@ -654,6 +787,7 @@ export default function AdminCmsV2Builder() {
   const pageId = params?.id;
   const [puckKey, setPuckKey] = useState(0);
   const [seoOpen, setSeoOpen] = useState(false);
+  const [viewportMode, setViewportMode] = useState<ViewportMode>("desktop");
   const [seoData, setSeoData] = useState<SeoData>({
     metaTitle: "",
     metaDescription: "",
@@ -755,10 +889,12 @@ export default function AdminCmsV2Builder() {
     );
   }
 
+  const viewportWidth = VIEWPORTS[viewportMode].width;
+
   return (
     <div className="min-h-screen bg-gray-950 text-white" data-testid="admin-cms-v2-builder-page">
       <div className="border-b border-gray-800 bg-gray-950/95 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-full mx-auto px-4 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -770,22 +906,27 @@ export default function AdminCmsV2Builder() {
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back
             </Button>
-            <span className="text-lg font-semibold text-white" data-testid="text-page-title">{page?.title}</span>
+            <span className="text-sm font-semibold text-white truncate max-w-[200px]" data-testid="text-page-title">{page?.title}</span>
             <Badge variant="outline" className={
-              page?.status === "published" ? "border-green-700 text-green-400" : "border-yellow-700 text-yellow-400"
+              page?.status === "published" ? "border-green-700 text-green-400 text-[10px]" : "border-yellow-700 text-yellow-400 text-[10px]"
             } data-testid="badge-page-status">
               {page?.status}
             </Badge>
           </div>
+
           <div className="flex items-center gap-2">
+            <QuickInsertBar />
+            <div className="w-px h-5 bg-gray-700" />
+            <ViewportSwitcher mode={viewportMode} onChange={setViewportMode} />
+            <div className="w-px h-5 bg-gray-700" />
             <Button
               size="sm"
               variant="outline"
-              className="border-cyan-700 text-cyan-400 hover:bg-cyan-900/30"
+              className="border-cyan-700 text-cyan-400 hover:bg-cyan-900/30 h-7 text-xs"
               onClick={() => setSeoOpen(true)}
               data-testid="button-open-seo"
             >
-              <Search className="w-4 h-4 mr-1" />
+              <Search className="w-3.5 h-3.5 mr-1" />
               SEO
             </Button>
             <InsertSectionButton onInsert={handleInsertSection} />
@@ -808,18 +949,55 @@ export default function AdminCmsV2Builder() {
                 <PublishButton pageId={pageId!} pageTitle={page?.title || ""} seoData={seoData} onDone={invalidateQueries} />
               </>
             ),
+            componentItem: ({ children, name }) => (
+              <div title={getBlockDescription(name)} data-testid={`block-picker-item-${name}`}>
+                {children}
+              </div>
+            ),
           }}
         />
       </div>
 
       <style>{`
         .puck-builder-container {
-          height: calc(100vh - 57px);
+          height: calc(100vh - 45px);
         }
         .puck-builder-container > div {
           height: 100%;
         }
+
+        /* Responsive preview viewport */
+        .puck-builder-container [class*="PuckPreview-frame"],
+        .puck-builder-container [class*="_PuckPreview-frame"] {
+          max-width: ${viewportWidth} !important;
+          margin: 0 auto;
+          transition: max-width 0.3s ease;
+        }
+        .puck-builder-container iframe {
+          max-width: ${viewportWidth};
+          margin: 0 auto;
+          transition: max-width 0.3s ease;
+        }
       `}</style>
     </div>
   );
+}
+
+function getBlockDescription(type: string): string {
+  const descriptions: Record<string, string> = {
+    hero: "Full-width hero with headline, subheadline, and CTA",
+    richText: "Text content with optional title and HTML body",
+    image: "Single image with caption and link",
+    imageGrid: "Grid of images with captions",
+    featureList: "Features with icons, titles, descriptions",
+    testimonials: "Customer testimonials in cards or slider",
+    faq: "Accordion-style FAQ section",
+    callToAction: "Conversion-focused CTA with buttons",
+    productGrid: "Product display grid with filters",
+    productHighlight: "Single product showcase with details",
+    trustBar: "Trust signals row with icons",
+    comparisonTable: "Feature comparison table",
+    sectionRef: "Reference to a saved reusable section",
+  };
+  return descriptions[type] || type;
 }

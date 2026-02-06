@@ -31,12 +31,12 @@ export function registerCmsV1Blocks() {
     renderComponent: HeroBlock,
     defaultProps: {
       headline: "Welcome to Power Plunge",
-      subheadline: "",
+      subheadline: "Experience the ultimate cold therapy for peak recovery and performance.",
       ctaText: "Shop Now",
       ctaHref: "/shop",
       backgroundImage: "",
       align: "center",
-      themeVariant: "",
+      themeVariant: "ice",
     },
     puckFields: {
       headline: textField("Headline"),
@@ -63,8 +63,8 @@ export function registerCmsV1Blocks() {
     description: "Text content block with optional title and HTML body",
     renderComponent: RichTextBlock,
     defaultProps: {
-      title: "",
-      bodyRichText: "<p>Enter your content here...</p>",
+      title: "About Our Products",
+      bodyRichText: "<p>Our cold plunge tanks are engineered for durability, performance, and ease of use. Whether you're a professional athlete or a wellness enthusiast, Power Plunge delivers consistent cold therapy at the touch of a button.</p><p>Every unit is built with medical-grade stainless steel and advanced cooling technology to maintain precise temperatures.</p>",
       align: "left",
     },
     puckFields: {
@@ -86,10 +86,10 @@ export function registerCmsV1Blocks() {
     description: "Single image with optional caption and link",
     renderComponent: ImageBlock,
     defaultProps: {
-      src: "",
-      alt: "",
-      caption: "",
-      aspectRatio: "",
+      src: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&h=450&fit=crop",
+      alt: "Cold plunge tank in a modern wellness studio",
+      caption: "The Power Plunge Pro in action",
+      aspectRatio: "16:9",
       rounded: true,
       linkHref: "",
     },
@@ -116,7 +116,11 @@ export function registerCmsV1Blocks() {
     description: "Grid of images with optional captions and links",
     renderComponent: ImageGridBlock,
     defaultProps: {
-      items: [],
+      items: [
+        { src: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop", alt: "Recovery session", caption: "Recovery Session", linkHref: "" },
+        { src: "https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=400&h=300&fit=crop", alt: "Athlete training", caption: "Peak Performance", linkHref: "" },
+        { src: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=300&fit=crop", alt: "Wellness center", caption: "Wellness Center", linkHref: "" },
+      ],
       columns: 3,
       spacing: "normal",
     },
@@ -144,8 +148,12 @@ export function registerCmsV1Blocks() {
     description: "List of features with icons, titles, and descriptions",
     renderComponent: FeatureListBlock,
     defaultProps: {
-      title: "",
-      items: [],
+      title: "Why Choose Power Plunge?",
+      items: [
+        { icon: "Snowflake", title: "Precise Temperature", description: "Maintain exact water temperature from 37\u00b0F to 60\u00b0F with our digital controller." },
+        { icon: "Shield", title: "Medical-Grade Build", description: "304 stainless steel interior with UV sanitation keeps your water crystal clear." },
+        { icon: "Zap", title: "Rapid Cooling", description: "Powerful chiller reaches target temperature in under 2 hours from room temp." },
+      ],
       columns: 3,
     },
     puckFields: {
@@ -168,7 +176,11 @@ export function registerCmsV1Blocks() {
     renderComponent: TestimonialsBlock,
     defaultProps: {
       title: "What Our Customers Say",
-      items: [],
+      items: [
+        { quote: "The Power Plunge has been a game-changer for my recovery routine. I feel more energized and recover faster after every session.", name: "Alex Johnson", title: "Professional Athlete", avatar: "" },
+        { quote: "Best investment I've made for my wellness studio. My clients absolutely love it and it's incredibly low maintenance.", name: "Sarah Chen", title: "Wellness Studio Owner", avatar: "" },
+        { quote: "The build quality is outstanding. It's been running perfectly for over a year with minimal upkeep. Highly recommend.", name: "Marcus Williams", title: "Fitness Coach", avatar: "" },
+      ],
       layout: "cards",
     },
     puckFields: {
@@ -195,7 +207,11 @@ export function registerCmsV1Blocks() {
     renderComponent: FAQBlock,
     defaultProps: {
       title: "Frequently Asked Questions",
-      items: [],
+      items: [
+        { q: "What temperature does the cold plunge maintain?", a: "Our cold plunge tanks can maintain precise temperatures between 37\u00b0F and 60\u00b0F, with digital controls for exact adjustments." },
+        { q: "How long does it take to cool down?", a: "From room temperature, our chiller system reaches the target temperature in approximately 2 hours. Once cooled, the insulated design maintains the temperature efficiently." },
+        { q: "Is a cold plunge safe for everyone?", a: "Cold plunging is generally safe for healthy adults. We recommend consulting your physician if you have heart conditions, high blood pressure, or are pregnant. Always start with shorter sessions and warmer temperatures." },
+      ],
       allowMultipleOpen: false,
     },
     puckFields: {
@@ -217,11 +233,11 @@ export function registerCmsV1Blocks() {
     renderComponent: CallToActionBlock,
     defaultProps: {
       headline: "Ready to Transform Your Recovery?",
-      subheadline: "",
-      primaryCtaText: "Get Started",
+      subheadline: "Join thousands of athletes and wellness enthusiasts who have elevated their recovery with Power Plunge.",
+      primaryCtaText: "Shop Now",
       primaryCtaHref: "/shop",
-      secondaryCtaText: "",
-      secondaryCtaHref: "",
+      secondaryCtaText: "Learn More",
+      secondaryCtaHref: "#features",
     },
     puckFields: {
       headline: textField("Headline"),
@@ -270,7 +286,12 @@ export function registerCmsV1Blocks() {
     renderComponent: ProductHighlightBlock,
     defaultProps: {
       productId: "",
-      highlightBullets: [],
+      highlightBullets: [
+        "Medical-grade 304 stainless steel interior",
+        "Digital temperature controller (37-60\u00b0F)",
+        "Built-in UV sanitation system",
+        "Energy-efficient insulated design",
+      ],
       showGallery: true,
       showBuyButton: true,
     },
@@ -289,7 +310,12 @@ export function registerCmsV1Blocks() {
     description: "Row of trust signals with icons, labels, and sublabels",
     renderComponent: TrustBarBlock,
     defaultProps: {
-      items: [],
+      items: [
+        { icon: "Truck", label: "Free Shipping", sublabel: "On all orders" },
+        { icon: "Shield", label: "2-Year Warranty", sublabel: "Full coverage" },
+        { icon: "Headphones", label: "24/7 Support", sublabel: "Always here to help" },
+        { icon: "RotateCcw", label: "30-Day Returns", sublabel: "No questions asked" },
+      ],
       layout: "row",
     },
     puckFields: {
@@ -313,10 +339,19 @@ export function registerCmsV1Blocks() {
     description: "Feature comparison table with highlight column support",
     renderComponent: ComparisonTableBlock,
     defaultProps: {
-      title: "",
-      columns: [],
-      rows: [],
-      highlightColumnKey: "",
+      title: "Compare Models",
+      columns: [
+        { key: "feature", label: "Feature" },
+        { key: "standard", label: "Standard" },
+        { key: "pro", label: "Pro" },
+      ],
+      rows: [
+        { label: "Temperature Range", feature: "", standard: "45-60\u00b0F", pro: "37-60\u00b0F" },
+        { label: "Material", feature: "", standard: "ABS Plastic", pro: "304 Stainless Steel" },
+        { label: "UV Sanitation", feature: "", standard: "No", pro: "Yes" },
+        { label: "WiFi Control", feature: "", standard: "No", pro: "Yes" },
+      ],
+      highlightColumnKey: "pro",
     },
     puckFields: {
       title: textField("Table Title"),
