@@ -1,15 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, Link, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
-import { Mail, Lock, User, ArrowLeft, Loader2, Ticket, PenTool, DollarSign, Users, Share2, Gift, ShieldAlert } from "lucide-react";
+import {
+  Mail, Lock, User, ArrowLeft, ArrowRight, Loader2, PenTool,
+  DollarSign, Users, Share2, Gift, ShieldAlert, Check, CheckCircle,
+  CreditCard, Code, Sparkles, ExternalLink, SkipForward, RefreshCw,
+  AlertCircle, Copy,
+} from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import logoImage from "@assets/powerplungelogo_1767907611722.png";
+
+type WizardStep = "welcome" | "account" | "agreement" | "payout" | "code" | "complete";
+
+const STEPS: WizardStep[] = ["welcome", "account", "agreement", "payout", "code", "complete"];
+
+const STEP_LABELS: Record<WizardStep, string> = {
+  welcome: "Welcome",
+  account: "Account Details",
+  agreement: "Agreement",
+  payout: "Payout Setup",
+  code: "Affiliate Code",
+  complete: "Complete",
+};
 
 interface SignupInfo {
   agreementText: string;
@@ -25,16 +45,52 @@ interface SignupInfo {
   } | null;
 }
 
+interface OnboardingMeta {
+  requiresStripeSetup: boolean;
+  hasPayoutAccount: boolean;
+  canCustomizeCode: boolean;
+  nextRecommendedStep: string;
+}
+
+interface ConnectStatus {
+  stripeConnectId: string | null;
+  stripeConnectStatus: string | null;
+  isConnected: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  chargesEnabled: boolean;
+  requirements?: {
+    currently_due?: string[];
+    eventually_due?: string[];
+  };
+}
+
+function trackEvent(event: string, data?: Record<string, any>) {
+  try {
+    console.info(`[affiliate-onboarding] ${event}`, data || {});
+    if (typeof window !== "undefined" && (window as any).__analytics?.track) {
+      (window as any).__analytics.track(event, data);
+    }
+  } catch {}
+}
+
 export default function BecomeAffiliate() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, login } = useCustomerAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  
-  const inviteCode = new URLSearchParams(searchString).get("code") || "";
-  
+
+  const params = new URLSearchParams(searchString);
+  const inviteCode = params.get("code") || "";
+  const connectReturn = params.get("connect");
+
+  const [currentStep, setCurrentStep] = useState<WizardStep>("welcome");
+  const [accountCreated, setAccountCreated] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [affiliateCode, setAffiliateCode] = useState("");
+  const [affiliateId, setAffiliateId] = useState("");
+  const [onboardingMeta, setOnboardingMeta] = useState<OnboardingMeta | null>(null);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -45,16 +101,37 @@ export default function BecomeAffiliate() {
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  const [customCode, setCustomCode] = useState("");
+  const [editingCode, setEditingCode] = useState(false);
+
   const { data: signupInfo, isLoading: infoLoading } = useQuery<SignupInfo>({
     queryKey: ["/api/affiliate-signup", inviteCode],
     queryFn: async () => {
-      const url = inviteCode 
+      const url = inviteCode
         ? `/api/affiliate-signup?code=${encodeURIComponent(inviteCode)}`
         : "/api/affiliate-signup";
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to load signup information");
       return res.json();
     },
+  });
+
+  const getAuthHeaders = useCallback((): Record<string, string> => {
+    const token = sessionToken || localStorage.getItem("customerSessionToken");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, [sessionToken]);
+
+  const { data: connectStatus, refetch: refetchConnectStatus } = useQuery<ConnectStatus>({
+    queryKey: ["/api/customer/affiliate-portal/connect/status"],
+    queryFn: async () => {
+      const res = await fetch("/api/customer/affiliate-portal/connect/status", {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch connect status");
+      return res.json();
+    },
+    enabled: accountCreated && (currentStep === "payout" || currentStep === "complete"),
+    refetchInterval: currentStep === "payout" ? 5000 : false,
   });
 
   useEffect(() => {
@@ -70,10 +147,23 @@ export default function BecomeAffiliate() {
   }, [signupInfo]);
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    if (!authLoading && isAuthenticated && connectReturn) {
+      setAccountCreated(true);
+      setCurrentStep("payout");
+      refetchConnectStatus();
+      const newUrl = window.location.pathname + (inviteCode ? `?code=${inviteCode}` : "");
+      window.history.replaceState({}, "", newUrl);
+      if (connectReturn === "complete") {
+        toast({ title: "Stripe Connect completed!", description: "Your payout account has been set up." });
+        trackEvent("stripe_connect_returned", { status: "complete" });
+      } else if (connectReturn === "refresh") {
+        toast({ title: "Stripe onboarding paused", description: "You can continue or complete it later." });
+        trackEvent("stripe_connect_returned", { status: "refresh" });
+      }
+    } else if (!authLoading && isAuthenticated && !accountCreated && !connectReturn) {
       setLocation("/affiliate-portal");
     }
-  }, [authLoading, isAuthenticated, setLocation]);
+  }, [authLoading, isAuthenticated, accountCreated, connectReturn, setLocation]);
 
   const signupMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -95,13 +185,21 @@ export default function BecomeAffiliate() {
     onSuccess: async (data) => {
       if (data.sessionToken) {
         localStorage.setItem("customerSessionToken", data.sessionToken);
+        setSessionToken(data.sessionToken);
       }
-      toast({
-        title: "Welcome to the Affiliate Program!",
-        description: "Your account has been created and you're now an affiliate.",
-      });
-      await login(formData.email, formData.password);
-      setLocation("/affiliate-portal");
+      setAffiliateCode(data.affiliate.code);
+      setAffiliateId(data.affiliate.id);
+      setCustomCode(data.affiliate.code);
+      if (data.onboarding) {
+        setOnboardingMeta(data.onboarding);
+      }
+      try {
+        await login(formData.email, formData.password);
+      } catch {}
+      setAccountCreated(true);
+      trackEvent("step_completed", { step: "agreement", affiliateId: data.affiliate.id });
+      setCurrentStep("payout");
+      trackEvent("step_viewed", { step: "payout" });
     },
     onError: (error: any) => {
       toast({
@@ -112,47 +210,135 @@ export default function BecomeAffiliate() {
     },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const startConnectMutation = useMutation({
+    mutationFn: async () => {
+      const returnPath = `/become-affiliate${inviteCode ? `?code=${inviteCode}` : ""}`;
+      const res = await fetch("/api/customer/affiliate-portal/connect/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ returnPath }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to start Stripe Connect");
+      }
+      return res.json();
+    },
+    onSuccess: (data: { url: string }) => {
+      trackEvent("stripe_connect_initiated", { affiliateId });
+      window.open(data.url, "_blank");
+      toast({
+        title: "Stripe onboarding opened",
+        description: "Complete the steps in the new tab. This page will update automatically.",
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Stripe setup error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateCodeMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const res = await fetch("/api/customer/affiliate-portal/code", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || "Failed to update code");
+      }
+      return res.json();
+    },
+    onSuccess: (data: { code: string }) => {
+      setAffiliateCode(data.code);
+      setCustomCode(data.code);
+      setEditingCode(false);
+      toast({ title: "Code updated!", description: `Your affiliate code is now ${data.code}` });
+      trackEvent("code_saved", { code: data.code, affiliateId });
+    },
+    onError: (error: any) => {
+      toast({ title: "Code update failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const goToStep = (step: WizardStep) => {
+    setCurrentStep(step);
+    trackEvent("step_viewed", { step });
+  };
+
+  const handleNext = () => {
+    const idx = STEPS.indexOf(currentStep);
+    if (idx < STEPS.length - 1) {
+      const nextStep = STEPS[idx + 1];
+      trackEvent("step_completed", { step: currentStep });
+      if (nextStep === "complete") {
+        trackEvent("onboarding_completed", { affiliateId, stripeConnected: connectStatus?.payoutsEnabled || false });
+      }
+      goToStep(nextStep);
+    }
+  };
+
+  const handleBack = () => {
+    const idx = STEPS.indexOf(currentStep);
+    if (idx > 0) {
+      if (accountCreated && STEPS[idx - 1] === "agreement") return;
+      if (accountCreated && STEPS[idx - 1] === "account") return;
+      if (accountCreated && STEPS[idx - 1] === "welcome") return;
+      goToStep(STEPS[idx - 1]);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match.",
-        variant: "destructive",
-      });
+      toast({ title: "Passwords don't match", description: "Please make sure your passwords match.", variant: "destructive" });
       return;
     }
-
     if (formData.password.length < 8) {
-      toast({
-        title: "Password too short",
-        description: "Password must be at least 8 characters.",
-        variant: "destructive",
-      });
+      toast({ title: "Password too short", description: "Password must be at least 8 characters.", variant: "destructive" });
       return;
     }
-
     if (!agreedToTerms) {
-      toast({
-        title: "Agreement required",
-        description: "Please agree to the affiliate program terms.",
-        variant: "destructive",
-      });
+      toast({ title: "Agreement required", description: "Please agree to the affiliate program terms.", variant: "destructive" });
       return;
     }
-
     if (!formData.signatureName.trim()) {
-      toast({
-        title: "Signature required",
-        description: "Please type your full legal name as signature.",
-        variant: "destructive",
-      });
+      toast({ title: "Signature required", description: "Please type your full legal name as signature.", variant: "destructive" });
       return;
     }
 
     signupMutation.mutate(formData);
   };
+
+  const canGoNext = (): boolean => {
+    switch (currentStep) {
+      case "welcome":
+        return true;
+      case "account":
+        return !!(formData.name && formData.email && formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && formData.password.length >= 8);
+      case "agreement":
+        return agreedToTerms && !!formData.signatureName.trim();
+      case "payout":
+        return true;
+      case "code":
+        return true;
+      case "complete":
+        return false;
+      default:
+        return false;
+    }
+  };
+
+  const currentStepIndex = STEPS.indexOf(currentStep);
+  const progressPercent = Math.round((currentStepIndex / (STEPS.length - 1)) * 100);
 
   if (authLoading || infoLoading) {
     return (
@@ -230,256 +416,673 @@ export default function BecomeAffiliate() {
     );
   }
 
+  const getStripeStatus = (): { label: string; color: string; icon: React.ReactNode } => {
+    if (!connectStatus || !connectStatus.isConnected) {
+      return { label: "Not Started", color: "bg-gray-500/20 text-gray-500 border-gray-500/30", icon: <CreditCard className="w-4 h-4" /> };
+    }
+    if (connectStatus.payoutsEnabled) {
+      return { label: "Connected", color: "bg-green-500/20 text-green-500 border-green-500/30", icon: <CheckCircle className="w-4 h-4" /> };
+    }
+    if (connectStatus.detailsSubmitted) {
+      return { label: "In Progress", color: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30", icon: <RefreshCw className="w-4 h-4" /> };
+    }
+    if (connectStatus.requirements?.currently_due?.length) {
+      return { label: "Needs Action", color: "bg-orange-500/20 text-orange-500 border-orange-500/30", icon: <AlertCircle className="w-4 h-4" /> };
+    }
+    return { label: "In Progress", color: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30", icon: <RefreshCw className="w-4 h-4" /> };
+  };
+
+  const renderChecklist = () => {
+    const items = [
+      { label: "Account created", done: accountCreated },
+      { label: "Agreement signed", done: accountCreated },
+      { label: "Payout setup", done: connectStatus?.payoutsEnabled || false, partial: connectStatus?.isConnected && !connectStatus?.payoutsEnabled },
+      { label: "Affiliate code reviewed", done: currentStepIndex >= STEPS.indexOf("complete") },
+    ];
+
+    return (
+      <div className="space-y-2" data-testid="checklist-progress">
+        {items.map((item, i) => (
+          <div key={i} className="flex items-center gap-2 text-sm">
+            {item.done ? (
+              <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+            ) : item.partial ? (
+              <RefreshCw className="w-4 h-4 text-yellow-500 shrink-0" />
+            ) : (
+              <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+            )}
+            <span className={item.done ? "text-foreground" : "text-muted-foreground"}>{item.label}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderStepIndicator = () => (
+    <div className="w-full max-w-2xl mx-auto mb-6">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-muted-foreground">
+          Step {currentStepIndex + 1} of {STEPS.length}
+        </span>
+        <span className="text-sm font-medium text-primary">{STEP_LABELS[currentStep]}</span>
+      </div>
+      <Progress value={progressPercent} className="h-2" data-testid="progress-wizard" />
+      <div className="flex justify-between mt-2">
+        {STEPS.map((step, i) => {
+          const isActive = i === currentStepIndex;
+          const isCompleted = i < currentStepIndex;
+          const isPostSignup = i >= STEPS.indexOf("payout");
+          const isPreSignup = i < STEPS.indexOf("payout");
+          const isClickable = (isCompleted && isPreSignup && !accountCreated) || (accountCreated && isPostSignup && isCompleted);
+          return (
+            <button
+              key={step}
+              onClick={() => isClickable && goToStep(step)}
+              disabled={!isClickable}
+              className={`text-xs px-1 transition-colors ${
+                isActive ? "text-primary font-semibold" :
+                isCompleted ? "text-green-500 cursor-pointer hover:text-green-600" :
+                "text-muted-foreground/50"
+              } ${isClickable && !isActive ? "cursor-pointer hover:text-primary" : ""}`}
+              data-testid={`step-indicator-${step}`}
+            >
+              {isCompleted ? <Check className="w-3 h-3 inline mr-0.5" /> : null}
+              <span className="hidden sm:inline">{STEP_LABELS[step]}</span>
+              <span className="sm:hidden">{i + 1}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderWelcomeStep = () => (
+    <div className="w-full max-w-2xl space-y-8">
+      <div className="text-center space-y-4">
+        <div className="flex justify-center">
+          <img src={logoImage} alt="Power Plunge" className="h-16" data-testid="img-logo" />
+        </div>
+        <h1 className="text-3xl md:text-4xl font-bold" data-testid="text-title">
+          Join Our Affiliate Program
+        </h1>
+        <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+          Earn 10% commission on every sale you refer. Share your unique link and get paid for promoting Power Plunge products.
+        </p>
+        {signupInfo?.invite?.targetName && (
+          <p className="text-primary font-medium" data-testid="text-welcome-name">
+            Welcome, {signupInfo.invite.targetName}! You've been personally invited.
+          </p>
+        )}
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        <Card className="text-center">
+          <CardHeader>
+            <div className="flex justify-center mb-2">
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Share2 className="w-6 h-6 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-lg">Share Your Link</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Get a unique affiliate link and QR code to share with your audience
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="text-center">
+          <CardHeader>
+            <div className="flex justify-center mb-2">
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Users className="w-6 h-6 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-lg">Refer Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              When people click your link and make a purchase, you earn a commission
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="text-center">
+          <CardHeader>
+            <div className="flex justify-center mb-2">
+              <div className="p-3 bg-primary/10 rounded-full">
+                <DollarSign className="w-6 h-6 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-lg">Get Paid</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Request payouts via Stripe Connect once you reach the minimum threshold
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-center">
+        <Button
+          size="lg"
+          onClick={handleNext}
+          className="px-8 gap-2"
+          data-testid="button-start-signup"
+        >
+          Get Started
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      </div>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link href="/login" className="text-primary hover:underline">
+          Sign in
+        </Link>{" "}
+        and join from your account dashboard.
+      </p>
+    </div>
+  );
+
+  const renderAccountStep = () => (
+    <Card className="w-full max-w-lg" data-testid="card-account-step">
+      <CardHeader className="text-center space-y-2">
+        <div className="flex justify-center">
+          <div className="p-3 bg-primary/10 rounded-full">
+            <User className="w-6 h-6 text-primary" />
+          </div>
+        </div>
+        <CardTitle className="text-2xl font-bold">Create Your Account</CardTitle>
+        <CardDescription>Enter your details to get started</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Full name</Label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              id="name"
+              type="text"
+              placeholder="John Doe"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="pl-10"
+              required
+              data-testid="input-name"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email address</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="pl-10"
+              required
+              disabled={!!signupInfo?.invite?.targetEmail}
+              data-testid="input-email"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="password"
+                type="password"
+                placeholder="Min 8 chars"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="pl-10"
+                required
+                data-testid="input-password"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="Re-enter"
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              required
+              data-testid="input-confirm-password"
+            />
+          </div>
+        </div>
+
+        {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+          <p className="text-sm text-destructive" data-testid="text-password-mismatch">Passwords don't match</p>
+        )}
+        {formData.password && formData.password.length > 0 && formData.password.length < 8 && (
+          <p className="text-sm text-destructive">Password must be at least 8 characters</p>
+        )}
+
+        <div className="flex gap-3 pt-4">
+          <Button type="button" variant="outline" onClick={handleBack} className="flex-1 gap-2" data-testid="button-back-account">
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+          <Button
+            onClick={handleNext}
+            disabled={!canGoNext()}
+            className="flex-1 gap-2"
+            data-testid="button-next-account"
+          >
+            Next
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderAgreementStep = () => (
+    <Card className="w-full max-w-lg" data-testid="card-agreement-step">
+      <CardHeader className="text-center space-y-2">
+        <div className="flex justify-center">
+          <div className="p-3 bg-primary/10 rounded-full">
+            <PenTool className="w-6 h-6 text-primary" />
+          </div>
+        </div>
+        <CardTitle className="text-2xl font-bold">Affiliate Agreement</CardTitle>
+        <CardDescription>Review and sign the affiliate program terms</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSignup} className="space-y-4">
+          <div className="p-4 bg-muted rounded-lg max-h-48 overflow-y-auto text-sm whitespace-pre-wrap" data-testid="text-agreement">
+            {signupInfo?.agreementText || "Loading agreement..."}
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="agree"
+              checked={agreedToTerms}
+              onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+              data-testid="checkbox-agree"
+            />
+            <label htmlFor="agree" className="text-sm cursor-pointer">
+              I have read and agree to the affiliate program terms and conditions above.
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="signature">E-Signature (Type your full legal name)</Label>
+            <Input
+              id="signature"
+              placeholder="Your full legal name"
+              value={formData.signatureName}
+              onChange={(e) => setFormData({ ...formData, signatureName: e.target.value })}
+              className="font-signature text-lg"
+              data-testid="input-signature"
+            />
+            <p className="text-xs text-muted-foreground">
+              By typing your name above, you are providing your electronic signature and agreeing to the terms.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={handleBack} className="flex-1 gap-2" data-testid="button-back-agreement">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <Button
+              type="submit"
+              disabled={!canGoNext() || signupMutation.isPending}
+              className="flex-1 gap-2"
+              data-testid="button-submit-agreement"
+            >
+              {signupMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                <>
+                  Create Account
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+
+  const renderPayoutStep = () => {
+    const stripeStatus = getStripeStatus();
+
+    return (
+      <Card className="w-full max-w-lg" data-testid="card-payout-step">
+        <CardHeader className="text-center space-y-2">
+          <div className="flex justify-center">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <CreditCard className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold">Set Up Payouts</CardTitle>
+          <CardDescription>
+            Connect your Stripe account to receive commission payouts directly to your bank
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="p-4 rounded-lg border space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">Stripe Connect</span>
+              <Badge className={stripeStatus.color} data-testid="badge-stripe-status">
+                {stripeStatus.icon}
+                <span className="ml-1">{stripeStatus.label}</span>
+              </Badge>
+            </div>
+
+            {connectStatus?.payoutsEnabled ? (
+              <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-500/10 p-3 rounded-lg" data-testid="text-payouts-enabled">
+                <CheckCircle className="w-5 h-5 shrink-0" />
+                <span>Your payout account is fully set up and ready to receive commissions!</span>
+              </div>
+            ) : connectStatus?.isConnected && !connectStatus?.payoutsEnabled ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-yellow-600 bg-yellow-50 dark:bg-yellow-500/10 p-3 rounded-lg">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span>Your Stripe account is connected but needs additional information before payouts can be enabled.</span>
+                </div>
+                {connectStatus.requirements?.currently_due && connectStatus.requirements.currently_due.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    <p className="font-medium mb-1">Requirements due:</p>
+                    <ul className="list-disc list-inside">
+                      {connectStatus.requirements.currently_due.map((req, i) => (
+                        <li key={i}>{req.replace(/_/g, " ")}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <Button
+                  onClick={() => startConnectMutation.mutate()}
+                  disabled={startConnectMutation.isPending}
+                  variant="outline"
+                  className="w-full gap-2"
+                  data-testid="button-continue-stripe"
+                >
+                  {startConnectMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ExternalLink className="w-4 h-4" />
+                  )}
+                  Continue Stripe Setup
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Stripe Connect lets you receive payouts directly to your bank account. Setup takes about 5 minutes.
+                </p>
+                <Button
+                  onClick={() => startConnectMutation.mutate()}
+                  disabled={startConnectMutation.isPending}
+                  className="w-full gap-2"
+                  data-testid="button-start-stripe"
+                >
+                  {startConnectMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-4 h-4" />
+                  )}
+                  Connect with Stripe
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                trackEvent("stripe_skipped", { affiliateId });
+                handleNext();
+              }}
+              className="flex-1 gap-2"
+              data-testid="button-skip-stripe"
+            >
+              <SkipForward className="w-4 h-4" />
+              Skip for Now
+            </Button>
+            <Button
+              onClick={handleNext}
+              className="flex-1 gap-2"
+              data-testid="button-next-payout"
+            >
+              Next
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <p className="text-xs text-center text-muted-foreground">
+            You can always set up or update Stripe Connect later from your affiliate portal.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderCodeStep = () => {
+    const referralLink = `${window.location.origin}?ref=${affiliateCode}`;
+
+    return (
+      <Card className="w-full max-w-lg" data-testid="card-code-step">
+        <CardHeader className="text-center space-y-2">
+          <div className="flex justify-center">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <Code className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold">Your Affiliate Code</CardTitle>
+          <CardDescription>
+            Review your unique referral code or set a custom one
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="p-4 rounded-lg border space-y-4">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-2">Your current code</p>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-2xl font-bold font-mono tracking-wider" data-testid="text-affiliate-code">{affiliateCode}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(referralLink);
+                    toast({ title: "Copied!", description: "Referral link copied to clipboard." });
+                  }}
+                  data-testid="button-copy-code"
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 break-all">{referralLink}</p>
+            </div>
+
+            {editingCode ? (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="customCode">Custom code (3-20 characters, letters & numbers only)</Label>
+                  <Input
+                    id="customCode"
+                    value={customCode}
+                    onChange={(e) => setCustomCode(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
+                    placeholder="MYCODE"
+                    maxLength={20}
+                    className="font-mono text-center text-lg uppercase"
+                    data-testid="input-custom-code"
+                  />
+                  {customCode.length > 0 && customCode.length < 3 && (
+                    <p className="text-xs text-destructive">Code must be at least 3 characters</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => { setEditingCode(false); setCustomCode(affiliateCode); }}
+                    className="flex-1"
+                    data-testid="button-cancel-code"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => updateCodeMutation.mutate(customCode)}
+                    disabled={customCode.length < 3 || customCode.length > 20 || updateCodeMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-save-code"
+                  >
+                    {updateCodeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Code"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => { setEditingCode(true); setCustomCode(affiliateCode); }}
+                className="w-full gap-2"
+                data-testid="button-customize-code"
+              >
+                <Sparkles className="w-4 h-4" />
+                Customize Your Code
+              </Button>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={handleBack} className="flex-1 gap-2" data-testid="button-back-code">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <Button
+              onClick={() => {
+                trackEvent("code_step_completed", { code: affiliateCode, customized: affiliateCode !== customCode, affiliateId });
+                handleNext();
+              }}
+              className="flex-1 gap-2"
+              data-testid="button-next-code"
+            >
+              {editingCode ? "Skip & Continue" : "Next"}
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <p className="text-xs text-center text-muted-foreground">
+            You can change your code anytime from your affiliate portal.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderCompleteStep = () => {
+    const referralLink = `${window.location.origin}?ref=${affiliateCode}`;
+
+    return (
+      <Card className="w-full max-w-lg" data-testid="card-complete-step">
+        <CardHeader className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="p-4 bg-green-500/10 rounded-full">
+              <CheckCircle className="w-10 h-10 text-green-500" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold" data-testid="text-complete-title">You're All Set!</CardTitle>
+          <CardDescription>
+            Your affiliate account is ready. Start sharing your link and earning commissions!
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {renderChecklist()}
+
+          <div className="p-4 bg-muted rounded-lg space-y-2">
+            <p className="text-sm font-medium">Your referral link</p>
+            <div className="flex gap-2">
+              <Input
+                value={referralLink}
+                readOnly
+                className="font-mono text-sm"
+                data-testid="input-referral-link"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(referralLink);
+                  toast({ title: "Copied!", description: "Referral link copied to clipboard." });
+                }}
+                data-testid="button-copy-link-complete"
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {!connectStatus?.payoutsEnabled && (
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-500/10 rounded-lg border border-yellow-200 dark:border-yellow-500/20">
+              <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                Don't forget to set up Stripe Connect in your portal to receive payouts!
+              </p>
+            </div>
+          )}
+
+          <Button
+            onClick={() => setLocation("/affiliate-portal")}
+            className="w-full gap-2"
+            size="lg"
+            data-testid="button-go-to-portal"
+          >
+            Go to Affiliate Portal
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case "welcome": return renderWelcomeStep();
+      case "account": return renderAccountStep();
+      case "agreement": return renderAgreementStep();
+      case "payout": return renderPayoutStep();
+      case "code": return renderCodeStep();
+      case "complete": return renderCompleteStep();
+      default: return renderWelcomeStep();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
-      <nav className="p-4">
+      <nav className="p-4 flex items-center justify-between">
         <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span>Back to store</span>
         </Link>
+        {accountCreated && currentStep !== "complete" && (
+          <div className="hidden md:block">{renderChecklist()}</div>
+        )}
       </nav>
 
       <div className="flex-1 flex flex-col items-center justify-center p-4">
-        {!showForm ? (
-          <div className="w-full max-w-2xl space-y-8">
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <img src={logoImage} alt="Power Plunge" className="h-16" data-testid="img-logo" />
-              </div>
-              <h1 className="text-3xl md:text-4xl font-bold" data-testid="text-title">
-                Join Our Affiliate Program
-              </h1>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-                Earn 10% commission on every sale you refer. Share your unique link and get paid for promoting Power Plunge products.
-              </p>
-              {signupInfo?.invite?.targetName && (
-                <p className="text-primary font-medium">
-                  Welcome, {signupInfo.invite.targetName}! You've been personally invited.
-                </p>
-              )}
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="flex justify-center mb-2">
-                    <div className="p-3 bg-primary/10 rounded-full">
-                      <Share2 className="w-6 h-6 text-primary" />
-                    </div>
-                  </div>
-                  <CardTitle className="text-lg">Share Your Link</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Get a unique affiliate link and QR code to share with your audience
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="flex justify-center mb-2">
-                    <div className="p-3 bg-primary/10 rounded-full">
-                      <Users className="w-6 h-6 text-primary" />
-                    </div>
-                  </div>
-                  <CardTitle className="text-lg">Refer Customers</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    When people click your link and make a purchase, you earn a commission
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="flex justify-center mb-2">
-                    <div className="p-3 bg-primary/10 rounded-full">
-                      <DollarSign className="w-6 h-6 text-primary" />
-                    </div>
-                  </div>
-                  <CardTitle className="text-lg">Get Paid</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Request payouts via Stripe Connect once you reach the minimum threshold
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="flex justify-center">
-              <Button 
-                size="lg" 
-                onClick={() => setShowForm(true)}
-                className="px-8"
-                data-testid="button-start-signup"
-              >
-                Apply Now
-              </Button>
-            </div>
-
-            <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link href="/login" className="text-primary hover:underline">
-                Sign in
-              </Link>{" "}
-              and join from your account dashboard.
-            </p>
-          </div>
-        ) : (
-          <Card className="w-full max-w-lg" data-testid="card-signup-form">
-            <CardHeader className="text-center space-y-4">
-              <div className="flex justify-center">
-                <img src={logoImage} alt="Power Plunge" className="h-12" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl font-bold" data-testid="text-form-title">
-                  Become an Affiliate
-                </CardTitle>
-                <CardDescription className="mt-2">
-                  Create your account and join our affiliate program
-                </CardDescription>
-              </div>
-            </CardHeader>
-
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="pl-10"
-                      required
-                      data-testid="input-name"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email address</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="pl-10"
-                      required
-                      disabled={!!signupInfo?.invite?.targetEmail}
-                      data-testid="input-email"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="pl-10"
-                        required
-                        data-testid="input-password"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      required
-                      data-testid="input-confirm-password"
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t pt-4 space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <PenTool className="w-4 h-4" />
-                    Affiliate Agreement
-                  </h3>
-                  
-                  <div className="p-4 bg-muted rounded-lg max-h-48 overflow-y-auto text-sm whitespace-pre-wrap" data-testid="text-agreement">
-                    {signupInfo?.agreementText || "Loading agreement..."}
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="agree"
-                      checked={agreedToTerms}
-                      onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                      data-testid="checkbox-agree"
-                    />
-                    <label htmlFor="agree" className="text-sm cursor-pointer">
-                      I have read and agree to the affiliate program terms and conditions above.
-                    </label>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signature">E-Signature (Type your full legal name)</Label>
-                    <Input
-                      id="signature"
-                      placeholder="Your full legal name"
-                      value={formData.signatureName}
-                      onChange={(e) => setFormData({ ...formData, signatureName: e.target.value })}
-                      className="font-signature text-lg"
-                      data-testid="input-signature"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      By typing your name above, you are providing your electronic signature and agreeing to the terms of this agreement.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setShowForm(false)}
-                    className="flex-1"
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={!agreedToTerms || !formData.signatureName.trim() || signupMutation.isPending}
-                    className="flex-1"
-                    data-testid="button-submit"
-                  >
-                    {signupMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating Account...
-                      </>
-                    ) : (
-                      "Create Account & Join"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+        {currentStep !== "welcome" && renderStepIndicator()}
+        {renderCurrentStep()}
       </div>
     </div>
   );
