@@ -266,6 +266,13 @@ export const integrationSettings = pgTable("integration_settings", {
   xRefreshTokenEncrypted: text("x_refresh_token_encrypted"),
   xLastSyncAt: timestamp("x_last_sync_at"),
   xLastSyncStatus: text("x_last_sync_status").default("never"),
+  // Mailchimp integration
+  mailchimpConfigured: boolean("mailchimp_configured").default(false),
+  mailchimpApiKeyEncrypted: text("mailchimp_api_key_encrypted"),
+  mailchimpServerPrefix: text("mailchimp_server_prefix"),
+  mailchimpAudienceId: text("mailchimp_audience_id"),
+  mailchimpLastSyncAt: timestamp("mailchimp_last_sync_at"),
+  mailchimpLastSyncStatus: text("mailchimp_last_sync_status").default("never"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   updatedByUserId: varchar("updated_by_user_id"),
 });
