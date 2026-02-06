@@ -43,7 +43,7 @@ interface OrderData {
 }
 
 function formatCurrency(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
+  return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
 function formatDate(dateString: string): string {
