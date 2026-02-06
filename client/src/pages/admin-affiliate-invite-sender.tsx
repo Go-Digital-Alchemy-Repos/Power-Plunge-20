@@ -9,13 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/use-admin";
 import AdminNav from "@/components/admin/AdminNav";
-import { Mail, Copy, Check, Loader2, Link2, UserPlus, Share2, MessageSquare } from "lucide-react";
+import { Mail, Copy, Check, Loader2, Link2, UserPlus, Share2, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 
 interface InviteResponse {
   invite: {
     id: string;
     inviteCode: string;
-    targetEmail: string;
+    targetEmail: string | null;
     targetName: string | null;
     expiresAt: string | null;
     maxUses: number;
@@ -40,6 +40,7 @@ export default function AdminAffiliateInviteSender() {
 
   const [lastResult, setLastResult] = useState<InviteResponse | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const sendInviteMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -48,7 +49,7 @@ export default function AdminAffiliateInviteSender() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          targetEmail: data.targetEmail.trim(),
+          targetEmail: data.targetEmail.trim() || undefined,
           targetName: data.targetName.trim() || undefined,
           maxUses: parseInt(data.maxUses) || 1,
           expiresInDays: parseInt(data.expiresInDays) || undefined,
@@ -56,7 +57,7 @@ export default function AdminAffiliateInviteSender() {
         }),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.message || "Failed to send invite");
+      if (!res.ok) throw new Error(result.message || "Failed to create invite");
       return result as InviteResponse;
     },
     onSuccess: async (data) => {
@@ -65,15 +66,12 @@ export default function AdminAffiliateInviteSender() {
       if (data.emailSent) {
         toast({
           title: "Invite Sent!",
-          description: `Invite email sent to ${formData.targetEmail}`,
+          description: `Invite email sent to ${data.invite.targetEmail}`,
         });
       } else {
         toast({
           title: "Invite Created",
-          description: data.emailError
-            ? `Invite created but email failed: ${data.emailError}. You can share the link manually.`
-            : "Invite created. Share the link below.",
-          variant: data.emailError ? "destructive" : "default",
+          description: "Share the link using the options below.",
         });
       }
 
@@ -83,7 +81,7 @@ export default function AdminAffiliateInviteSender() {
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to send invite",
+        title: "Failed to create invite",
         description: error.message,
         variant: "destructive",
       });
@@ -93,7 +91,7 @@ export default function AdminAffiliateInviteSender() {
   const triggerNativeShare = async (data: InviteResponse) => {
     const shareText = data.invite.targetName
       ? `Hi ${data.invite.targetName}, here's your private affiliate signup link for Power Plunge: ${data.inviteUrl}`
-      : `Here's your private affiliate signup link for Power Plunge: ${data.inviteUrl}`;
+      : `Here's your private Power Plunge affiliate signup link: ${data.inviteUrl}`;
 
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
@@ -119,7 +117,6 @@ export default function AdminAffiliateInviteSender() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.targetEmail.trim()) return;
     sendInviteMutation.mutate(formData);
   };
 
@@ -191,89 +188,16 @@ export default function AdminAffiliateInviteSender() {
           </div>
           <h1 className="text-2xl font-bold" data-testid="text-page-title">Invite Affiliate</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Send a private invite to join the affiliate program
+            Create an invite link and share it via text, email, or any app
           </p>
         </div>
 
         <Card data-testid="card-invite-form">
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="targetEmail">Email address *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="targetEmail"
-                    type="email"
-                    placeholder="affiliate@example.com"
-                    value={formData.targetEmail}
-                    onChange={(e) => setFormData({ ...formData, targetEmail: e.target.value })}
-                    className="pl-11 h-12 text-base"
-                    required
-                    autoComplete="email"
-                    data-testid="input-target-email"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="targetName">Name (optional)</Label>
-                <Input
-                  id="targetName"
-                  type="text"
-                  placeholder="Jane Smith"
-                  value={formData.targetName}
-                  onChange={(e) => setFormData({ ...formData, targetName: e.target.value })}
-                  className="h-12 text-base"
-                  data-testid="input-target-name"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxUses">Max uses</Label>
-                  <Input
-                    id="maxUses"
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={formData.maxUses}
-                    onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
-                    className="h-12 text-base"
-                    data-testid="input-max-uses"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expiresInDays">Expires in (days)</Label>
-                  <Input
-                    id="expiresInDays"
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={formData.expiresInDays}
-                    onChange={(e) => setFormData({ ...formData, expiresInDays: e.target.value })}
-                    className="h-12 text-base"
-                    data-testid="input-expires-days"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (optional)</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Internal notes about this invite..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={2}
-                  className="text-base"
-                  data-testid="input-notes"
-                />
-              </div>
-
               <Button
                 type="submit"
-                disabled={sendInviteMutation.isPending || !formData.targetEmail.trim()}
+                disabled={sendInviteMutation.isPending}
                 className="w-full h-14 text-base font-semibold"
                 data-testid="button-send-invite"
               >
@@ -291,9 +215,98 @@ export default function AdminAffiliateInviteSender() {
               </Button>
 
               {supportsNativeShare && (
-                <p className="text-xs text-center text-muted-foreground">
-                  Tap Share to send via Messages, Mail, WhatsApp, etc.
+                <p className="text-xs text-center text-muted-foreground -mt-2">
+                  Opens Messages, Mail, WhatsApp, or other apps to send the invite
                 </p>
+              )}
+
+              <button
+                type="button"
+                className="flex items-center justify-center gap-2 w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                data-testid="button-toggle-options"
+              >
+                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {showAdvanced ? "Hide options" : "Add email, name, or other options"}
+              </button>
+
+              {showAdvanced && (
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <div className="space-y-2">
+                    <Label htmlFor="targetEmail">Email address (optional)</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="targetEmail"
+                        type="email"
+                        placeholder="affiliate@example.com"
+                        value={formData.targetEmail}
+                        onChange={(e) => setFormData({ ...formData, targetEmail: e.target.value })}
+                        className="pl-11 h-12 text-base"
+                        autoComplete="email"
+                        data-testid="input-target-email"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      If provided, the invite will be locked to this email and an email will also be sent automatically.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="targetName">Name (optional)</Label>
+                    <Input
+                      id="targetName"
+                      type="text"
+                      placeholder="Jane Smith"
+                      value={formData.targetName}
+                      onChange={(e) => setFormData({ ...formData, targetName: e.target.value })}
+                      className="h-12 text-base"
+                      data-testid="input-target-name"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="maxUses">Max uses</Label>
+                      <Input
+                        id="maxUses"
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={formData.maxUses}
+                        onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
+                        className="h-12 text-base"
+                        data-testid="input-max-uses"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="expiresInDays">Expires in (days)</Label>
+                      <Input
+                        id="expiresInDays"
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={formData.expiresInDays}
+                        onChange={(e) => setFormData({ ...formData, expiresInDays: e.target.value })}
+                        className="h-12 text-base"
+                        data-testid="input-expires-days"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Notes (optional)</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Internal notes about this invite..."
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      rows={2}
+                      className="text-base"
+                      data-testid="input-notes"
+                    />
+                  </div>
+                </div>
               )}
             </form>
           </CardContent>
@@ -309,7 +322,9 @@ export default function AdminAffiliateInviteSender() {
               <CardDescription>
                 {lastResult.emailSent
                   ? `Email sent to ${lastResult.invite.targetEmail}`
-                  : "Share the link below manually"}
+                  : lastResult.invite.targetEmail
+                    ? "Share the link below or use the share options"
+                    : "Share this link with anyone you'd like to invite"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -340,7 +355,7 @@ export default function AdminAffiliateInviteSender() {
                     data-testid="button-share-again"
                   >
                     <Share2 className="w-5 h-5 mr-2" />
-                    Share Again
+                    Share via Messages, WhatsApp, etc.
                   </Button>
                 )}
 
@@ -378,13 +393,19 @@ export default function AdminAffiliateInviteSender() {
                 </Button>
               </div>
 
-              {!lastResult.emailSent && lastResult.emailError && (
+              {!lastResult.emailSent && lastResult.emailError && lastResult.invite.targetEmail && (
                 <p className="text-sm text-amber-600" data-testid="text-email-warning">
                   Email not sent: {lastResult.emailError}
                 </p>
               )}
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>Code: {lastResult.invite.inviteCode}</p>
+                {lastResult.invite.targetEmail && (
+                  <p>Locked to: {lastResult.invite.targetEmail}</p>
+                )}
+                {!lastResult.invite.targetEmail && (
+                  <p>Open invite — anyone with this link can sign up</p>
+                )}
                 {lastResult.invite.expiresAt && (
                   <p>Expires: {new Date(lastResult.invite.expiresAt).toLocaleDateString()}</p>
                 )}

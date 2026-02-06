@@ -2698,7 +2698,7 @@ export async function registerRoutes(
   app.post("/api/admin/affiliate-invites/send", requireFullAccess, async (req: any, res) => {
     try {
       const sendInviteSchema = z.object({
-        targetEmail: z.string().email("Valid email is required"),
+        targetEmail: z.string().email("Valid email is required").optional().or(z.literal("")),
         targetName: z.string().optional(),
         expiresAt: z.string().optional(),
         expiresInDays: z.number().positive().optional(),
@@ -2715,6 +2715,7 @@ export async function registerRoutes(
       }
 
       const { targetEmail, targetName, expiresAt, expiresInDays, maxUses, notes } = parseResult.data;
+      const normalizedEmail = targetEmail?.trim().toLowerCase() || null;
 
       let expirationDate: Date | null = null;
       if (expiresAt) {
@@ -2732,7 +2733,7 @@ export async function registerRoutes(
 
       const invite = await storage.createAffiliateInvite({
         inviteCode,
-        targetEmail: targetEmail.toLowerCase(),
+        targetEmail: normalizedEmail,
         targetName: targetName || null,
         createdByAdminId: req.adminUser?.id || null,
         expiresAt: expirationDate,
@@ -2745,13 +2746,14 @@ export async function registerRoutes(
         : process.env.BASE_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
       const inviteUrl = `${baseUrl}/become-affiliate?code=${inviteCode}`;
 
-      let emailResult = { success: false, error: "Email not attempted" } as any;
-      try {
-        const recipientName = targetName || targetEmail.split("@")[0];
-        emailResult = await emailService.sendEmail({
-          to: targetEmail,
-          subject: `${recipientName}, you're invited to partner with Power Plunge`,
-          html: `<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+      let emailResult = { success: false, error: "No email address provided — share the link manually" } as any;
+      if (normalizedEmail) {
+        try {
+          const recipientName = targetName || normalizedEmail.split("@")[0];
+          emailResult = await emailService.sendEmail({
+            to: normalizedEmail,
+            subject: `${recipientName}, you're invited to partner with Power Plunge`,
+            html: `<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
 <p>Hi ${recipientName},</p>
 
 <p>I wanted to reach out personally — we'd love to have you as a Power Plunge affiliate partner.</p>
@@ -2765,11 +2767,12 @@ ${expirationDate ? `<p style="color: #666; font-size: 13px;">This link expires o
 
 <p>Thanks,<br>The Power Plunge Team</p>
 </div>`,
-          text: `Hi ${recipientName},\n\nI wanted to reach out personally — we'd love to have you as a Power Plunge affiliate partner.\n\nYou can sign up and get started here:\n${inviteUrl}\n\n${expirationDate ? `This link expires on ${expirationDate.toLocaleDateString()}.\n\n` : ""}Let us know if you have any questions.\n\nThanks,\nThe Power Plunge Team`,
-        });
-      } catch (emailError: any) {
-        console.error("Failed to send affiliate invite email:", emailError);
-        emailResult = { success: false, error: emailError.message || "Failed to send email" };
+            text: `Hi ${recipientName},\n\nI wanted to reach out personally — we'd love to have you as a Power Plunge affiliate partner.\n\nYou can sign up and get started here:\n${inviteUrl}\n\n${expirationDate ? `This link expires on ${expirationDate.toLocaleDateString()}.\n\n` : ""}Let us know if you have any questions.\n\nThanks,\nThe Power Plunge Team`,
+          });
+        } catch (emailError: any) {
+          console.error("Failed to send affiliate invite email:", emailError);
+          emailResult = { success: false, error: emailError.message || "Failed to send email" };
+        }
       }
 
       const adminEmail = req.adminUser?.email || req.session?.adminEmail || "admin";
@@ -2780,7 +2783,7 @@ ${expirationDate ? `<p style="color: #666; font-size: 13px;">This link expires o
         entityId: invite.id,
         metadata: {
           inviteCode,
-          targetEmail,
+          targetEmail: normalizedEmail,
           targetName,
           emailSent: emailResult.success,
           emailError: emailResult.error || null,
