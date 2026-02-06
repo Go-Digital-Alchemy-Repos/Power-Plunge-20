@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Section, Container } from "@/cms/layout";
+import { Heading, Text } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 export default function CallToActionBlock({ data, settings }: BlockRenderProps) {
@@ -26,13 +27,13 @@ export default function CallToActionBlock({ data, settings }: BlockRenderProps) 
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="font-display text-4xl md:text-5xl font-bold mb-6">
+            <Heading level={2} align="center" className="font-display text-4xl md:text-5xl mb-6">
               {headline}
-            </h2>
+            </Heading>
             {subheadline && (
-              <p className="pp-text-muted text-lg mb-10 max-w-2xl mx-auto">
+              <Text size="lg" muted align="center" className="mb-10 max-w-2xl mx-auto">
                 {subheadline}
-              </p>
+              </Text>
             )}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {primaryCtaText && (

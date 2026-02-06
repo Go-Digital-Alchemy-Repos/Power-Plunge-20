@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Section, Container } from "@/cms/layout";
+import { Heading, Text } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 export default function FAQBlock({ data, settings }: BlockRenderProps) {
@@ -25,9 +26,9 @@ export default function FAQBlock({ data, settings }: BlockRenderProps) {
     <Section className={settings?.className} data-testid="block-faq">
       <Container width="narrow">
         {title && (
-          <h2 className="text-3xl font-bold text-white mb-8 text-center">
+          <Heading level={2} align="center" className="mb-8">
             {title}
-          </h2>
+          </Heading>
         )}
         <div className="space-y-4">
           {items.map(
@@ -58,8 +59,8 @@ export default function FAQBlock({ data, settings }: BlockRenderProps) {
                     )}
                   </button>
                   {isOpen && (
-                    <div className="p-4 pp-text-muted bg-slate-900/50">
-                      {answer}
+                    <div className="p-4 bg-slate-900/50">
+                      <Text muted prose>{answer}</Text>
                     </div>
                   )}
                 </div>

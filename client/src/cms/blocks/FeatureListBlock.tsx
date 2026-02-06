@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getIconWithFallback } from "@/lib/iconUtils";
 import { Section, Container } from "@/cms/layout";
+import { Heading, Text } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 const gridColsMap: Record<number, string> = {
@@ -19,9 +20,9 @@ export default function FeatureListBlock({ data, settings }: BlockRenderProps) {
     <Section className={settings?.className} data-testid="block-featurelist">
       <Container>
         {title && (
-          <h2 className="text-3xl font-bold text-white mb-8 text-center">
+          <Heading level={2} align="center" className="mb-8">
             {title}
-          </h2>
+          </Heading>
         )}
         <div
           className={cn(
@@ -41,8 +42,8 @@ export default function FeatureListBlock({ data, settings }: BlockRenderProps) {
                     <Icon className="w-6 h-6 text-cyan-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white mb-2">{f.title}</h3>
-                    <p className="pp-text-muted">{f.description}</p>
+                    <Heading level={3} className="mb-2">{f.title}</Heading>
+                    <Text muted>{f.description}</Text>
                   </div>
                 </div>
               );

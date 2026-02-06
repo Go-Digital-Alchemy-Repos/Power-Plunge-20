@@ -4,6 +4,7 @@ import { Check, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Section, Container } from "@/cms/layout";
+import { Heading, Text } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 interface Product {
@@ -68,9 +69,9 @@ export default function ProductHighlightBlock({
     return (
       <Section className={settings?.className} data-testid="block-producthighlight">
         <Container>
-          <div className="text-center pp-text-muted py-12">
+          <Text muted align="center" className="py-12">
             {productId ? "Product not found" : "No product ID specified"}
-          </div>
+          </Text>
         </Container>
       </Section>
     );
@@ -151,29 +152,29 @@ export default function ProductHighlightBlock({
             className="space-y-6"
           >
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-3">
+              <Heading level={2} className="mb-3">
                 {product.name}
-              </h2>
+              </Heading>
               {product.tagline && (
-                <p className="text-xl pp-text-muted mb-4">
+                <Text size="xl" muted className="mb-4">
                   {product.tagline}
-                </p>
+                </Text>
               )}
               {product.description && (
-                <p className="pp-text-muted leading-relaxed">
+                <Text muted prose>
                   {product.description}
-                </p>
+                </Text>
               )}
             </div>
 
             {bullets.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-lg font-semibold">Highlights</h4>
+                <Heading level={3} className="text-lg">Highlights</Heading>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {bullets.map((bullet, i) => (
                     <div key={i} className="flex items-center gap-3 text-sm">
                       <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                      <span className="pp-text-muted">{bullet}</span>
+                      <Text size="sm" muted className="!mb-0">{bullet}</Text>
                     </div>
                   ))}
                 </div>
@@ -182,7 +183,7 @@ export default function ProductHighlightBlock({
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-4 border-t pp-border-subtle">
               <div>
-                <p className="text-sm pp-text-muted mb-1">Price</p>
+                <Text size="sm" muted className="mb-1">Price</Text>
                 {isOnSale && saleDisplayPrice != null ? (
                   <div className="flex items-baseline gap-3">
                     <span className="pp-text-muted line-through text-xl">
@@ -193,9 +194,9 @@ export default function ProductHighlightBlock({
                     </span>
                   </div>
                 ) : (
-                  <p className="text-4xl font-bold text-gradient-ice">
+                  <span className="text-4xl font-bold text-gradient-ice">
                     ${displayPrice.toLocaleString()}
-                  </p>
+                  </span>
                 )}
               </div>
               {showBuyButton && onAddToCart && (

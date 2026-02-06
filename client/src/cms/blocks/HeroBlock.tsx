@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Container } from "@/cms/layout";
+import { Heading, Text } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 export default function HeroBlock({ data, settings }: BlockRenderProps) {
@@ -48,23 +49,24 @@ export default function HeroBlock({ data, settings }: BlockRenderProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1
-              className={cn(
-                "font-display text-5xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight",
-                themeVariant === "ice" && "text-gradient-ice"
-              )}
+            <Heading
+              level={1}
+              className="mb-6 leading-tight"
+              gradient={themeVariant === "ice"}
             >
               {headline}
-            </h1>
+            </Heading>
             {subheadline && (
-              <p
+              <Text
+                size="lg"
+                muted
                 className={cn(
-                  "pp-text-muted text-lg md:text-xl mb-10",
+                  "md:text-xl mb-10",
                   align === "center" ? "max-w-2xl mx-auto" : "max-w-2xl"
                 )}
               >
                 {subheadline}
-              </p>
+              </Text>
             )}
             {ctaText && (
               <div

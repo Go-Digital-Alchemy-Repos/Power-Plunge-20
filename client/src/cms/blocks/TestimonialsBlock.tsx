@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Section, Container } from "@/cms/layout";
+import { Heading, Text } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 function TestimonialCard({
@@ -19,7 +19,7 @@ function TestimonialCard({
           />
         ))}
       </div>
-      <blockquote className="pp-text-muted mb-4">"{item.quote}"</blockquote>
+      <Text muted className="mb-4">"{item.quote}"</Text>
       <div className="flex items-center gap-3">
         {item.avatar && (
           <img
@@ -29,9 +29,9 @@ function TestimonialCard({
           />
         )}
         <div>
-          <p className="font-semibold text-white">{item.name}</p>
+          <Text size="sm" className="font-semibold text-white !mb-0">{item.name}</Text>
           {item.title && (
-            <p className="text-sm pp-text-muted">{item.title}</p>
+            <Text size="sm" muted className="!mb-0">{item.title}</Text>
           )}
         </div>
       </div>
@@ -53,9 +53,9 @@ export default function TestimonialsBlock({ data, settings }: BlockRenderProps) 
       <Section className={settings?.className} data-testid="block-testimonials">
         <Container width="default">
           {title && (
-            <h2 className="text-3xl font-bold text-white mb-8 text-center">
+            <Heading level={2} align="center" className="mb-8">
               {title}
-            </h2>
+            </Heading>
           )}
           <div className="relative">
             <TestimonialCard item={items[current]} />
@@ -87,9 +87,9 @@ export default function TestimonialsBlock({ data, settings }: BlockRenderProps) 
     <Section className={settings?.className} data-testid="block-testimonials">
       <Container>
         {title && (
-          <h2 className="text-3xl font-bold text-white mb-8 text-center">
+          <Heading level={2} align="center" className="mb-8">
             {title}
-          </h2>
+          </Heading>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {items.map(

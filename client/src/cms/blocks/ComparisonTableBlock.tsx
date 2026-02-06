@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Section, Container } from "@/cms/layout";
+import { Heading } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 export default function ComparisonTableBlock({ data, settings }: BlockRenderProps) {
@@ -14,9 +15,9 @@ export default function ComparisonTableBlock({ data, settings }: BlockRenderProp
     <Section className={settings?.className} data-testid="block-comparisontable">
       <Container width="default">
         {title && (
-          <h2 className="text-3xl font-bold text-white mb-8 text-center">
+          <Heading level={2} align="center" className="mb-8">
             {title}
-          </h2>
+          </Heading>
         )}
         <div className="overflow-x-auto">
           <table className="w-full">

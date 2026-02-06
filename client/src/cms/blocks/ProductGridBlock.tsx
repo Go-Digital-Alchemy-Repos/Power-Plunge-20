@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Section, Container } from "@/cms/layout";
+import { Heading, Text } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 interface Product {
@@ -78,9 +79,9 @@ export default function ProductGridBlock({ data, settings, onAddToCart }: BlockR
     <Section className={settings?.className} data-testid="block-productgrid">
       <Container>
         {title && (
-          <h2 className="text-3xl font-bold text-white mb-8 text-center">
+          <Heading level={2} align="center" className="mb-8">
             {title}
-          </h2>
+          </Heading>
         )}
         <div
           className={cn(
@@ -102,11 +103,11 @@ export default function ProductGridBlock({ data, settings, onAddToCart }: BlockR
                   className="w-full h-48 object-cover rounded-lg mb-4"
                 />
               )}
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <Heading level={3} className="mb-2">
                 {product.name}
-              </h3>
+              </Heading>
               {product.tagline && (
-                <p className="pp-text-muted text-sm mb-3">{product.tagline}</p>
+                <Text size="sm" muted className="mb-3">{product.tagline}</Text>
               )}
               {showPrice && (
                 <div className="flex items-center justify-between">

@@ -2,6 +2,7 @@ import { Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getIconWithFallback } from "@/lib/iconUtils";
 import { Section, Container } from "@/cms/layout";
+import { Text } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 export default function TrustBarBlock({ data, settings }: BlockRenderProps) {
@@ -33,11 +34,11 @@ export default function TrustBarBlock({ data, settings }: BlockRenderProps) {
                   <Icon className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white text-sm">
+                  <Text size="sm" className="font-semibold text-white !mb-0">
                     {item.label}
-                  </p>
+                  </Text>
                   {item.sublabel && (
-                    <p className="text-xs pp-text-muted">{item.sublabel}</p>
+                    <Text size="sm" muted className="text-xs !mb-0">{item.sublabel}</Text>
                   )}
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Section, Container } from "@/cms/layout";
+import { Heading } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 export default function RichTextBlock({ data, settings }: BlockRenderProps) {
@@ -17,10 +18,14 @@ export default function RichTextBlock({ data, settings }: BlockRenderProps) {
           )}
         >
           {title && (
-            <h2 className="text-3xl font-bold text-white mb-6">{title}</h2>
+            <Heading level={2} className="mb-6">{title}</Heading>
           )}
           <div
             className="prose prose-invert prose-lg max-w-none"
+            style={{
+              fontFamily: "var(--pp-font-family, 'Inter', sans-serif)",
+              lineHeight: "var(--pp-line-height, 1.5)",
+            }}
             dangerouslySetInnerHTML={{ __html: body }}
           />
         </div>
