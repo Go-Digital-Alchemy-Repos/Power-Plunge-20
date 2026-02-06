@@ -138,6 +138,17 @@ export async function registerRoutes(
     res.json({ cmsV2Enabled: isCmsV2Enabled() });
   });
 
+  app.get("/api/sections/:id", async (req, res) => {
+    try {
+      const { sectionsService } = await import("./src/services/sections.service");
+      const section = await sectionsService.getById(req.params.id);
+      if (!section) return res.status(404).json({ error: "Section not found" });
+      res.json({ id: section.id, name: section.name, blocks: section.blocks });
+    } catch {
+      res.status(500).json({ error: "Failed to fetch section" });
+    }
+  });
+
   // ==================== PUBLIC ROUTES ====================
   // Note: /api/products routes have been migrated to layered architecture above
 

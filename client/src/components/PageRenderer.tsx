@@ -1038,6 +1038,74 @@ const IconGridBlock = ({ data, settings }: { data: Record<string, any>; settings
   );
 };
 
+const SectionRefBlock: React.FC<{ data: Record<string, any>; settings?: BlockSettings; onAddToCart?: (productId: string, quantity: number) => void }> = ({ data, settings, onAddToCart }) => {
+  const [sectionBlocks, setSectionBlocks] = useState<PageBlock[]>([]);
+  const [sectionName, setSectionName] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!data.sectionId) {
+      setLoading(false);
+      setError(true);
+      return;
+    }
+    fetch(`/api/sections/${data.sectionId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Not found");
+        return res.json();
+      })
+      .then((section) => {
+        setSectionBlocks(Array.isArray(section.blocks) ? section.blocks : []);
+        setSectionName(section.name || "");
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
+  }, [data.sectionId]);
+
+  if (loading) {
+    return <div className="py-4 text-center text-gray-500 animate-pulse" data-testid="section-ref-loading">Loading section...</div>;
+  }
+
+  if (error || sectionBlocks.length === 0) {
+    return (
+      <div className="py-4 text-center text-gray-500 border border-dashed border-gray-700 rounded-lg" data-testid="section-ref-error">
+        {error ? "Section not found or unavailable" : `Section "${sectionName}" has no blocks`}
+      </div>
+    );
+  }
+
+  return (
+    <div data-testid={`section-ref-${data.sectionId}`} data-section-id={data.sectionId}>
+      {sectionBlocks.map((block, index) => {
+        if (!block) return null;
+        const normalizedBlock = {
+          id: block.id || `section-block-${index}`,
+          type: block.type || "spacer",
+          data: block.data || {},
+          settings: block.settings || {},
+        };
+        const BlockComp = blockComponents[normalizedBlock.type];
+        if (!BlockComp) {
+          return (
+            <div key={normalizedBlock.id}>
+              <UnknownBlock data={normalizedBlock.data} blockType={normalizedBlock.type} />
+            </div>
+          );
+        }
+        return (
+          <div key={normalizedBlock.id}>
+            <BlockComp data={normalizedBlock.data} settings={normalizedBlock.settings} onAddToCart={onAddToCart} />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const blockComponents: Record<string, React.FC<{ data: Record<string, any>; settings?: BlockSettings; onAddToCart?: (productId: string, quantity: number) => void }>> = {
   hero: HeroBlock,
   richText: RichTextBlock,
@@ -1059,6 +1127,7 @@ const blockComponents: Record<string, React.FC<{ data: Record<string, any>; sett
   statsBar: StatsBarBlock,
   featuredProduct: FeaturedProductBlock,
   iconGrid: IconGridBlock,
+  sectionRef: SectionRefBlock,
 };
 
 function resolveBlockComponent(type: string): React.FC<{ data: Record<string, any>; settings?: BlockSettings; onAddToCart?: (productId: string, quantity: number) => void }> | null {

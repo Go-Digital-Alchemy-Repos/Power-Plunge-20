@@ -330,4 +330,17 @@ export function registerAllBlocks() {
       columns: numberField("Columns"),
     },
   });
+
+  registerBlock({
+    type: "sectionRef",
+    label: "Section Reference",
+    category: "layout",
+    version: 1,
+    renderComponent: blockComponents.sectionRef,
+    defaultProps: { sectionId: "", sectionName: "" },
+    puckFields: {
+      sectionId: textField("Section ID"),
+      sectionName: textField("Section Name (display only)"),
+    },
+  });
 }

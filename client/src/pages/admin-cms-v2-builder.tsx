@@ -1,9 +1,9 @@
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useAdmin } from "@/hooks/use-admin";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminNav from "@/components/admin/AdminNav";
-import { ArrowLeft, Save, Globe } from "lucide-react";
+import { ArrowLeft, Save, Globe, Layers, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,14 @@ import { Puck, usePuck, type Config, type Data } from "@puckeditor/core";
 import "@puckeditor/core/dist/index.css";
 import { registerAllBlocks } from "@/lib/blockRegistryEntries";
 import { getAllBlocks } from "@/lib/blockRegistry";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 
 registerAllBlocks();
 
@@ -19,6 +27,8 @@ function buildPuckConfig(): Config {
   const components: Config["components"] = {};
 
   for (const entry of entries) {
+    if (entry.type === "sectionRef") continue;
+
     const puckFields: Record<string, any> = {};
     for (const [key, field] of Object.entries(entry.puckFields)) {
       if (field.type === "text") {
@@ -44,6 +54,26 @@ function buildPuckConfig(): Config {
       },
     };
   }
+
+  components["sectionRef"] = {
+    label: "Section Reference",
+    defaultProps: { sectionId: "", sectionName: "" },
+    fields: {
+      sectionId: { type: "text", label: "Section ID" },
+      sectionName: { type: "text", label: "Section Name" },
+    },
+    render: ({ puck: _puck, sectionId, sectionName, ...rest }: any) => (
+      <div className="border-2 border-dashed border-cyan-700/50 rounded-lg p-4 my-2 bg-cyan-900/10">
+        <div className="flex items-center gap-2 text-cyan-400 text-sm">
+          <Layers className="w-4 h-4" />
+          <span className="font-medium">Section: {sectionName || sectionId || "Not set"}</span>
+        </div>
+        {!sectionId && (
+          <p className="text-gray-500 text-xs mt-1">Use "Insert Section" to link a saved section.</p>
+        )}
+      </div>
+    ),
+  };
 
   return {
     components,
@@ -85,6 +115,159 @@ function contentJsonToPuckData(contentJson: any, pageTitle: string): Data {
     content,
     zones: {},
   };
+}
+
+interface SavedSection {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  blocks: any[];
+}
+
+function InsertSectionButton({ onInsert }: { onInsert: (section: SavedSection) => void }) {
+  const [open, setOpen] = useState(false);
+  const { data: sections } = useQuery<SavedSection[]>({
+    queryKey: ["/api/admin/cms-v2/sections"],
+    enabled: open,
+  });
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        className="border-cyan-700 text-cyan-400 hover:bg-cyan-900/30"
+        onClick={() => setOpen(true)}
+        data-testid="button-insert-section"
+      >
+        <Layers className="w-4 h-4 mr-1" />
+        Insert Section
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg" data-testid="dialog-insert-section">
+          <DialogHeader>
+            <DialogTitle className="text-white">Insert Saved Section</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Choose a section to insert. It will be linked — changes to the section update all pages using it.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-80 overflow-y-auto space-y-2 py-2">
+            {!sections || sections.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-4">
+                No saved sections. Create sections in the Sections library first.
+              </p>
+            ) : (
+              sections.map((section) => (
+                <Card
+                  key={section.id}
+                  className="bg-gray-800 border-gray-700 hover:border-cyan-700 cursor-pointer transition-colors"
+                  onClick={() => { onInsert(section); setOpen(false); }}
+                  data-testid={`section-option-${section.id}`}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-white text-sm">{section.name}</p>
+                        {section.description && (
+                          <p className="text-xs text-gray-500 mt-0.5">{section.description}</p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="border-gray-600 text-gray-400 text-xs">
+                        {Array.isArray(section.blocks) ? section.blocks.length : 0} blocks
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function DetachSectionButton({ pageId, pageTitle, onDone }: { pageId: string; pageTitle: string; onDone: () => void }) {
+  const { appState, dispatch } = usePuck();
+  const { toast } = useToast();
+  const [detaching, setDetaching] = useState(false);
+
+  const sectionRefCount = (appState.data.content || []).filter((item: any) => item.type === "sectionRef" && item.props?.sectionId).length;
+
+  const handleDetach = async () => {
+    setDetaching(true);
+    try {
+      const newContent: any[] = [];
+      for (const item of appState.data.content || []) {
+        if (item.type === "sectionRef" && item.props?.sectionId) {
+          const res = await fetch(`/api/admin/cms-v2/sections/${item.props.sectionId}`, { credentials: "include" });
+          if (res.ok) {
+            const section = await res.json();
+            const blocks = Array.isArray(section.blocks) ? section.blocks : [];
+            for (const block of blocks) {
+              newContent.push({
+                type: block.type,
+                props: {
+                  id: crypto.randomUUID(),
+                  ...block.data,
+                },
+              });
+            }
+          } else {
+            newContent.push(item);
+          }
+        } else {
+          newContent.push(item);
+        }
+      }
+
+      const contentJson = {
+        version: 1,
+        blocks: newContent.map((item: any) => ({
+          id: item.props?.id || crypto.randomUUID(),
+          type: item.type,
+          data: Object.fromEntries(
+            Object.entries(item.props || {}).filter(([k]) => k !== "id")
+          ),
+          settings: {},
+        })),
+      };
+
+      const saveRes = await fetch(`/api/admin/cms-v2/pages/${pageId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentJson, title: (appState.data.root as any)?.props?.title || pageTitle }),
+      });
+      if (!saveRes.ok) throw new Error("Save failed");
+
+      toast({ title: "Sections detached", description: "Section references replaced with inline blocks. Reload to see changes." });
+      onDone();
+      window.location.reload();
+    } catch {
+      toast({ title: "Error", description: "Failed to detach sections.", variant: "destructive" });
+    } finally {
+      setDetaching(false);
+    }
+  };
+
+  if (sectionRefCount === 0) return null;
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="border-yellow-700 text-yellow-400 hover:bg-yellow-900/30"
+      disabled={detaching}
+      onClick={handleDetach}
+      data-testid="button-detach-sections"
+    >
+      <Unlink className="w-4 h-4 mr-1" />
+      {detaching ? "Detaching..." : `Detach (${sectionRefCount})`}
+    </Button>
+  );
 }
 
 function SaveDraftButton({ pageId, pageTitle, onDone }: { pageId: string; pageTitle: string; onDone: () => void }) {
@@ -173,6 +356,7 @@ export default function AdminCmsV2Builder() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const pageId = params?.id;
+  const [puckKey, setPuckKey] = useState(0);
 
   const { data: page, isLoading } = useQuery<any>({
     queryKey: [`/api/admin/cms-v2/pages/${pageId}`],
@@ -184,12 +368,42 @@ export default function AdminCmsV2Builder() {
   const initialData = useMemo<Data | null>(() => {
     if (!page) return null;
     return contentJsonToPuckData(page.contentJson, page.title);
-  }, [page]);
+  }, [page, puckKey]);
 
   const invalidateQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: [`/api/admin/cms-v2/pages/${pageId}`] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/cms-v2/pages"] });
   }, [pageId, queryClient]);
+
+  const handleInsertSection = useCallback(async (section: SavedSection) => {
+    if (!pageId) return;
+    const currentPage = queryClient.getQueryData<any>([`/api/admin/cms-v2/pages/${pageId}`]);
+    const currentBlocks = currentPage?.contentJson?.blocks || [];
+
+    const newBlock = {
+      id: crypto.randomUUID(),
+      type: "sectionRef",
+      data: { sectionId: section.id, sectionName: section.name },
+      settings: {},
+    };
+
+    const updatedContentJson = {
+      version: 1,
+      blocks: [...currentBlocks, newBlock],
+    };
+
+    try {
+      const res = await fetch(`/api/admin/cms-v2/pages/${pageId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentJson: updatedContentJson }),
+      });
+      if (!res.ok) throw new Error("Failed to insert section");
+      invalidateQueries();
+      setPuckKey((k) => k + 1);
+    } catch {
+    }
+  }, [pageId, queryClient, invalidateQueries]);
 
   if (adminLoading || !hasFullAccess) {
     return (
@@ -233,10 +447,13 @@ export default function AdminCmsV2Builder() {
               {page?.status}
             </Badge>
           </div>
+          <div className="flex items-center gap-2">
+            <InsertSectionButton onInsert={handleInsertSection} />
+          </div>
         </div>
       </div>
 
-      <div className="puck-builder-container" data-testid="puck-editor-container">
+      <div className="puck-builder-container" data-testid="puck-editor-container" key={puckKey}>
         <Puck
           config={puckConfig}
           data={initialData}
@@ -244,6 +461,7 @@ export default function AdminCmsV2Builder() {
             headerActions: ({ children }) => (
               <>
                 {children}
+                <DetachSectionButton pageId={pageId!} pageTitle={page?.title || ""} onDone={invalidateQueries} />
                 <SaveDraftButton pageId={pageId!} pageTitle={page?.title || ""} onDone={invalidateQueries} />
                 <PublishButton pageId={pageId!} pageTitle={page?.title || ""} onDone={invalidateQueries} />
               </>

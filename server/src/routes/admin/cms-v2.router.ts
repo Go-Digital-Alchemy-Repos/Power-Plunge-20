@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { cmsV2Service } from "../../services/cms-v2.service";
-import { insertPageSchema } from "@shared/schema";
+import { sectionsService } from "../../services/sections.service";
+import { insertPageSchema, insertSavedSectionSchema } from "@shared/schema";
 
 const router = Router();
 
@@ -80,6 +81,50 @@ router.post("/pages/:id/set-shop", async (req, res) => {
   const page = await cmsV2Service.setShopPage(req.params.id);
   if (!page) return res.status(404).json({ error: "Page not found" });
   res.json(page);
+});
+
+router.get("/sections", async (_req, res) => {
+  const list = await sectionsService.list();
+  res.json(list);
+});
+
+router.get("/sections/:id", async (req, res) => {
+  const section = await sectionsService.getById(req.params.id);
+  if (!section) return res.status(404).json({ error: "Section not found" });
+  res.json(section);
+});
+
+router.post("/sections", async (req, res) => {
+  try {
+    const parsed = insertSavedSectionSchema.parse(req.body);
+    const section = await sectionsService.create(parsed);
+    res.status(201).json(section);
+  } catch (err: any) {
+    if (err.name === "ZodError") {
+      return res.status(400).json({ error: "Validation failed", details: err.errors });
+    }
+    res.status(500).json({ error: "Failed to create section" });
+  }
+});
+
+router.put("/sections/:id", async (req, res) => {
+  try {
+    const partial = insertSavedSectionSchema.partial().parse(req.body);
+    const section = await sectionsService.update(req.params.id, partial);
+    if (!section) return res.status(404).json({ error: "Section not found" });
+    res.json(section);
+  } catch (err: any) {
+    if (err.name === "ZodError") {
+      return res.status(400).json({ error: "Validation failed", details: err.errors });
+    }
+    res.status(500).json({ error: "Failed to update section" });
+  }
+});
+
+router.delete("/sections/:id", async (req, res) => {
+  const section = await sectionsService.remove(req.params.id);
+  if (!section) return res.status(404).json({ error: "Section not found" });
+  res.json({ success: true });
 });
 
 export default router;
