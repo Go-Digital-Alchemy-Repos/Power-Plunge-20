@@ -42,7 +42,7 @@ export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps)
   };
 
   const isActive = (page: string) => currentPage === page;
-  const isClientManagement = currentPage === "customers" || currentPage === "affiliates" || currentPage === "support";
+  const isClientManagement = currentPage === "customers" || currentPage === "affiliates" || currentPage === "support" || currentPage === "affiliate-invite-sender";
   const isCms = currentPage === "pages" || currentPage === "page-builder" || currentPage === "theme" || currentPage === "sections" || currentPage === "media";
   const isSettings = currentPage === "settings" || currentPage === "team" || currentPage === "email-templates" || currentPage === "integrations" || currentPage === "docs";
 
@@ -158,6 +158,12 @@ export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps)
                     <Link href="/admin/affiliates" className="flex items-center gap-2 cursor-pointer">
                       <Link2 className="w-4 h-4" />
                       Affiliates
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/affiliate-invite-sender" className="flex items-center gap-2 cursor-pointer" data-testid="link-invite-affiliates">
+                      <UserPlus className="w-4 h-4" />
+                      Invite Affiliates
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

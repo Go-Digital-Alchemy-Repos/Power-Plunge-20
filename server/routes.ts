@@ -72,6 +72,7 @@ import { affiliateCommissionService } from "./src/services/affiliate-commission.
 import { couponAnalyticsService } from "./src/services/coupon-analytics.service";
 import { checkoutRecoveryService } from "./src/services/checkout-recovery.service";
 import { errorAlertingService } from "./src/services/error-alerting.service";
+import { emailService } from "./src/integrations/mailgun/EmailService";
 
 // Generate unique affiliate code
 function generateAffiliateCode(): string {
@@ -2627,7 +2628,8 @@ export async function registerRoutes(
       const { targetEmail, targetName, expiresAt, maxUses, notes } = req.body;
       
       // Generate unique invite code
-      const inviteCode = `INV${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+      const { randomBytes } = await import("crypto");
+      const inviteCode = `INV${randomBytes(5).toString("hex").toUpperCase()}`;
       
       const invite = await storage.createAffiliateInvite({
         inviteCode,
@@ -2687,6 +2689,125 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to delete affiliate invite:", error);
       res.status(500).json({ message: "Failed to delete affiliate invite" });
+    }
+  });
+
+  // Create and send affiliate invite email
+  app.post("/api/admin/affiliate-invites/send", requireFullAccess, async (req: any, res) => {
+    try {
+      const sendInviteSchema = z.object({
+        targetEmail: z.string().email("Valid email is required"),
+        targetName: z.string().optional(),
+        expiresAt: z.string().optional(),
+        expiresInDays: z.number().positive().optional(),
+        maxUses: z.number().int().positive().optional(),
+        notes: z.string().optional(),
+      });
+
+      const parseResult = sendInviteSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          message: parseResult.error.errors[0].message,
+          errors: parseResult.error.errors,
+        });
+      }
+
+      const { targetEmail, targetName, expiresAt, expiresInDays, maxUses, notes } = parseResult.data;
+
+      let expirationDate: Date | null = null;
+      if (expiresAt) {
+        expirationDate = new Date(expiresAt);
+        if (isNaN(expirationDate.getTime())) {
+          return res.status(400).json({ message: "Invalid expiration date format" });
+        }
+      } else if (expiresInDays) {
+        expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + expiresInDays);
+      }
+
+      const { randomBytes } = await import("crypto");
+      const inviteCode = `INV${randomBytes(5).toString("hex").toUpperCase()}`;
+
+      const invite = await storage.createAffiliateInvite({
+        inviteCode,
+        targetEmail: targetEmail.toLowerCase(),
+        targetName: targetName || null,
+        createdByAdminId: req.adminUser?.id || null,
+        expiresAt: expirationDate,
+        maxUses: maxUses || 1,
+        notes: notes || null,
+      });
+
+      const baseUrl = process.env.REPLIT_DOMAINS
+        ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+        : process.env.BASE_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      const inviteUrl = `${baseUrl}/become-affiliate?code=${inviteCode}`;
+
+      let emailResult = { success: false, error: "Email not attempted" } as any;
+      try {
+        const recipientName = targetName || targetEmail.split("@")[0];
+        emailResult = await emailService.sendEmail({
+          to: targetEmail,
+          subject: "You're Invited to Join the Power Plunge Affiliate Program!",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #0891b2; margin-bottom: 16px;">You're Invited!</h2>
+              <p style="font-size: 16px; color: #333;">Hi ${recipientName},</p>
+              <p style="font-size: 16px; color: #333;">
+                You've been personally invited to join the <strong>Power Plunge Affiliate Program</strong>.
+                Earn commissions on every sale you refer!
+              </p>
+              <div style="margin: 32px 0; text-align: center;">
+                <a href="${inviteUrl}" 
+                   style="background-color: #0891b2; color: white; padding: 14px 32px; 
+                          text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold;
+                          display: inline-block;">
+                  Accept Invitation
+                </a>
+              </div>
+              <p style="font-size: 14px; color: #666;">
+                Or copy this link into your browser:<br />
+                <a href="${inviteUrl}" style="color: #0891b2; word-break: break-all;">${inviteUrl}</a>
+              </p>
+              ${expirationDate ? `<p style="font-size: 13px; color: #999;">This invite expires on ${expirationDate.toLocaleDateString()}.</p>` : ""}
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+              <p style="font-size: 12px; color: #999;">
+                Power Plunge Affiliate Program
+              </p>
+            </div>
+          `,
+          text: `Hi ${recipientName},\n\nYou've been invited to join the Power Plunge Affiliate Program! Earn commissions on every sale you refer.\n\nAccept your invitation here: ${inviteUrl}\n\n${expirationDate ? `This invite expires on ${expirationDate.toLocaleDateString()}.` : ""}\n\nPower Plunge Affiliate Program`,
+        });
+      } catch (emailError: any) {
+        console.error("Failed to send affiliate invite email:", emailError);
+        emailResult = { success: false, error: emailError.message || "Failed to send email" };
+      }
+
+      const adminEmail = req.adminUser?.email || req.session?.adminEmail || "admin";
+      await storage.createAuditLog({
+        actor: adminEmail,
+        action: "affiliate_invite.sent",
+        entityType: "affiliate_invite",
+        entityId: invite.id,
+        metadata: {
+          inviteCode,
+          targetEmail,
+          targetName,
+          emailSent: emailResult.success,
+          emailError: emailResult.error || null,
+          inviteUrl,
+        },
+      });
+
+      res.json({
+        invite,
+        inviteUrl,
+        emailSent: emailResult.success,
+        emailError: emailResult.success ? null : (emailResult.error || "Failed to send email"),
+      });
+    } catch (error: any) {
+      console.error("Failed to create and send affiliate invite:", error);
+      res.status(500).json({ message: "Failed to create and send affiliate invite" });
     }
   });
 

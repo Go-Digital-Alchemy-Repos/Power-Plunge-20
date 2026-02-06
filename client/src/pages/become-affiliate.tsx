@@ -7,13 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
-import { Mail, Lock, User, ArrowLeft, Loader2, Ticket, PenTool, DollarSign, Users, Share2, Gift } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Loader2, Ticket, PenTool, DollarSign, Users, Share2, Gift, ShieldAlert } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import logoImage from "@assets/powerplungelogo_1767907611722.png";
 
 interface SignupInfo {
   agreementText: string;
   programEnabled: boolean;
+  inviteRequired: boolean;
+  inviteError: string | null;
   invite: {
     code: string;
     valid: boolean;
@@ -83,7 +85,7 @@ export default function BecomeAffiliate() {
           password: data.password,
           name: data.name,
           signatureName: data.signatureName,
-          inviteCode: data.inviteCode || undefined,
+          inviteCode: data.inviteCode,
         }),
       });
       const result = await res.json();
@@ -160,7 +162,10 @@ export default function BecomeAffiliate() {
     );
   }
 
-  if (signupInfo?.invite && !signupInfo.invite.valid) {
+  const hasValidInvite = signupInfo?.invite?.valid === true;
+  const inviteErrorMessage = signupInfo?.invite?.error || signupInfo?.inviteError || null;
+
+  if (!hasValidInvite) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
         <nav className="p-4">
@@ -170,21 +175,26 @@ export default function BecomeAffiliate() {
           </Link>
         </nav>
         <div className="flex-1 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md text-center">
+          <Card className="w-full max-w-md text-center" data-testid="card-invite-required">
             <CardHeader>
               <div className="flex justify-center mb-4">
-                <div className="p-4 bg-destructive/10 rounded-full">
-                  <Ticket className="w-8 h-8 text-destructive" />
+                <div className="p-4 bg-amber-500/10 rounded-full">
+                  <ShieldAlert className="w-8 h-8 text-amber-500" />
                 </div>
               </div>
-              <CardTitle className="text-xl">Invalid Invite</CardTitle>
-              <CardDescription className="mt-2">
-                {signupInfo.invite.error || "This invite code is not valid."}
+              <CardTitle className="text-xl" data-testid="text-invite-title">
+                {inviteCode ? "Invalid Invite" : "Invite Required"}
+              </CardTitle>
+              <CardDescription className="mt-2" data-testid="text-invite-message">
+                {inviteErrorMessage || "Our affiliate program is invite-only. You need a valid invite link from an administrator to sign up."}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                If you believe you should have access, please contact us and we'll send you an invite.
+              </p>
               <Link href="/">
-                <Button className="w-full">Return to Store</Button>
+                <Button className="w-full" data-testid="button-return-store">Return to Store</Button>
               </Link>
             </CardContent>
           </Card>
@@ -242,6 +252,11 @@ export default function BecomeAffiliate() {
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
                 Earn 10% commission on every sale you refer. Share your unique link and get paid for promoting Power Plunge products.
               </p>
+              {signupInfo?.invite?.targetName && (
+                <p className="text-primary font-medium">
+                  Welcome, {signupInfo.invite.targetName}! You've been personally invited.
+                </p>
+              )}
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
@@ -397,24 +412,6 @@ export default function BecomeAffiliate() {
                     />
                   </div>
                 </div>
-
-                {!inviteCode && (
-                  <div className="space-y-2">
-                    <Label htmlFor="inviteCode">Invite code (optional)</Label>
-                    <div className="relative">
-                      <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="inviteCode"
-                        type="text"
-                        placeholder="Enter invite code if you have one"
-                        value={formData.inviteCode}
-                        onChange={(e) => setFormData({ ...formData, inviteCode: e.target.value })}
-                        className="pl-10"
-                        data-testid="input-invite-code"
-                      />
-                    </div>
-                  </div>
-                )}
 
                 <div className="border-t pt-4 space-y-4">
                   <h3 className="font-semibold flex items-center gap-2">

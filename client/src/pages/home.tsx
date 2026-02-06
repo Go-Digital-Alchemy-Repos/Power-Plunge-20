@@ -214,15 +214,7 @@ export default function Home() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            {!isAuthenticated && (
-              <a 
-                href="/become-affiliate" 
-                className="text-sm text-muted-foreground hover:text-primary transition-colors hidden sm:inline-flex items-center gap-1"
-                data-testid="link-header-affiliate"
-              >
-                Become an Affiliate
-              </a>
-            )}
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2" data-testid="button-my-account">
@@ -677,13 +669,6 @@ export default function Home() {
               <img src={logoImage} alt="Power Plunge" className="h-8" />
             </div>
             <div className="flex items-center gap-6">
-              <a 
-                href="/become-affiliate" 
-                className="text-muted-foreground hover:text-primary text-sm transition-colors"
-                data-testid="link-become-affiliate"
-              >
-                Become an Affiliate
-              </a>
               <p className="text-muted-foreground text-sm">
                 Mind + Body + Spirit | © 2026 Power Plunge. All rights reserved.
               </p>

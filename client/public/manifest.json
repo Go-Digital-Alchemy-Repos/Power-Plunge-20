@@ -1,0 +1,18 @@
+{
+  "name": "Power Plunge",
+  "short_name": "Power Plunge",
+  "description": "Power Plunge Admin & Affiliate Portal",
+  "start_url": "/admin/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0891b2",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

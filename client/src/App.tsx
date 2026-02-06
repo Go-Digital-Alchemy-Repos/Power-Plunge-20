@@ -41,6 +41,7 @@ import AdminRecovery from "@/pages/admin-recovery";
 import AdminAlerts from "@/pages/admin-alerts";
 import AdminSections from "@/pages/admin-sections";
 import AdminMediaLibrary from "@/pages/admin-media-library";
+import AdminAffiliateInviteSender from "@/pages/admin-affiliate-invite-sender";
 import PageView from "@/pages/page-view";
 import Shop from "@/pages/shop";
 import BecomeAffiliate from "@/pages/become-affiliate";
@@ -93,6 +94,7 @@ function Router() {
       <Route path="/admin/sections" component={AdminSections} />
       <Route path="/admin/media" component={AdminMediaLibrary} />
       <Route path="/admin/support" component={AdminSupport} />
+      <Route path="/admin/affiliate-invite-sender" component={AdminAffiliateInviteSender} />
       <Route component={NotFound} />
     </Switch>
   );

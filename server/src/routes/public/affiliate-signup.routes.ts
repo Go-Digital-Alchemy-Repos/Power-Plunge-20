@@ -14,10 +14,13 @@ router.get("/", async (req: Request, res: Response) => {
     const agreementText = settings?.agreementText ?? "Affiliate Program Agreement - Terms and conditions for the affiliate program. By joining, you agree to promote our products ethically and in accordance with all applicable laws.";
 
     let invite = null;
-    let inviteValid = true;
+    let inviteValid = false;
     let inviteError: string | null = null;
 
-    if (inviteCode) {
+    if (!inviteCode) {
+      inviteValid = false;
+      inviteError = "Affiliate signup is invite-only. Please use a valid invite link.";
+    } else {
       invite = await storage.getAffiliateInviteByCode(inviteCode);
       
       if (!invite) {
@@ -29,11 +32,14 @@ router.get("/", async (req: Request, res: Response) => {
       } else if (invite.maxUses && invite.timesUsed >= invite.maxUses) {
         inviteValid = false;
         inviteError = "This invite has reached its usage limit";
+      } else {
+        inviteValid = true;
       }
     }
 
     res.json({
       agreementText,
+      inviteRequired: true,
       invite: invite ? {
         code: invite.inviteCode,
         valid: inviteValid,
@@ -41,6 +47,7 @@ router.get("/", async (req: Request, res: Response) => {
         targetEmail: invite.targetEmail,
         targetName: invite.targetName,
       } : null,
+      inviteError: inviteError,
       programEnabled: settings?.programActive ?? true,
     });
   } catch (error: any) {
@@ -54,7 +61,7 @@ const signupSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(1, "Name is required"),
   signatureName: z.string().min(1, "Signature is required"),
-  inviteCode: z.string().optional(),
+  inviteCode: z.string().min(1, "Affiliate signup is invite-only. A valid invite code is required."),
 });
 
 router.post("/", async (req: Request, res: Response) => {
@@ -76,25 +83,22 @@ router.post("/", async (req: Request, res: Response) => {
 
     const { email, password, name, signatureName, inviteCode } = parseResult.data;
 
-    let invite = null;
-    if (inviteCode) {
-      invite = await storage.getAffiliateInviteByCode(inviteCode);
-      
-      if (!invite) {
-        return res.status(400).json({ message: "Invalid invite code" });
-      }
-      
-      if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) {
-        return res.status(400).json({ message: "This invite has expired" });
-      }
-      
-      if (invite.maxUses && invite.timesUsed >= invite.maxUses) {
-        return res.status(400).json({ message: "This invite has reached its usage limit" });
-      }
-      
-      if (invite.targetEmail && invite.targetEmail.toLowerCase() !== email.toLowerCase()) {
-        return res.status(400).json({ message: "This invite is for a different email address" });
-      }
+    const invite = await storage.getAffiliateInviteByCode(inviteCode);
+    
+    if (!invite) {
+      return res.status(400).json({ message: "Invalid invite code" });
+    }
+    
+    if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) {
+      return res.status(400).json({ message: "This invite has expired" });
+    }
+    
+    if (invite.maxUses && invite.timesUsed >= invite.maxUses) {
+      return res.status(400).json({ message: "This invite has reached its usage limit" });
+    }
+    
+    if (invite.targetEmail && invite.targetEmail.toLowerCase() !== email.toLowerCase()) {
+      return res.status(400).json({ message: "This invite is for a different email address" });
     }
 
     const existingCustomer = await storage.getCustomerByEmail(email);
@@ -133,13 +137,11 @@ router.post("/", async (req: Request, res: Response) => {
         signatureIp: req.ip || "unknown",
       });
       
-      if (invite) {
-        await storage.incrementAffiliateInviteUsage(invite.id);
-        await storage.updateAffiliateInvite(invite.id, {
-          usedByAffiliateId: affiliate.id,
-          usedAt: new Date(),
-        });
-      }
+      await storage.incrementAffiliateInviteUsage(invite.id);
+      await storage.updateAffiliateInvite(invite.id, {
+        usedByAffiliateId: affiliate.id,
+        usedAt: new Date(),
+      });
       
       const sessionToken = createSessionToken(existingCustomer.id, email);
       
@@ -180,13 +182,11 @@ router.post("/", async (req: Request, res: Response) => {
       signatureIp: req.ip || "unknown",
     });
     
-    if (invite) {
-      await storage.incrementAffiliateInviteUsage(invite.id);
-      await storage.updateAffiliateInvite(invite.id, {
-        usedByAffiliateId: affiliate.id,
-        usedAt: new Date(),
-      });
-    }
+    await storage.incrementAffiliateInviteUsage(invite.id);
+    await storage.updateAffiliateInvite(invite.id, {
+      usedByAffiliateId: affiliate.id,
+      usedAt: new Date(),
+    });
     
     const sessionToken = createSessionToken(customer.id, email);
     
