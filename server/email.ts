@@ -156,7 +156,7 @@ export async function sendShippingNotification(
 
         <!-- View Order Button -->
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${baseUrl}/track-order" style="display: inline-block; background: #0891b2; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">View Order Details</a>
+          <a href="${baseUrl}/order-status/${order.id}" style="display: inline-block; background: #0891b2; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">View Order Tracking</a>
         </div>
 
         <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; text-align: center;">
