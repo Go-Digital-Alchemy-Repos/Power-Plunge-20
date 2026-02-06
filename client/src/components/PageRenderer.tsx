@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import UnknownBlock from "@/components/UnknownBlock";
 import { getIconWithFallback } from "@/lib/iconUtils";
+import { getBlock as getLegacyBlock } from "@/lib/blockRegistry";
+import { getBlock as getCmsBlock } from "@/cms/blocks/registry";
 
 interface BlockSettings {
   visibility?: 'all' | 'desktop' | 'mobile';
@@ -179,14 +181,19 @@ const HeroBlock = ({ data, settings, onAddToCart }: { data: Record<string, any>;
   );
 };
 
-const RichTextBlock = ({ data, settings }: { data: Record<string, any>; settings?: BlockSettings }) => (
-  <section className={cn("max-w-4xl mx-auto px-4", getLayoutClasses(settings))} data-testid="block-richtext">
-    <div 
-      className="prose prose-invert prose-lg max-w-none"
-      dangerouslySetInnerHTML={{ __html: data.content || '' }}
-    />
-  </section>
-);
+const RichTextBlock = ({ data, settings }: { data: Record<string, any>; settings?: BlockSettings }) => {
+  const title = data?.title || '';
+  const htmlContent = data?.bodyRichText || data?.content || '';
+  return (
+    <section className={cn("max-w-4xl mx-auto px-4", getLayoutClasses(settings))} data-testid="block-richtext">
+      {title && <h2 className="text-2xl font-bold text-white mb-4">{title}</h2>}
+      <div 
+        className="prose prose-invert prose-lg max-w-none"
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
+      />
+    </section>
+  );
+};
 
 const ImageBlock = ({ data, settings }: { data: Record<string, any>; settings?: BlockSettings }) => {
   const src = data?.src || data?.url || '';
@@ -1132,11 +1139,10 @@ const blockComponents: Record<string, React.FC<{ data: Record<string, any>; sett
 
 function resolveBlockComponent(type: string): React.FC<{ data: Record<string, any>; settings?: BlockSettings; onAddToCart?: (productId: string, quantity: number) => void }> | null {
   if (blockComponents[type]) return blockComponents[type];
-  try {
-    const { getBlock } = require("@/lib/blockRegistry");
-    const entry = getBlock(type);
-    if (entry?.renderComponent) return entry.renderComponent as any;
-  } catch {}
+  const legacyEntry = getLegacyBlock(type);
+  if (legacyEntry?.renderComponent) return legacyEntry.renderComponent as any;
+  const cmsEntry = getCmsBlock(type);
+  if (cmsEntry?.renderComponent) return cmsEntry.renderComponent as any;
   return null;
 }
 

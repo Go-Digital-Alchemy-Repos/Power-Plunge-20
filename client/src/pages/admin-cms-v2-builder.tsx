@@ -14,6 +14,7 @@ import { Puck, usePuck, type Config, type Data } from "@puckeditor/core";
 import "@puckeditor/core/dist/index.css";
 import { registerAllBlocks } from "@/lib/blockRegistryEntries";
 import { getAllBlocks } from "@/lib/blockRegistry";
+import { registerCmsV1Blocks, getAllBlocks as getCmsBlocks } from "@/cms/blocks";
 import {
   Dialog,
   DialogContent,
@@ -37,27 +38,51 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 
 registerAllBlocks();
+registerCmsV1Blocks();
 
 function buildPuckConfig(): Config {
-  const entries = getAllBlocks();
+  const legacyEntries = getAllBlocks();
+  const cmsEntries = getCmsBlocks();
+  const cmsTypes = new Set(cmsEntries.map((e) => e.type));
+  const deduped = legacyEntries.filter((e) => !cmsTypes.has(e.type));
+  const entries = [...deduped, ...cmsEntries];
   const components: Config["components"] = {};
 
   for (const entry of entries) {
     if (entry.type === "sectionRef") continue;
 
     const puckFields: Record<string, any> = {};
-    for (const [key, field] of Object.entries(entry.puckFields)) {
+    const convertField = (field: any, key: string): any => {
       if (field.type === "text") {
-        puckFields[key] = { type: "text", label: field.label || key };
+        return { type: "text", label: field.label || key };
       } else if (field.type === "textarea") {
-        puckFields[key] = { type: "textarea", label: field.label || key };
+        return { type: "textarea", label: field.label || key };
       } else if (field.type === "number") {
-        puckFields[key] = { type: "number", label: field.label || key, min: field.min, max: field.max };
+        return { type: "number", label: field.label || key, min: field.min, max: field.max };
       } else if (field.type === "select") {
-        puckFields[key] = { type: "select", label: field.label || key, options: field.options || [] };
+        return { type: "select", label: field.label || key, options: field.options || [] };
       } else if (field.type === "radio") {
-        puckFields[key] = { type: "radio", label: field.label || key, options: field.options || [] };
+        return { type: "radio", label: field.label || key, options: field.options || [] };
+      } else if (field.type === "array" && field.arrayFields) {
+        const arrayFields: Record<string, any> = {};
+        for (const [ak, af] of Object.entries(field.arrayFields)) {
+          const converted = convertField(af, ak);
+          if (converted) arrayFields[ak] = converted;
+        }
+        return { type: "array", label: field.label || key, arrayFields, defaultItemProps: Object.fromEntries(Object.keys(arrayFields).map(k => [k, ""])), getItemSummary: (item: any) => item[Object.keys(arrayFields)[0]] || `Item` };
+      } else if (field.type === "object" && field.objectFields) {
+        const objectFields: Record<string, any> = {};
+        for (const [ok, of_] of Object.entries(field.objectFields)) {
+          const converted = convertField(of_, ok);
+          if (converted) objectFields[ok] = converted;
+        }
+        return { type: "object", label: field.label || key, objectFields };
       }
+      return null;
+    };
+    for (const [key, field] of Object.entries(entry.puckFields)) {
+      const converted = convertField(field, key);
+      if (converted) puckFields[key] = converted;
     }
 
     components[entry.type] = {

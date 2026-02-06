@@ -2,12 +2,26 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import PageRenderer from "@/components/PageRenderer";
+
+interface PageBlock {
+  id: string;
+  type: string;
+  data: Record<string, any>;
+  settings?: Record<string, any>;
+}
+
+interface PageContentJson {
+  version: number;
+  blocks: PageBlock[];
+}
 
 interface Page {
   id: string;
   title: string;
   slug: string;
   content: string | null;
+  contentJson: PageContentJson | null;
   metaTitle: string | null;
   metaDescription: string | null;
   status: string;
@@ -42,6 +56,8 @@ export default function PageView() {
     );
   }
 
+  const hasBlocks = page.contentJson?.blocks && page.contentJson.blocks.length > 0;
+
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <header className="bg-slate-800 border-b border-slate-700">
@@ -54,12 +70,17 @@ export default function PageView() {
         </div>
       </header>
       
-      <main className="container mx-auto px-4 py-12 max-w-4xl">
-        <article 
-          className="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-p:text-slate-300 prose-a:text-cyan-400 prose-strong:text-white prose-li:text-slate-300"
-          dangerouslySetInnerHTML={{ __html: page.content || "" }}
-          data-testid="page-content"
-        />
+      <main data-testid="page-content">
+        {hasBlocks ? (
+          <PageRenderer contentJson={page.contentJson} legacyContent={page.content} />
+        ) : (
+          <div className="container mx-auto px-4 py-12 max-w-4xl">
+            <article 
+              className="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-p:text-slate-300 prose-a:text-cyan-400 prose-strong:text-white prose-li:text-slate-300"
+              dangerouslySetInnerHTML={{ __html: page.content || "" }}
+            />
+          </div>
+        )}
       </main>
 
       <footer className="bg-slate-800 border-t border-slate-700 py-8 mt-12">
