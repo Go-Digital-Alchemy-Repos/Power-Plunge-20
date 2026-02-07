@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Section, Container } from "@/cms/layout";
+import { Text } from "@/cms/typography";
 import type { BlockRenderProps } from "./types";
 
 const gridColsMap: Record<number, string> = {
@@ -9,8 +10,8 @@ const gridColsMap: Record<number, string> = {
 };
 
 const spacingMap: Record<string, string> = {
-  tight: "gap-2",
-  normal: "gap-4",
+  tight: "gap-3",
+  normal: "gap-5",
   loose: "gap-8",
 };
 
@@ -26,7 +27,7 @@ export default function ImageGridBlock({ data, settings }: BlockRenderProps) {
           className={cn(
             "grid grid-cols-2",
             gridColsMap[columns] || "md:grid-cols-3",
-            spacingMap[spacing] || "gap-4"
+            spacingMap[spacing] || "gap-5"
           )}
         >
           {items.map(
@@ -34,26 +35,56 @@ export default function ImageGridBlock({ data, settings }: BlockRenderProps) {
               img: { src: string; alt?: string; caption?: string; linkHref?: string },
               idx: number
             ) => {
-              const imgEl = (
-                <img
-                  src={img.src}
-                  alt={img.alt || ""}
-                  className="rounded-lg shadow-lg w-full h-48 object-cover"
-                />
+              const imageEl = (
+                <div
+                  className="relative overflow-hidden aspect-[4/3]"
+                  style={{
+                    borderRadius: "var(--pp-card-radius, 0.75rem)",
+                  }}
+                >
+                  <img
+                    src={img.src}
+                    alt={img.alt || ""}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                    data-testid={`img-grid-${idx}`}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </div>
               );
+
               return (
-                <figure key={idx}>
+                <figure
+                  key={idx}
+                  className="group"
+                  style={{
+                    transition: "transform 300ms ease, box-shadow 300ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                  data-testid={`card-image-${idx}`}
+                >
                   {img.linkHref ? (
                     <a href={img.linkHref} className="block">
-                      {imgEl}
+                      {imageEl}
                     </a>
                   ) : (
-                    imgEl
+                    imageEl
                   )}
                   {img.caption && (
-                    <figcaption className="mt-2 text-sm pp-text-muted text-center">
+                    <Text
+                      size="sm"
+                      muted
+                      align="center"
+                      className="mt-3"
+                    >
                       {img.caption}
-                    </figcaption>
+                    </Text>
                   )}
                 </figure>
               );

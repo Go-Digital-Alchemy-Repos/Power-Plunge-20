@@ -20,13 +20,13 @@ export default function FeatureListBlock({ data, settings }: BlockRenderProps) {
     <Section className={settings?.className} data-testid="block-featurelist">
       <Container>
         {title && (
-          <Heading level={2} align="center" className="mb-8">
+          <Heading level={2} align="center" className="mb-12">
             {title}
           </Heading>
         )}
         <div
           className={cn(
-            "grid grid-cols-1 gap-8",
+            "grid grid-cols-1 gap-6",
             gridColsMap[columns] || "md:grid-cols-3"
           )}
         >
@@ -37,14 +37,39 @@ export default function FeatureListBlock({ data, settings }: BlockRenderProps) {
             ) => {
               const Icon = getIconWithFallback(f.icon, Check);
               return (
-                <div key={idx} className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-cyan-400" />
+                <div
+                  key={idx}
+                  className="flex flex-col items-center text-center h-full"
+                  style={{
+                    backgroundColor: "var(--pp-surface, #111827)",
+                    borderRadius: "var(--pp-card-radius, 0.75rem)",
+                    border: "1px solid color-mix(in srgb, var(--pp-primary, #67e8f9) 12%, transparent)",
+                    padding: "2rem 1.5rem",
+                    transition: "border-color 200ms ease, box-shadow 200ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "color-mix(in srgb, var(--pp-primary, #67e8f9) 30%, transparent)";
+                    e.currentTarget.style.boxShadow = "0 0 24px color-mix(in srgb, var(--pp-primary, #67e8f9) 8%, transparent)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "color-mix(in srgb, var(--pp-primary, #67e8f9) 12%, transparent)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                  data-testid={`card-feature-${idx}`}
+                >
+                  <div
+                    className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                    style={{
+                      backgroundColor: "color-mix(in srgb, var(--pp-primary, #67e8f9) 15%, transparent)",
+                    }}
+                  >
+                    <Icon
+                      className="w-6 h-6"
+                      style={{ color: "var(--pp-primary, #67e8f9)" }}
+                    />
                   </div>
-                  <div>
-                    <Heading level={3} className="mb-2">{f.title}</Heading>
-                    <Text muted>{f.description}</Text>
-                  </div>
+                  <Heading level={3} className="mb-3">{f.title}</Heading>
+                  <Text muted className="leading-relaxed">{f.description}</Text>
                 </div>
               );
             }

@@ -14,17 +14,20 @@ export default function RichTextBlock({ data, settings }: BlockRenderProps) {
         <div
           className={cn(
             align === "center" && "text-center",
-            align === "right" && "text-right"
+            align === "right" && "text-right",
+            align === "center" && "mx-auto"
           )}
+          style={{ maxWidth: "72ch" }}
         >
           {title && (
-            <Heading level={2} className="mb-6">{title}</Heading>
+            <Heading level={2} className="mb-8">{title}</Heading>
           )}
           <div
-            className="prose prose-invert prose-lg max-w-none"
+            className="pp-richtext"
             style={{
               fontFamily: "var(--pp-font-family, 'Inter', sans-serif)",
-              lineHeight: "var(--pp-line-height, 1.5)",
+              lineHeight: "1.8",
+              color: "color-mix(in srgb, var(--pp-text, #f9fafb) 80%, transparent)",
             }}
             dangerouslySetInnerHTML={{ __html: body }}
           />

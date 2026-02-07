@@ -166,4 +166,54 @@
   .pp-border-subtle {
     border-color: var(--pp-border, #374151);
   }
+
+  .pp-richtext h1,
+  .pp-richtext h2,
+  .pp-richtext h3 {
+    font-family: var(--pp-font-family, 'Inter', sans-serif);
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--pp-text, #f9fafb);
+    margin-top: 2em;
+    margin-bottom: 0.75em;
+  }
+  .pp-richtext h1 { font-size: 2rem; }
+  .pp-richtext h2 { font-size: 1.5rem; }
+  .pp-richtext h3 { font-size: 1.25rem; }
+  .pp-richtext p {
+    margin-bottom: 1.25em;
+  }
+  .pp-richtext ul,
+  .pp-richtext ol {
+    margin-bottom: 1.25em;
+    padding-left: 1.5em;
+  }
+  .pp-richtext li {
+    margin-bottom: 0.5em;
+  }
+  .pp-richtext a {
+    color: var(--pp-primary, #67e8f9);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .pp-richtext a:hover {
+    opacity: 0.85;
+  }
+  .pp-richtext blockquote {
+    border-left: 3px solid var(--pp-primary, #67e8f9);
+    padding-left: 1em;
+    margin: 1.5em 0;
+    font-style: italic;
+    color: var(--pp-text-muted, #9ca3af);
+  }
+  .pp-richtext strong {
+    color: var(--pp-text, #f9fafb);
+    font-weight: 600;
+  }
+  .pp-richtext > *:first-child {
+    margin-top: 0;
+  }
+  .pp-richtext > *:last-child {
+    margin-bottom: 0;
+  }
 }
