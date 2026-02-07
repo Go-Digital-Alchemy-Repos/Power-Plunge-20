@@ -20,6 +20,14 @@ import ProductGridBlock from "./ProductGridBlock";
 import ProductHighlightBlock from "./ProductHighlightBlock";
 import TrustBarBlock from "./TrustBarBlock";
 import ComparisonTableBlock from "./ComparisonTableBlock";
+import BenefitStackBlock from "./BenefitStackBlock";
+import ScienceExplainerBlock from "./ScienceExplainerBlock";
+import ProtocolBuilderBlock from "./ProtocolBuilderBlock";
+import RecoveryUseCasesBlock from "./RecoveryUseCasesBlock";
+import SafetyChecklistBlock from "./SafetyChecklistBlock";
+import GuaranteeAndWarrantyBlock from "./GuaranteeAndWarrantyBlock";
+import DeliveryAndSetupBlock from "./DeliveryAndSetupBlock";
+import FinancingAndPaymentBlock from "./FinancingAndPaymentBlock";
 
 export function registerCmsV1Blocks() {
   registerBlock({
@@ -384,6 +392,259 @@ export function registerCmsV1Blocks() {
       }),
       rows: arrayField("Rows", {
         label: textField("Feature Label"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "benefitStack",
+    label: "Benefit Stack",
+    category: "powerplunge",
+    version: 1,
+    description: "Scannable benefits list in stack or timeline layout",
+    renderComponent: BenefitStackBlock,
+    defaultProps: {
+      title: "Why Cold Plunging Works",
+      items: [
+        { headline: "Reduced Inflammation", description: "Cold exposure constricts blood vessels, helping reduce swelling and muscle soreness after intense activity.", icon: "Snowflake", emphasis: true },
+        { headline: "Improved Circulation", description: "Alternating cold exposure stimulates blood flow, delivering oxygen and nutrients to recovering tissues.", icon: "Activity" },
+        { headline: "Mental Clarity", description: "Cold immersion activates the sympathetic nervous system, boosting focus and alertness throughout the day.", icon: "Brain" },
+        { headline: "Better Sleep", description: "Regular cold plunging helps regulate your body's core temperature cycle, promoting deeper, more restorative sleep.", icon: "Moon" },
+      ],
+      layout: "stack",
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      layout: selectField("Layout", [
+        { label: "Stack (cards)", value: "stack" },
+        { label: "Timeline", value: "timeline" },
+      ]),
+      items: arrayField("Benefits", {
+        headline: textField("Headline"),
+        description: textareaField("Description"),
+        icon: textField("Icon (Lucide name)"),
+        emphasis: checkboxField("Emphasize"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "scienceExplainer",
+    label: "Science Explainer",
+    category: "powerplunge",
+    version: 1,
+    description: "Evidence-based content sections with citations and disclaimer",
+    renderComponent: ScienceExplainerBlock,
+    defaultProps: {
+      title: "The Science Behind Cold Exposure",
+      sections: [
+        { heading: "Hormetic Stress Response", body: "Brief cold exposure triggers a hormetic stress response — a beneficial adaptation where the body becomes more resilient. This process activates cold-shock proteins and increases norepinephrine levels, which can support mood and attention.", citationLabel: "Shevchuk, 2008", citationUrl: "" },
+        { heading: "Inflammation & Recovery", body: "Cold water immersion has been widely studied for its effects on delayed-onset muscle soreness (DOMS). Research suggests that cold exposure may help modulate the inflammatory response following exercise.", citationLabel: "Bleakley et al., 2012", citationUrl: "" },
+        { heading: "Metabolic Activation", body: "Cold exposure activates brown adipose tissue (BAT), which generates heat by burning calories. Regular cold plunging may support metabolic health over time.", citationLabel: "van Marken Lichtenbelt et al., 2009", citationUrl: "" },
+      ],
+      disclaimerText: "This content is for informational purposes only and is not intended as medical advice. Consult a qualified healthcare professional before beginning any cold exposure practice.",
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      disclaimerText: textareaField("Disclaimer Text"),
+      sections: arrayField("Sections", {
+        heading: textField("Heading"),
+        body: textareaField("Body"),
+        citationLabel: textField("Citation Label"),
+        citationUrl: textField("Citation URL"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "protocolBuilder",
+    label: "Protocol Builder",
+    category: "powerplunge",
+    version: 1,
+    description: "Cold plunge protocols by experience level with safety disclaimer",
+    renderComponent: ProtocolBuilderBlock,
+    defaultProps: {
+      title: "Cold Plunge Protocols",
+      protocols: [
+        { level: "beginner", tempRange: "58–60°F (14–16°C)", duration: "1–2 minutes", frequency: "2–3× per week", notes: "Focus on controlled breathing. Exit if you feel dizzy or numb." },
+        { level: "intermediate", tempRange: "50–57°F (10–14°C)", duration: "2–5 minutes", frequency: "3–5× per week", notes: "Pair with breathwork. Gradually extend session length over weeks." },
+        { level: "advanced", tempRange: "37–49°F (3–9°C)", duration: "5–10 minutes", frequency: "Daily or as tolerated", notes: "Monitor body response closely. Never plunge alone at extreme temperatures." },
+      ],
+      disclaimerText: "Consult a healthcare professional before starting any cold exposure protocol. Individual tolerance varies — start conservatively and progress gradually.",
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      disclaimerText: textareaField("Disclaimer Text"),
+      protocols: arrayField("Protocols", {
+        level: selectField("Level", [
+          { label: "Beginner", value: "beginner" },
+          { label: "Intermediate", value: "intermediate" },
+          { label: "Advanced", value: "advanced" },
+        ]),
+        tempRange: textField("Temperature Range"),
+        duration: textField("Duration"),
+        frequency: textField("Frequency"),
+        notes: textareaField("Notes"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "recoveryUseCases",
+    label: "Recovery Use Cases",
+    category: "powerplunge",
+    version: 1,
+    description: "Persona-based messaging showing cold plunge benefits for different audiences",
+    renderComponent: RecoveryUseCasesBlock,
+    defaultProps: {
+      title: "Cold Plunging for Every Lifestyle",
+      cases: [
+        { audience: "athletes", headline: "Train Harder, Recover Faster", bullets: ["Reduce post-workout soreness", "Accelerate muscle recovery between sessions", "Support joint health under heavy training loads"] },
+        { audience: "busy professionals", headline: "Sharpen Your Edge", bullets: ["Boost morning alertness without extra caffeine", "Manage daily stress with a reset ritual", "Improve focus and mental resilience"] },
+        { audience: "active aging", headline: "Move Better, Feel Younger", bullets: ["Support circulation and joint mobility", "Promote deeper, more restorative sleep", "Build a daily wellness habit with measurable impact"] },
+        { audience: "first responders", headline: "Built for Those Who Serve", bullets: ["Manage physical strain from demanding shifts", "Support mental health through cold-water therapy", "Recover faster between back-to-back duties"] },
+      ],
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      cases: arrayField("Use Cases", {
+        audience: selectField("Audience", [
+          { label: "Athletes", value: "athletes" },
+          { label: "Busy Professionals", value: "busy professionals" },
+          { label: "Active Aging", value: "active aging" },
+          { label: "First Responders", value: "first responders" },
+        ]),
+        headline: textField("Headline"),
+        bullets: arrayField("Bullet Points", {
+          value: textField("Bullet Text"),
+        }),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "safetyChecklist",
+    label: "Safety Checklist",
+    category: "powerplunge",
+    version: 1,
+    description: "Safety guidelines checklist with required/optional items and disclaimer",
+    renderComponent: SafetyChecklistBlock,
+    defaultProps: {
+      title: "Safety Guidelines",
+      items: [
+        { text: "Consult your physician before starting cold water immersion", required: true },
+        { text: "Never plunge alone — always have someone nearby", required: true },
+        { text: "Start with warmer temperatures (58–60°F) and shorter sessions", required: true },
+        { text: "Exit immediately if you feel dizzy, numb, or short of breath", required: true },
+        { text: "Avoid cold plunging after consuming alcohol", required: true },
+        { text: "Wait at least 30 minutes after a heavy meal", required: false },
+        { text: "Keep a warm towel and dry clothes within arm's reach", required: false },
+        { text: "Track your sessions to monitor progress and tolerance", required: false },
+      ],
+      disclaimerText: "Cold water immersion carries inherent risks. Individuals with cardiovascular conditions, Raynaud's disease, or pregnancy should avoid cold plunging. Always consult a qualified healthcare provider.",
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      disclaimerText: textareaField("Disclaimer Text"),
+      items: arrayField("Checklist Items", {
+        text: textField("Item Text"),
+        required: checkboxField("Required"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "guaranteeAndWarranty",
+    label: "Guarantee & Warranty",
+    category: "powerplunge",
+    version: 1,
+    description: "Trust-building section with guarantee bullets, warranty summary, and support CTA",
+    renderComponent: GuaranteeAndWarrantyBlock,
+    defaultProps: {
+      title: "Our Promise to You",
+      guaranteeBullets: [
+        "30-day money-back guarantee — no questions asked",
+        "Free return shipping on all guarantee claims",
+        "Full refund or exchange at your choice",
+        "Hassle-free process with dedicated support",
+      ],
+      warrantySummary: "Every Power Plunge unit comes with a comprehensive 2-year manufacturer warranty covering the chiller system, tub construction, and electronic controls. Extended warranty options are available at checkout for up to 5 years of total coverage.",
+      supportCtaText: "Contact Our Support Team",
+      supportCtaHref: "/contact",
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      warrantySummary: textareaField("Warranty Summary"),
+      supportCtaText: textField("Support CTA Text"),
+      supportCtaHref: textField("Support CTA Link"),
+      guaranteeBullets: arrayField("Guarantee Bullets", {
+        value: textField("Bullet Text"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "deliveryAndSetup",
+    label: "Delivery & Setup",
+    category: "powerplunge",
+    version: 1,
+    description: "Step-by-step delivery and setup process with included items and shipping info",
+    renderComponent: DeliveryAndSetupBlock,
+    defaultProps: {
+      title: "Delivery & Setup",
+      steps: [
+        { title: "Order Confirmation", description: "Receive your order confirmation and estimated delivery window within 24 hours." },
+        { title: "White-Glove Delivery", description: "Our team delivers your unit to the room of your choice — no heavy lifting on your end." },
+        { title: "Professional Setup", description: "We handle full assembly, water fill, and initial system calibration on-site." },
+        { title: "Walkthrough & Training", description: "A technician walks you through operation, maintenance, and your first plunge session." },
+      ],
+      includesBullets: [
+        "Cold plunge tub and chiller unit",
+        "Insulated cover and filtration system",
+        "Digital temperature controller",
+        "Starter water treatment kit",
+        "Quick-start guide and owner's manual",
+      ],
+      shippingEstimateText: "Free shipping on all orders. Typical delivery within 7–14 business days to most US locations.",
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      shippingEstimateText: textField("Shipping Estimate Text"),
+      steps: arrayField("Setup Steps", {
+        title: textField("Step Title"),
+        description: textareaField("Step Description"),
+      }),
+      includesBullets: arrayField("What's Included", {
+        value: textField("Item"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "financingAndPayment",
+    label: "Financing & Payment",
+    category: "powerplunge",
+    version: 1,
+    description: "Payment options and financing information to reduce price objections",
+    renderComponent: FinancingAndPaymentBlock,
+    defaultProps: {
+      title: "Flexible Payment Options",
+      bullets: [
+        "All major credit and debit cards accepted",
+        "Split your purchase into 3–12 monthly installments",
+        "0% APR financing available on qualifying orders",
+        "Apple Pay and Google Pay supported at checkout",
+        "Business purchase orders and net-30 terms available",
+      ],
+      financingProviderName: "Affirm",
+      financingDisclaimer: "Financing is subject to credit approval. Terms and rates may vary based on creditworthiness. 0% APR available on select terms for qualified buyers.",
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      financingProviderName: textField("Financing Provider Name"),
+      financingDisclaimer: textareaField("Financing Disclaimer"),
+      bullets: arrayField("Payment Options", {
+        value: textField("Option"),
       }),
     },
   });

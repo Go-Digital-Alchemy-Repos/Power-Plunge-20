@@ -146,6 +146,103 @@ export const comparisonTableSchema = z.object({
 });
 export type ComparisonTableProps = z.infer<typeof comparisonTableSchema>;
 
+export const benefitItemSchema = z.object({
+  headline: z.string().min(1),
+  description: z.string().default(""),
+  icon: z.string().optional(),
+  emphasis: z.boolean().optional(),
+});
+
+export const benefitStackSchema = z.object({
+  title: z.string().default(""),
+  items: z.array(benefitItemSchema).default([]),
+  layout: z.enum(["stack", "timeline"]).default("stack"),
+});
+export type BenefitStackProps = z.infer<typeof benefitStackSchema>;
+
+export const scienceSectionSchema = z.object({
+  heading: z.string().min(1),
+  body: z.string().default(""),
+  citationLabel: z.string().optional(),
+  citationUrl: z.string().optional(),
+});
+
+export const scienceExplainerSchema = z.object({
+  title: z.string().default(""),
+  sections: z.array(scienceSectionSchema).default([]),
+  disclaimerText: z.string().default("This content is informational and not medical advice."),
+});
+export type ScienceExplainerProps = z.infer<typeof scienceExplainerSchema>;
+
+export const protocolSchema = z.object({
+  level: z.enum(["beginner", "intermediate", "advanced"]),
+  tempRange: z.string().default(""),
+  duration: z.string().default(""),
+  frequency: z.string().default(""),
+  notes: z.string().default(""),
+});
+
+export const protocolBuilderSchema = z.object({
+  title: z.string().default(""),
+  protocols: z.array(protocolSchema).default([]),
+  disclaimerText: z.string().default("Consult a healthcare professional before starting any cold exposure protocol."),
+});
+export type ProtocolBuilderProps = z.infer<typeof protocolBuilderSchema>;
+
+export const useCaseSchema = z.object({
+  audience: z.enum(["athletes", "busy professionals", "active aging", "first responders"]),
+  headline: z.string().default(""),
+  bullets: z.array(z.string()).default([]),
+});
+
+export const recoveryUseCasesSchema = z.object({
+  title: z.string().default(""),
+  cases: z.array(useCaseSchema).default([]),
+});
+export type RecoveryUseCasesProps = z.infer<typeof recoveryUseCasesSchema>;
+
+export const safetyItemSchema = z.object({
+  text: z.string().min(1),
+  required: z.boolean().optional(),
+});
+
+export const safetyChecklistSchema = z.object({
+  title: z.string().default(""),
+  items: z.array(safetyItemSchema).default([]),
+  disclaimerText: z.string().default("Always consult your physician before beginning cold water immersion."),
+});
+export type SafetyChecklistProps = z.infer<typeof safetyChecklistSchema>;
+
+export const guaranteeAndWarrantySchema = z.object({
+  title: z.string().default(""),
+  guaranteeBullets: z.array(z.string()).default([]),
+  warrantySummary: z.string().default(""),
+  supportCtaText: z.string().default("Contact Support"),
+  supportCtaHref: z.string().default("/contact"),
+});
+export type GuaranteeAndWarrantyProps = z.infer<typeof guaranteeAndWarrantySchema>;
+
+export const setupStepSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().default(""),
+});
+
+export const deliveryAndSetupSchema = z.object({
+  title: z.string().default(""),
+  steps: z.array(setupStepSchema).default([]),
+  includesBullets: z.array(z.string()).default([]),
+  shippingEstimateText: z.string().default(""),
+});
+export type DeliveryAndSetupProps = z.infer<typeof deliveryAndSetupSchema>;
+
+export const financingAndPaymentSchema = z.object({
+  title: z.string().default(""),
+  bullets: z.array(z.string()).default([]),
+  financingProviderName: z.string().optional(),
+  financingDisclaimer: z.string().optional(),
+});
+export type FinancingAndPaymentProps = z.infer<typeof financingAndPaymentSchema>;
+
 const blockSchemaMap: Record<string, z.ZodTypeAny> = {
   hero: heroSchema,
   richText: richTextSchema,
@@ -159,6 +256,14 @@ const blockSchemaMap: Record<string, z.ZodTypeAny> = {
   productHighlight: productHighlightSchema,
   trustBar: trustBarSchema,
   comparisonTable: comparisonTableSchema,
+  benefitStack: benefitStackSchema,
+  scienceExplainer: scienceExplainerSchema,
+  protocolBuilder: protocolBuilderSchema,
+  recoveryUseCases: recoveryUseCasesSchema,
+  safetyChecklist: safetyChecklistSchema,
+  guaranteeAndWarranty: guaranteeAndWarrantySchema,
+  deliveryAndSetup: deliveryAndSetupSchema,
+  financingAndPayment: financingAndPaymentSchema,
 };
 
 export function validateBlockData(
