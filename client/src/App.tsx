@@ -19,6 +19,8 @@ import PageView from "@/pages/page-view";
 import Shop from "@/pages/shop";
 import NotFound from "@/pages/not-found";
 
+const BlogIndexPage = lazy(() => import("@/blog/BlogIndexPage"));
+const BlogPostPage = lazy(() => import("@/blog/BlogPostPage"));
 const BetterAuthLogin = lazy(() => import("@/pages/better-auth-login"));
 const BetterAuthRegister = lazy(() => import("@/pages/better-auth-register"));
 const BecomeAffiliate = lazy(() => import("@/pages/become-affiliate"));
@@ -97,6 +99,8 @@ function Router() {
         <Route path="/shop" component={Shop} />
         <Route path="/become-affiliate" component={BecomeAffiliate} />
         <Route path="/affiliate-portal" component={AffiliatePortal} />
+        <Route path="/blog/:slug">{() => <BlogPostPage />}</Route>
+        <Route path="/blog">{() => <BlogIndexPage />}</Route>
         <Route path="/page/:slug" component={PageView} />
         <Route path="/admin" component={AdminLogin} />
         <Route path="/admin/forgot-password" component={AdminForgotPassword} />
