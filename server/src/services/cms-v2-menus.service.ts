@@ -14,6 +14,10 @@ export class CmsV2MenusService {
     return cmsV2MenusRepository.findActiveByLocation(location);
   }
 
+  async getByLocation(location: string) {
+    return cmsV2MenusRepository.findByLocation(location);
+  }
+
   async create(data: InsertCmsV2Menu) {
     return cmsV2MenusRepository.create(data);
   }

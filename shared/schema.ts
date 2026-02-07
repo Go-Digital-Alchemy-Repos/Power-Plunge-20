@@ -1547,10 +1547,16 @@ export type InsertCmsV2Post = z.infer<typeof insertCmsV2PostSchema>;
 export type CmsV2Post = typeof cmsV2Posts.$inferSelect;
 
 // ==================== CMS V2: Navigation Menus ====================
-export const menuItemSchema = z.object({
+export const menuItemSchema: z.ZodType<any> = z.object({
   id: z.string(),
+  type: z.enum(["page", "post", "external", "label"]).default("external"),
   label: z.string(),
-  url: z.string(),
+  href: z.string().optional().default(""),
+  url: z.string().optional().default(""),
+  pageId: z.string().optional(),
+  pageSlug: z.string().optional(),
+  postId: z.string().optional(),
+  postSlug: z.string().optional(),
   target: z.enum(["_self", "_blank"]).default("_self"),
   order: z.number().default(0),
   children: z.lazy((): z.ZodTypeAny => z.array(menuItemSchema)).default([]),

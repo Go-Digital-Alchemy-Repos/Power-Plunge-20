@@ -1,9 +1,44 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useAdmin } from "@/hooks/use-admin";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import CmsV2Layout from "@/components/admin/CmsV2Layout";
-import { Menu, Plus, Trash2, Pencil, GripVertical, ExternalLink } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  Menu,
+  Plus,
+  Trash2,
+  Pencil,
+  GripVertical,
+  ExternalLink,
+  FileText,
+  PenLine,
+  Link2,
+  Tag,
+  ChevronRight,
+  ChevronDown,
+  Search,
+  X,
+  Save,
+  ArrowLeft,
+  CornerDownRight,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,56 +62,948 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface MenuItemForm {
+interface MenuItemData {
   id: string;
+  type: "page" | "post" | "external" | "label";
   label: string;
+  href: string;
   url: string;
+  pageId?: string;
+  pageSlug?: string;
+  postId?: string;
+  postSlug?: string;
   target: "_self" | "_blank";
   order: number;
+  children: MenuItemData[];
 }
+
+interface MenuData {
+  id: string;
+  name: string;
+  location: string;
+  items: MenuItemData[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const MAX_DEPTH = 3;
 
 function generateId() {
   return Math.random().toString(36).substring(2, 10);
+}
+
+function getItemTypeIcon(type: string) {
+  switch (type) {
+    case "page": return <FileText className="w-3.5 h-3.5 text-blue-400" />;
+    case "post": return <PenLine className="w-3.5 h-3.5 text-green-400" />;
+    case "external": return <ExternalLink className="w-3.5 h-3.5 text-orange-400" />;
+    case "label": return <Tag className="w-3.5 h-3.5 text-purple-400" />;
+    default: return <Link2 className="w-3.5 h-3.5 text-gray-400" />;
+  }
+}
+
+function getItemTypeLabel(type: string) {
+  switch (type) {
+    case "page": return "Page";
+    case "post": return "Post";
+    case "external": return "External Link";
+    case "label": return "Label";
+    default: return type;
+  }
+}
+
+function flattenForDnd(items: MenuItemData[], parentId: string | null = null): { item: MenuItemData; parentId: string | null; depth: number }[] {
+  const result: { item: MenuItemData; parentId: string | null; depth: number }[] = [];
+  function walk(list: MenuItemData[], pid: string | null, depth: number) {
+    for (const item of list) {
+      result.push({ item, parentId: pid, depth });
+      if (item.children?.length) {
+        walk(item.children, item.id, depth + 1);
+      }
+    }
+  }
+  walk(items, parentId, 0);
+  return result;
+}
+
+function SortableMenuItem({
+  item,
+  depth,
+  onEdit,
+  onRemove,
+  onToggleChildren,
+  expandedIds,
+  onAddChild,
+  onMoveToParent,
+  canMoveUp,
+}: {
+  item: MenuItemData;
+  depth: number;
+  onEdit: (item: MenuItemData) => void;
+  onRemove: (id: string) => void;
+  onToggleChildren: (id: string) => void;
+  expandedIds: Set<string>;
+  onAddChild: (parentId: string) => void;
+  onMoveToParent: (id: string) => void;
+  canMoveUp: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const hasChildren = item.children?.length > 0;
+  const isExpanded = expandedIds.has(item.id);
+  const resolvedHref = item.type === "page" ? `/${item.pageSlug || ""}` :
+                       item.type === "post" ? `/blog/${item.postSlug || ""}` :
+                       item.href || item.url || "";
+
+  return (
+    <div ref={setNodeRef} style={style} className="select-none">
+      <div
+        className={`flex items-center gap-2 bg-gray-800/60 border border-gray-700/40 rounded-md p-2 group hover:border-gray-600/60 transition-colors ${
+          isDragging ? "shadow-lg ring-1 ring-cyan-500/30" : ""
+        }`}
+        style={{ marginLeft: `${depth * 28}px` }}
+        data-testid={`menu-item-row-${item.id}`}
+      >
+        <button
+          className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing p-0.5 touch-none"
+          {...attributes}
+          {...listeners}
+          data-testid={`drag-handle-${item.id}`}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+
+        {hasChildren ? (
+          <button
+            onClick={() => onToggleChildren(item.id)}
+            className="text-gray-500 hover:text-gray-300 p-0.5"
+            data-testid={`toggle-children-${item.id}`}
+          >
+            {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          </button>
+        ) : (
+          <span className="w-5" />
+        )}
+
+        {getItemTypeIcon(item.type)}
+
+        <span className="text-sm text-white font-medium truncate flex-1" data-testid={`menu-item-label-${item.id}`}>
+          {item.label || "(untitled)"}
+        </span>
+
+        {item.type !== "label" && resolvedHref && (
+          <span className="text-xs text-gray-500 truncate max-w-[150px] hidden md:inline" title={resolvedHref}>
+            {resolvedHref}
+          </span>
+        )}
+
+        {item.target === "_blank" && (
+          <ExternalLink className="w-3 h-3 text-gray-600 flex-shrink-0" />
+        )}
+
+        <Badge variant="secondary" className="bg-gray-700/50 text-gray-400 text-[10px] px-1.5 py-0">
+          {getItemTypeLabel(item.type)}
+        </Badge>
+
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {depth < MAX_DEPTH - 1 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onAddChild(item.id)}
+              className="h-6 w-6 p-0 text-gray-500 hover:text-cyan-400"
+              title="Add child item"
+              data-testid={`add-child-${item.id}`}
+            >
+              <Plus className="w-3 h-3" />
+            </Button>
+          )}
+          {depth > 0 && canMoveUp && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onMoveToParent(item.id)}
+              className="h-6 w-6 p-0 text-gray-500 hover:text-cyan-400"
+              title="Move to parent level"
+              data-testid={`move-up-${item.id}`}
+            >
+              <CornerDownRight className="w-3 h-3 rotate-180" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(item)}
+            className="h-6 w-6 p-0 text-gray-500 hover:text-white"
+            data-testid={`edit-item-${item.id}`}
+          >
+            <Pencil className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRemove(item.id)}
+            className="h-6 w-6 p-0 text-gray-500 hover:text-red-400"
+            data-testid={`remove-item-${item.id}`}
+          >
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddItemModal({
+  open,
+  onClose,
+  onAdd,
+  parentLabel,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAdd: (item: MenuItemData) => void;
+  parentLabel?: string;
+}) {
+  const [type, setType] = useState<"page" | "post" | "external" | "label">("page");
+  const [label, setLabel] = useState("");
+  const [href, setHref] = useState("");
+  const [target, setTarget] = useState<"_self" | "_blank">("_self");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+  const [selectedPageSlug, setSelectedPageSlug] = useState<string | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [selectedPostSlug, setSelectedPostSlug] = useState<string | null>(null);
+
+  const { data: pages = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/cms-v2/pages"],
+    queryFn: () => apiRequest("GET", "/api/admin/cms-v2/pages").then((r) => r.json()),
+    enabled: type === "page",
+  });
+
+  const { data: posts = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/cms-v2/posts"],
+    queryFn: () => apiRequest("GET", "/api/admin/cms-v2/posts").then((r) => r.json()),
+    enabled: type === "post",
+  });
+
+  const filteredPages = useMemo(() => {
+    if (!searchQuery) return pages;
+    const q = searchQuery.toLowerCase();
+    return pages.filter((p: any) => p.title?.toLowerCase().includes(q) || p.slug?.toLowerCase().includes(q));
+  }, [pages, searchQuery]);
+
+  const filteredPosts = useMemo(() => {
+    if (!searchQuery) return posts;
+    const q = searchQuery.toLowerCase();
+    return posts.filter((p: any) => p.title?.toLowerCase().includes(q) || p.slug?.toLowerCase().includes(q));
+  }, [posts, searchQuery]);
+
+  function reset() {
+    setType("page");
+    setLabel("");
+    setHref("");
+    setTarget("_self");
+    setSearchQuery("");
+    setSelectedPageId(null);
+    setSelectedPageSlug(null);
+    setSelectedPostId(null);
+    setSelectedPostSlug(null);
+  }
+
+  function handleAdd() {
+    const newItem: MenuItemData = {
+      id: generateId(),
+      type,
+      label: label || "(untitled)",
+      href: type === "external" ? href : type === "page" ? `/${selectedPageSlug || ""}` : type === "post" ? `/blog/${selectedPostSlug || ""}` : "",
+      url: type === "external" ? href : "",
+      pageId: type === "page" ? selectedPageId || undefined : undefined,
+      pageSlug: type === "page" ? selectedPageSlug || undefined : undefined,
+      postId: type === "post" ? selectedPostId || undefined : undefined,
+      postSlug: type === "post" ? selectedPostSlug || undefined : undefined,
+      target,
+      order: 0,
+      children: [],
+    };
+    onAdd(newItem);
+    reset();
+    onClose();
+  }
+
+  const canSave = label && (
+    type === "label" ||
+    type === "external" && href ||
+    type === "page" && selectedPageId ||
+    type === "post" && selectedPostId
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
+      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle data-testid="text-add-item-title">Add Menu Item</DialogTitle>
+          <DialogDescription className="text-gray-400">
+            {parentLabel ? `Adding as child of "${parentLabel}"` : "Add a new navigation item"}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <Label className="text-gray-300 text-sm">Item Type</Label>
+            <div className="grid grid-cols-4 gap-2 mt-1.5">
+              {(["page", "post", "external", "label"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => { setType(t); setSearchQuery(""); setSelectedPageId(null); setSelectedPostId(null); }}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-xs transition-all ${
+                    type === t
+                      ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
+                      : "border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600"
+                  }`}
+                  data-testid={`type-button-${t}`}
+                >
+                  {getItemTypeIcon(t)}
+                  <span>{getItemTypeLabel(t)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {type === "page" && (
+            <div>
+              <Label className="text-gray-300 text-sm">Select Page</Label>
+              <div className="relative mt-1.5">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Input
+                  placeholder="Search pages..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white pl-9"
+                  data-testid="input-search-pages"
+                />
+              </div>
+              <div className="mt-2 max-h-48 overflow-y-auto space-y-1 border border-gray-700/50 rounded-md p-1" data-testid="page-list">
+                {filteredPages.length === 0 ? (
+                  <p className="text-xs text-gray-500 py-3 text-center">No pages found</p>
+                ) : (
+                  filteredPages.map((page: any) => (
+                    <button
+                      key={page.id}
+                      onClick={() => {
+                        setSelectedPageId(page.id);
+                        setSelectedPageSlug(page.slug);
+                        if (!label) setLabel(page.title);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center justify-between ${
+                        selectedPageId === page.id
+                          ? "bg-cyan-500/15 text-cyan-400"
+                          : "text-gray-300 hover:bg-gray-800"
+                      }`}
+                      data-testid={`select-page-${page.id}`}
+                    >
+                      <span className="truncate">{page.title}</span>
+                      <span className="text-xs text-gray-500 ml-2 flex-shrink-0">/{page.slug}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {type === "post" && (
+            <div>
+              <Label className="text-gray-300 text-sm">Select Post</Label>
+              <div className="relative mt-1.5">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Input
+                  placeholder="Search posts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white pl-9"
+                  data-testid="input-search-posts"
+                />
+              </div>
+              <div className="mt-2 max-h-48 overflow-y-auto space-y-1 border border-gray-700/50 rounded-md p-1" data-testid="post-list">
+                {filteredPosts.length === 0 ? (
+                  <p className="text-xs text-gray-500 py-3 text-center">No posts found</p>
+                ) : (
+                  filteredPosts.map((post: any) => (
+                    <button
+                      key={post.id}
+                      onClick={() => {
+                        setSelectedPostId(post.id);
+                        setSelectedPostSlug(post.slug);
+                        if (!label) setLabel(post.title);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center justify-between ${
+                        selectedPostId === post.id
+                          ? "bg-cyan-500/15 text-cyan-400"
+                          : "text-gray-300 hover:bg-gray-800"
+                      }`}
+                      data-testid={`select-post-${post.id}`}
+                    >
+                      <span className="truncate">{post.title}</span>
+                      <Badge variant="secondary" className="text-[10px] bg-gray-700 text-gray-400 ml-2">
+                        {post.status || "draft"}
+                      </Badge>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {type === "external" && (
+            <div>
+              <Label className="text-gray-300 text-sm">URL</Label>
+              <Input
+                value={href}
+                onChange={(e) => setHref(e.target.value)}
+                placeholder="https://example.com"
+                className="bg-gray-800 border-gray-700 text-white mt-1.5"
+                data-testid="input-external-url"
+              />
+            </div>
+          )}
+
+          <div>
+            <Label className="text-gray-300 text-sm">Label *</Label>
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Menu item label"
+              className="bg-gray-800 border-gray-700 text-white mt-1.5"
+              data-testid="input-item-label"
+            />
+          </div>
+
+          {type !== "label" && (
+            <div>
+              <Label className="text-gray-300 text-sm">Open in</Label>
+              <Select value={target} onValueChange={(v) => setTarget(v as "_self" | "_blank")}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1.5" data-testid="select-item-target">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                  <SelectItem value="_self">Same tab</SelectItem>
+                  <SelectItem value="_blank">New tab</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => { reset(); onClose(); }} data-testid="button-cancel-add-item">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAdd}
+            disabled={!canSave}
+            className="bg-cyan-600 hover:bg-cyan-700"
+            data-testid="button-confirm-add-item"
+          >
+            Add Item
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MenuEditor({
+  menu,
+  onBack,
+}: {
+  menu: MenuData | null;
+  onBack: () => void;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [name, setName] = useState(menu?.name || "");
+  const [location, setLocation] = useState(menu?.location || "main");
+  const [active, setActive] = useState(menu?.active ?? true);
+  const [items, setItems] = useState<MenuItemData[]>(
+    (menu?.items || []).map((item, i) => normalizeItem(item, i))
+  );
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    const ids = new Set<string>();
+    function walk(list: MenuItemData[]) {
+      for (const item of list) {
+        if (item.children?.length) {
+          ids.add(item.id);
+          walk(item.children);
+        }
+      }
+    }
+    walk(menu?.items || []);
+    return ids;
+  });
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addParentId, setAddParentId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<MenuItemData | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  function normalizeItem(item: any, i: number): MenuItemData {
+    return {
+      id: item.id || generateId(),
+      type: item.type || "external",
+      label: item.label || "",
+      href: item.href || item.url || "",
+      url: item.url || item.href || "",
+      pageId: item.pageId,
+      pageSlug: item.pageSlug,
+      postId: item.postId,
+      postSlug: item.postSlug,
+      target: item.target || "_self",
+      order: item.order ?? i,
+      children: (item.children || []).map((c: any, j: number) => normalizeItem(c, j)),
+    };
+  }
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const data = { name, location, active, items: items.map((item, i) => serializeItem(item, i)) };
+      if (menu) {
+        return apiRequest("PUT", `/api/admin/cms-v2/menus/${menu.id}`, data).then((r) => r.json());
+      }
+      return apiRequest("POST", `/api/admin/cms-v2/menus`, data).then((r) => r.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cms-v2/menus"] });
+      toast({ title: menu ? "Menu updated" : "Menu created" });
+      setHasChanges(false);
+      onBack();
+    },
+    onError: () => toast({ title: "Failed to save menu", variant: "destructive" }),
+  });
+
+  function serializeItem(item: MenuItemData, i: number): any {
+    return {
+      id: item.id,
+      type: item.type,
+      label: item.label,
+      href: item.href || item.url || "",
+      url: item.url || item.href || "",
+      pageId: item.pageId,
+      pageSlug: item.pageSlug,
+      postId: item.postId,
+      postSlug: item.postSlug,
+      target: item.target,
+      order: i,
+      children: (item.children || []).map((c, j) => serializeItem(c, j)),
+    };
+  }
+
+  const flatItems = useMemo(() => {
+    const result: { item: MenuItemData; depth: number }[] = [];
+    function walk(list: MenuItemData[], depth: number) {
+      for (const item of list) {
+        result.push({ item, depth });
+        if (item.children?.length && expandedIds.has(item.id)) {
+          walk(item.children, depth + 1);
+        }
+      }
+    }
+    walk(items, 0);
+    return result;
+  }, [items, expandedIds]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function findAndRemoveItem(list: MenuItemData[], id: string): { remaining: MenuItemData[]; removed?: MenuItemData } {
+    const result: MenuItemData[] = [];
+    let removed: MenuItemData | undefined;
+    for (const item of list) {
+      if (item.id === id) {
+        removed = item;
+      } else {
+        const childResult = findAndRemoveItem(item.children || [], id);
+        result.push({ ...item, children: childResult.remaining });
+        if (childResult.removed) removed = childResult.removed;
+      }
+    }
+    return { remaining: result, removed };
+  }
+
+  function findItemDepth(list: MenuItemData[], id: string, depth: number = 0): number {
+    for (const item of list) {
+      if (item.id === id) return depth;
+      if (item.children?.length) {
+        const d = findItemDepth(item.children, id, depth + 1);
+        if (d >= 0) return d;
+      }
+    }
+    return -1;
+  }
+
+  function insertItemAtIndex(list: MenuItemData[], targetId: string, newItem: MenuItemData): MenuItemData[] {
+    const result: MenuItemData[] = [];
+    for (const item of list) {
+      if (item.id === targetId) {
+        result.push(newItem);
+        result.push(item);
+      } else {
+        result.push({
+          ...item,
+          children: insertItemAtIndex(item.children || [], targetId, newItem),
+        });
+      }
+    }
+    return result;
+  }
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setItems((prev) => {
+      const activeDepth = findItemDepth(prev, active.id as string);
+      const overDepth = findItemDepth(prev, over.id as string);
+
+      if (activeDepth === overDepth && activeDepth === 0) {
+        const oldIndex = prev.findIndex((i) => i.id === active.id);
+        const newIndex = prev.findIndex((i) => i.id === over.id);
+        if (oldIndex >= 0 && newIndex >= 0) {
+          return arrayMove(prev, oldIndex, newIndex);
+        }
+      }
+
+      function reorderInParent(list: MenuItemData[]): MenuItemData[] {
+        const activeIdx = list.findIndex((i) => i.id === active.id);
+        const overIdx = list.findIndex((i) => i.id === over.id);
+        if (activeIdx >= 0 && overIdx >= 0) {
+          return arrayMove(list, activeIdx, overIdx);
+        }
+        return list.map((item) => ({
+          ...item,
+          children: reorderInParent(item.children || []),
+        }));
+      }
+
+      return reorderInParent(prev);
+    });
+    setHasChanges(true);
+  }, []);
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function addItemToParent(parentId: string | null, item: MenuItemData) {
+    if (!parentId) {
+      setItems((prev) => [...prev, item]);
+    } else {
+      setItems((prev) => {
+        function addChild(list: MenuItemData[]): MenuItemData[] {
+          return list.map((i) => {
+            if (i.id === parentId) {
+              return { ...i, children: [...(i.children || []), item] };
+            }
+            return { ...i, children: addChild(i.children || []) };
+          });
+        }
+        return addChild(prev);
+      });
+      setExpandedIds((prev) => new Set([...prev, parentId]));
+    }
+    setHasChanges(true);
+  }
+
+  function removeItem(id: string) {
+    setItems((prev) => findAndRemoveItem(prev, id).remaining);
+    setHasChanges(true);
+  }
+
+  function moveToParent(id: string) {
+    setItems((prev) => {
+      function moveUp(list: MenuItemData[], parentList: MenuItemData[] | null): { result: MenuItemData[]; movedItem?: MenuItemData } {
+        for (let i = 0; i < list.length; i++) {
+          const childIdx = (list[i].children || []).findIndex((c) => c.id === id);
+          if (childIdx >= 0) {
+            const movedItem = list[i].children![childIdx];
+            const newChildren = list[i].children!.filter((_, j) => j !== childIdx);
+            const newList = [...list];
+            newList[i] = { ...newList[i], children: newChildren };
+            newList.splice(i + 1, 0, movedItem);
+            return { result: newList, movedItem };
+          }
+          const childResult = moveUp(list[i].children || [], list);
+          if (childResult.movedItem) {
+            const newList = [...list];
+            newList[i] = { ...newList[i], children: childResult.result };
+            return { result: newList, movedItem: childResult.movedItem };
+          }
+        }
+        return { result: list };
+      }
+      return moveUp(prev, null).result;
+    });
+    setHasChanges(true);
+  }
+
+  function updateEditingItem(updates: Partial<MenuItemData>) {
+    if (!editingItem) return;
+    setEditingItem({ ...editingItem, ...updates });
+  }
+
+  function saveEditingItem() {
+    if (!editingItem) return;
+    setItems((prev) => {
+      function updateInTree(list: MenuItemData[]): MenuItemData[] {
+        return list.map((item) => {
+          if (item.id === editingItem!.id) return { ...editingItem! };
+          return { ...item, children: updateInTree(item.children || []) };
+        });
+      }
+      return updateInTree(prev);
+    });
+    setEditingItem(null);
+    setHasChanges(true);
+  }
+
+  const addParentItem = addParentId
+    ? flatItems.find((fi) => fi.item.id === addParentId)?.item
+    : null;
+
+  const locationLabels: Record<string, string> = {
+    main: "Main Navigation",
+    footer: "Footer",
+    utility: "Utility Bar",
+    header: "Header",
+    sidebar: "Sidebar",
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-400 hover:text-white" data-testid="button-back-to-menus">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold" data-testid="text-editor-title">
+              {menu ? "Edit Menu" : "New Menu"}
+            </h1>
+            {menu && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                {locationLabels[menu.location] || menu.location} &middot; {(menu.items || []).length} items
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasChanges && (
+            <Badge variant="secondary" className="bg-yellow-900/30 text-yellow-400 text-xs">Unsaved</Badge>
+          )}
+          <Button
+            onClick={() => saveMutation.mutate()}
+            disabled={!name || saveMutation.isPending}
+            className="bg-cyan-600 hover:bg-cyan-700 gap-2"
+            data-testid="button-save-menu"
+          >
+            <Save className="w-4 h-4" />
+            {saveMutation.isPending ? "Saving..." : "Save Menu"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="bg-gray-900/60 border-gray-800 lg:col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-gray-300">Menu Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-gray-400 text-xs">Name *</Label>
+              <Input
+                value={name}
+                onChange={(e) => { setName(e.target.value); setHasChanges(true); }}
+                placeholder="Main Navigation"
+                className="bg-gray-800 border-gray-700 text-white mt-1"
+                data-testid="input-menu-name"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400 text-xs">Location</Label>
+              <Select value={location} onValueChange={(v) => { setLocation(v); setHasChanges(true); }}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1" data-testid="select-menu-location">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                  <SelectItem value="main">Main Navigation</SelectItem>
+                  <SelectItem value="footer">Footer</SelectItem>
+                  <SelectItem value="utility">Utility Bar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <Label className="text-gray-400 text-xs">Active</Label>
+              <Switch
+                checked={active}
+                onCheckedChange={(v) => { setActive(v); setHasChanges(true); }}
+                data-testid="switch-menu-active"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-900/60 border-gray-800 lg:col-span-2">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-gray-300">
+                Menu Items ({items.length})
+              </CardTitle>
+              <Button
+                onClick={() => { setAddParentId(null); setShowAddModal(true); }}
+                size="sm"
+                className="bg-cyan-600 hover:bg-cyan-700 gap-1.5 h-7 text-xs"
+                data-testid="button-add-item"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Item
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {flatItems.length === 0 ? (
+              <div className="text-center py-12 text-gray-500" data-testid="text-no-items">
+                <Menu className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No menu items yet</p>
+                <p className="text-xs mt-1 text-gray-600">Click "Add Item" to start building your menu</p>
+              </div>
+            ) : (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={flatItems.map((fi) => fi.item.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-1" data-testid="menu-items-list">
+                    {flatItems.map(({ item, depth }) => (
+                      <SortableMenuItem
+                        key={item.id}
+                        item={item}
+                        depth={depth}
+                        onEdit={setEditingItem}
+                        onRemove={removeItem}
+                        onToggleChildren={toggleExpanded}
+                        expandedIds={expandedIds}
+                        onAddChild={(parentId) => { setAddParentId(parentId); setShowAddModal(true); }}
+                        onMoveToParent={moveToParent}
+                        canMoveUp={true}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <AddItemModal
+        open={showAddModal}
+        onClose={() => { setShowAddModal(false); setAddParentId(null); }}
+        onAdd={(item) => addItemToParent(addParentId, item)}
+        parentLabel={addParentItem?.label}
+      />
+
+      <Dialog open={!!editingItem} onOpenChange={(o) => { if (!o) setEditingItem(null); }}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Menu Item</DialogTitle>
+            <DialogDescription className="text-gray-400">Update this menu item's properties</DialogDescription>
+          </DialogHeader>
+          {editingItem && (
+            <div className="space-y-4 py-2">
+              <div>
+                <Label className="text-gray-300 text-sm">Type</Label>
+                <div className="flex items-center gap-2 mt-1.5">
+                  {getItemTypeIcon(editingItem.type)}
+                  <span className="text-sm text-gray-300">{getItemTypeLabel(editingItem.type)}</span>
+                </div>
+              </div>
+              <div>
+                <Label className="text-gray-300 text-sm">Label *</Label>
+                <Input
+                  value={editingItem.label}
+                  onChange={(e) => updateEditingItem({ label: e.target.value })}
+                  className="bg-gray-800 border-gray-700 text-white mt-1.5"
+                  data-testid="input-edit-label"
+                />
+              </div>
+              {editingItem.type === "external" && (
+                <div>
+                  <Label className="text-gray-300 text-sm">URL</Label>
+                  <Input
+                    value={editingItem.href || editingItem.url}
+                    onChange={(e) => updateEditingItem({ href: e.target.value, url: e.target.value })}
+                    placeholder="https://..."
+                    className="bg-gray-800 border-gray-700 text-white mt-1.5"
+                    data-testid="input-edit-url"
+                  />
+                </div>
+              )}
+              {editingItem.type !== "label" && (
+                <div>
+                  <Label className="text-gray-300 text-sm">Open in</Label>
+                  <Select value={editingItem.target} onValueChange={(v) => updateEditingItem({ target: v as "_self" | "_blank" })}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1.5" data-testid="select-edit-target">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                      <SelectItem value="_self">Same tab</SelectItem>
+                      <SelectItem value="_blank">New tab</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditingItem(null)}>Cancel</Button>
+            <Button
+              onClick={saveEditingItem}
+              className="bg-cyan-600 hover:bg-cyan-700"
+              data-testid="button-save-edit-item"
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
 
 export default function AdminCmsV2Menus() {
   const { hasFullAccess, isLoading: adminLoading } = useAdmin();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showCreate, setShowCreate] = useState(false);
-  const [editingMenu, setEditingMenu] = useState<any>(null);
+  const [editingMenu, setEditingMenu] = useState<MenuData | null | "new">(null);
 
-  const [formName, setFormName] = useState("");
-  const [formLocation, setFormLocation] = useState("header");
-  const [formActive, setFormActive] = useState(true);
-  const [formItems, setFormItems] = useState<MenuItemForm[]>([]);
-
-  const { data: menus = [], isLoading } = useQuery<any[]>({
+  const { data: menus = [], isLoading } = useQuery<MenuData[]>({
     queryKey: ["/api/admin/cms-v2/menus"],
     queryFn: () => apiRequest("GET", "/api/admin/cms-v2/menus").then((r) => r.json()),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/admin/cms-v2/menus", data).then((r) => r.json()),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cms-v2/menus"] });
-      toast({ title: "Menu created" });
-      resetForm();
-      setShowCreate(false);
-    },
-    onError: () => toast({ title: "Failed to create menu", variant: "destructive" }),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      apiRequest("PUT", `/api/admin/cms-v2/menus/${id}`, data).then((r) => r.json()),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cms-v2/menus"] });
-      toast({ title: "Menu updated" });
-      resetForm();
-      setEditingMenu(null);
-    },
-    onError: () => toast({ title: "Failed to update menu", variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -86,74 +1013,6 @@ export default function AdminCmsV2Menus() {
       toast({ title: "Menu deleted" });
     },
   });
-
-  function resetForm() {
-    setFormName("");
-    setFormLocation("header");
-    setFormActive(true);
-    setFormItems([]);
-  }
-
-  function openEdit(menu: any) {
-    setEditingMenu(menu);
-    setFormName(menu.name);
-    setFormLocation(menu.location);
-    setFormActive(menu.active);
-    setFormItems(
-      (menu.items || []).map((item: any, i: number) => ({
-        id: item.id || generateId(),
-        label: item.label || "",
-        url: item.url || "",
-        target: item.target || "_self",
-        order: item.order ?? i,
-      }))
-    );
-  }
-
-  function addItem() {
-    setFormItems([
-      ...formItems,
-      { id: generateId(), label: "", url: "/", target: "_self", order: formItems.length },
-    ]);
-  }
-
-  function updateItem(index: number, field: string, value: string) {
-    const updated = [...formItems];
-    (updated[index] as any)[field] = value;
-    setFormItems(updated);
-  }
-
-  function removeItem(index: number) {
-    setFormItems(formItems.filter((_, i) => i !== index));
-  }
-
-  function handleSave() {
-    const data: any = {
-      name: formName,
-      location: formLocation,
-      active: formActive,
-      items: formItems.map((item, i) => ({
-        id: item.id,
-        label: item.label,
-        url: item.url,
-        target: item.target,
-        order: i,
-        children: [],
-      })),
-    };
-
-    if (editingMenu) {
-      updateMutation.mutate({ id: editingMenu.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
-  }
-
-  const locationLabels: Record<string, string> = {
-    header: "Header",
-    footer: "Footer",
-    sidebar: "Sidebar",
-  };
 
   if (adminLoading || isLoading) {
     return (
@@ -173,18 +1032,38 @@ export default function AdminCmsV2Menus() {
     );
   }
 
-  const isFormOpen = showCreate || !!editingMenu;
+  if (editingMenu !== null) {
+    return (
+      <CmsV2Layout activeNav="menus" breadcrumbs={[{ label: "Menus", href: "/admin/cms-v2/menus" }, { label: editingMenu === "new" ? "New Menu" : "Edit" }]}>
+        <MenuEditor
+          menu={editingMenu === "new" ? null : editingMenu}
+          onBack={() => {
+            setEditingMenu(null);
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/cms-v2/menus"] });
+          }}
+        />
+      </CmsV2Layout>
+    );
+  }
+
+  const locationLabels: Record<string, string> = {
+    main: "Main",
+    footer: "Footer",
+    utility: "Utility",
+    header: "Header",
+    sidebar: "Sidebar",
+  };
 
   return (
     <CmsV2Layout activeNav="menus" breadcrumbs={[{ label: "Menus" }]}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold" data-testid="text-menus-title">Menus</h1>
-            <p className="text-sm text-gray-400 mt-1">Manage navigation menus for header, footer, and sidebar</p>
+            <h1 className="text-2xl font-bold" data-testid="text-menus-title">Navigation Menus</h1>
+            <p className="text-sm text-gray-400 mt-1">Manage your site navigation for main, footer, and utility areas</p>
           </div>
           <Button
-            onClick={() => { resetForm(); setShowCreate(true); }}
+            onClick={() => setEditingMenu("new")}
             className="bg-cyan-600 hover:bg-cyan-700 gap-2"
             data-testid="button-create-menu"
           >
@@ -196,12 +1075,19 @@ export default function AdminCmsV2Menus() {
         {menus.length === 0 ? (
           <div className="text-center py-16 text-gray-500" data-testid="text-no-menus">
             <Menu className="w-12 h-12 mx-auto mb-4 opacity-30" />
-            <p>No menus yet. Create a navigation menu.</p>
+            <p className="mb-2">No navigation menus yet</p>
+            <p className="text-xs text-gray-600 mb-4">Create a menu to control site navigation</p>
+            <Button onClick={() => setEditingMenu("new")} className="bg-cyan-600 hover:bg-cyan-700 gap-2" data-testid="button-create-first-menu">
+              <Plus className="w-4 h-4" />
+              Create Your First Menu
+            </Button>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {menus.map((menu: any) => (
-              <Card key={menu.id} className="bg-gray-900/60 border-gray-800" data-testid={`card-menu-${menu.id}`}>
+            {menus.map((menu) => (
+              <Card key={menu.id} className="bg-gray-900/60 border-gray-800 hover:border-gray-700 transition-colors cursor-pointer" data-testid={`card-menu-${menu.id}`}
+                onClick={() => setEditingMenu(menu)}
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-semibold text-white" data-testid={`text-menu-name-${menu.id}`}>
@@ -229,23 +1115,25 @@ export default function AdminCmsV2Menus() {
                   </div>
                   {(menu.items || []).length > 0 && (
                     <div className="space-y-1 mb-3">
-                      {(menu.items as any[]).slice(0, 5).map((item: any, i: number) => (
+                      {(menu.items as MenuItemData[]).slice(0, 5).map((item, i) => (
                         <div key={i} className="flex items-center gap-2 text-xs text-gray-400">
-                          <GripVertical className="w-3 h-3 text-gray-600" />
+                          {getItemTypeIcon(item.type || "external")}
                           <span className="truncate">{item.label}</span>
-                          {item.target === "_blank" && <ExternalLink className="w-3 h-3 text-gray-600 flex-shrink-0" />}
+                          {(item.children || []).length > 0 && (
+                            <span className="text-gray-600">({item.children.length})</span>
+                          )}
                         </div>
                       ))}
-                      {(menu.items as any[]).length > 5 && (
-                        <span className="text-xs text-gray-600">+{(menu.items as any[]).length - 5} more</span>
+                      {(menu.items as MenuItemData[]).length > 5 && (
+                        <span className="text-xs text-gray-600">+{menu.items.length - 5} more</span>
                       )}
                     </div>
                   )}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => openEdit(menu)}
+                      onClick={() => setEditingMenu(menu)}
                       className="text-gray-400 hover:text-white gap-1 h-7 text-xs"
                       data-testid={`button-edit-menu-${menu.id}`}
                     >
@@ -255,7 +1143,7 @@ export default function AdminCmsV2Menus() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        if (window.confirm("Delete this menu?")) {
+                        if (window.confirm("Delete this menu? This will remove it from your site navigation.")) {
                           deleteMutation.mutate(menu.id);
                         }
                       }}
@@ -271,117 +1159,6 @@ export default function AdminCmsV2Menus() {
           </div>
         )}
       </div>
-
-      <Dialog open={isFormOpen} onOpenChange={(open) => { if (!open) { setShowCreate(false); setEditingMenu(null); resetForm(); } }}>
-        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle data-testid="text-menu-dialog-title">{editingMenu ? "Edit Menu" : "New Menu"}</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              {editingMenu ? "Update this navigation menu." : "Create a new navigation menu."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label className="text-gray-300">Name *</Label>
-              <Input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Main Navigation"
-                className="bg-gray-800 border-gray-700 text-white mt-1"
-                data-testid="input-menu-name"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-300">Location</Label>
-                <Select value={formLocation} onValueChange={setFormLocation}>
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1" data-testid="select-menu-location">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                    <SelectItem value="header">Header</SelectItem>
-                    <SelectItem value="footer">Footer</SelectItem>
-                    <SelectItem value="sidebar">Sidebar</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end gap-2 pb-1">
-                <Switch
-                  checked={formActive}
-                  onCheckedChange={setFormActive}
-                  data-testid="switch-menu-active"
-                />
-                <Label className="text-gray-300 text-sm">{formActive ? "Active" : "Inactive"}</Label>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-gray-300">Menu Items</Label>
-                <Button variant="ghost" size="sm" onClick={addItem} className="text-cyan-400 hover:text-cyan-300 h-7 text-xs gap-1" data-testid="button-add-menu-item">
-                  <Plus className="w-3 h-3" />Add Item
-                </Button>
-              </div>
-              {formItems.length === 0 ? (
-                <p className="text-xs text-gray-600 py-4 text-center">No items. Click "Add Item" to start.</p>
-              ) : (
-                <div className="space-y-2">
-                  {formItems.map((item, i) => (
-                    <div key={item.id} className="flex items-center gap-2 bg-gray-800/60 rounded-md p-2" data-testid={`menu-item-row-${i}`}>
-                      <GripVertical className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                      <Input
-                        value={item.label}
-                        onChange={(e) => updateItem(i, "label", e.target.value)}
-                        placeholder="Label"
-                        className="bg-gray-700/60 border-gray-600 text-white text-xs h-8 flex-1"
-                        data-testid={`input-menu-item-label-${i}`}
-                      />
-                      <Input
-                        value={item.url}
-                        onChange={(e) => updateItem(i, "url", e.target.value)}
-                        placeholder="/path"
-                        className="bg-gray-700/60 border-gray-600 text-white text-xs h-8 flex-1"
-                        data-testid={`input-menu-item-url-${i}`}
-                      />
-                      <Select value={item.target} onValueChange={(v) => updateItem(i, "target", v)}>
-                        <SelectTrigger className="bg-gray-700/60 border-gray-600 text-white text-xs h-8 w-24" data-testid={`select-menu-item-target-${i}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                          <SelectItem value="_self">Same tab</SelectItem>
-                          <SelectItem value="_blank">New tab</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeItem(i)}
-                        className="text-red-400 hover:text-red-300 h-8 w-8 p-0"
-                        data-testid={`button-remove-menu-item-${i}`}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => { setShowCreate(false); setEditingMenu(null); resetForm(); }} data-testid="button-cancel-menu">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!formName || createMutation.isPending || updateMutation.isPending}
-              className="bg-cyan-600 hover:bg-cyan-700"
-              data-testid="button-save-menu"
-            >
-              {(createMutation.isPending || updateMutation.isPending) ? "Saving..." : editingMenu ? "Update" : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </CmsV2Layout>
   );
 }
