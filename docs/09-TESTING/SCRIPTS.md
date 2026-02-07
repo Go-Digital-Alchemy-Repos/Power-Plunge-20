@@ -180,6 +180,59 @@ npx tsx scripts/seed-email-templates.ts
 - `AFFILIATE_PAYOUT` — Payout notification
 - `RECOVERY_REMINDER` — Cart recovery follow-up
 
+## Post-Refactor Route Verification
+
+After extracting routes from `routes.ts` into modular router files, use these verification steps:
+
+### Quick Smoke Test
+
+```bash
+curl -s http://localhost:5000/api/products | head -c 100
+curl -s http://localhost:5000/api/pages/home | head -c 100
+curl -s http://localhost:5000/api/site-settings | head -c 100
+curl -s http://localhost:5000/api/stripe/config | head -c 100
+curl -s http://localhost:5000/api/health/config | head -c 100
+```
+
+All should return valid JSON (200 OK). These are public endpoints that don't require authentication.
+
+### Admin Endpoint Verification (requires admin JWT)
+
+```bash
+TOKEN="your-admin-jwt-here"
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/admin/me
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/admin/dashboard
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/admin/orders
+```
+
+### Auth Enforcement Check
+
+```bash
+curl -s http://localhost:5000/api/admin/orders
+```
+
+Should return `401 Unauthorized` — confirms `requireAdmin` middleware is active.
+
+### Route File Inventory
+
+To verify all 46 router files are present:
+
+```bash
+find server/src/routes -name "*.ts" -not -name "index.ts" | wc -l
+```
+
+Expected output: `46` (or the current count of router files).
+
+### Check for Orphaned Inline Handlers
+
+To confirm no inline handlers remain in `routes.ts`:
+
+```bash
+grep -c 'app\.\(get\|post\|put\|patch\|delete\)(' server/routes.ts
+```
+
+Expected output: `0` — all handlers should be in router files.
+
 ## Running All Checks
 
 To run all non-destructive verification scripts:

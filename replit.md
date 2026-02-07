@@ -26,7 +26,7 @@ The Power Plunge e-commerce platform utilizes a modern full-stack architecture.
 
 **Backend:**
 - Developed with Express, adopting a layered, modular architecture (`server/src/`).
-- **Route Architecture (Fully Modular):** All API routes are organized into 46 dedicated router files under `server/src/routes/` grouped by domain: `admin/` (19 routers), `customer/` (5 routers), `public/` (9 routers), `webhooks/` (1 router), and shared domain routers (12). The central `server/routes.ts` (159 lines) is a slim orchestrator that imports and mounts all routers with appropriate middleware. No inline handlers remain in routes.ts.
+- **Route Architecture (Fully Modular):** All API routes are organized into 46 dedicated router files under `server/src/routes/` grouped by domain: `admin/` (21 routers), `customer/` (5 routers), `public/` (9 routers), `webhooks/` (1 router), and shared domain routers (10). The central `server/routes.ts` (159 lines) is a slim orchestrator that imports and mounts all routers with appropriate middleware. No inline handlers remain in routes.ts.
   - Admin routers use `requireAdmin` (all roles) or `requireFullAccess` (blocks fulfillment) middleware applied at mount level.
   - Customer routers use `isAuthenticated` middleware at mount level.
   - Public and webhook routers have no auth middleware; rate limiters are applied at route level within router files.

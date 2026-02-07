@@ -113,6 +113,35 @@ Run these after any stabilization change to confirm nothing is broken.
 
 ---
 
+## ROUTE ARCHITECTURE
+
+### R1. Public Endpoints Respond
+1. `curl http://localhost:5000/api/products` — returns JSON array
+2. `curl http://localhost:5000/api/pages/home` — returns JSON page object
+3. `curl http://localhost:5000/api/site-settings` — returns JSON settings
+4. `curl http://localhost:5000/api/stripe/config` — returns JSON with publishableKey
+5. **Verify:** All return 200 OK with valid JSON (not 404 or 500).
+
+### R2. Admin Auth Enforced
+1. `curl http://localhost:5000/api/admin/orders` (no auth header)
+2. **Verify:** Returns 401 Unauthorized.
+
+### R3. Customer Auth Enforced
+1. `curl http://localhost:5000/api/customer/profile` (no auth header)
+2. **Verify:** Returns 401 Unauthorized.
+
+### R4. Multi-Mount Routers
+1. `curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/admin/shipping/zones` — returns shipping zones
+2. `curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/admin/orders/1/shipments` — returns shipments (or 404 for order)
+3. `curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/admin/dashboard` — returns dashboard stats
+4. **Verify:** All return valid responses (not 404). This confirms multi-router exports are mounted correctly.
+
+### R5. Payment Rate Limiting
+1. Send 10 rapid requests to `POST /api/create-payment-intent`
+2. **Verify:** After threshold, responses return 429 Too Many Requests.
+
+---
+
 ## Cleanup
 
 After completing smoke tests, optionally delete the "Smoke Test Page" and "Smoke CTA Section" created during testing to keep the environment clean.

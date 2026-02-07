@@ -1,7 +1,7 @@
 # Feature Module Template
 
 > Standard structure for new feature modules in the Power Plunge platform.
-> All new routes should follow this pattern. Existing routes are being migrated incrementally.
+> All new routes should follow this pattern. All routes have been migrated to this pattern. routes.ts is a 159-line orchestrator with zero inline handlers.
 
 ## Directory Structure
 
@@ -110,6 +110,55 @@ import featureRoutes from "./src/routes/admin/{feature}.routes";
 app.use("/api/admin/{feature}", requireFullAccess, featureRoutes);
 ```
 
+## Multi-Router Exports
+
+When a single domain's routes need to be mounted at different URL prefixes or with different middleware, export multiple routers from the same file. The default export is the primary router; named exports are secondary routers.
+
+```typescript
+// server/src/routes/admin/shipping.routes.ts
+import { Router, Request, Response } from "express";
+import { storage } from "../../../storage";
+
+// Main router — mounted at /api/admin/shipping with requireFullAccess
+const router = Router();
+
+router.get("/zones", async (_req: Request, res: Response) => { ... });
+router.post("/zones", async (req: Request, res: Response) => { ... });
+// ... more zone/rate routes
+
+// Shipment routes — different mount point and middleware
+export const shipmentRoutes = Router();
+shipmentRoutes.get("/:orderId/shipments", async (req: Request, res: Response) => { ... });
+shipmentRoutes.post("/:orderId/shipments", async (req: Request, res: Response) => { ... });
+
+// Shipment management — yet another mount point
+export const shipmentManagementRoutes = Router();
+shipmentManagementRoutes.patch("/:id", async (req: Request, res: Response) => { ... });
+
+export default router;
+```
+
+```typescript
+// server/routes.ts — mounting with different middleware
+import adminShippingRoutes, { shipmentRoutes, shipmentManagementRoutes } from "./src/routes/admin/shipping.routes";
+
+app.use("/api/admin/shipping", requireFullAccess, adminShippingRoutes);
+app.use("/api/admin/orders", requireAdmin, shipmentRoutes);
+app.use("/api/admin/shipments", requireAdmin, shipmentManagementRoutes);
+```
+
+### When to use multi-router exports
+
+- When a domain's routes need different auth middleware (e.g. `requireAdmin` vs `requireFullAccess`)
+- When routes share domain logic but have different URL prefixes
+- When a domain includes both admin and public routes in the same file
+
+### Other examples in the codebase
+
+- `operations.routes.ts` — default + `dashboardRoutes` + `refundOrderRoutes`
+- `coupons.routes.ts` — default + `publicCouponRoutes`
+- `customer/affiliates.routes.ts` — default + `publicAffiliateRoutes`
+
 ## Key Conventions
 
 1. **Middleware is applied at mount level** — `requireAdmin`, `requireFullAccess`, or `isAuthenticated` is added in `routes.ts` when mounting, not inside the router file.
@@ -146,14 +195,16 @@ export const featureService = new FeatureService();
 
 ## Migration Checklist
 
-When extracting routes from `routes.ts`:
+When adding a new route module or extracting from an existing router:
 
-- [ ] Create router file in appropriate directory (admin/public/customer)
-- [ ] Copy handlers verbatim — no behavior changes
-- [ ] Keep all original route paths (mount prefix + handler path = same URL)
-- [ ] Move middleware to mount level in routes.ts
-- [ ] Add import and `app.use()` mount in routes.ts
-- [ ] Remove old inline handlers from routes.ts (leave comment breadcrumb)
-- [ ] Remove any now-unused imports from routes.ts
-- [ ] Restart server and verify all endpoints still respond
-- [ ] Test with curl or E2E to confirm response parity
+- [x] Create router file in appropriate directory (admin/public/customer)
+- [x] Copy handlers verbatim — no behavior changes
+- [x] Keep all original route paths (mount prefix + handler path = same URL)
+- [x] Move middleware to mount level in routes.ts
+- [x] Add import and `app.use()` mount in routes.ts
+- [x] Remove old inline handlers from routes.ts (leave comment breadcrumb)
+- [x] Remove any now-unused imports from routes.ts
+- [x] Restart server and verify all endpoints still respond
+- [x] Test with curl or E2E to confirm response parity
+
+> All 187 original inline handlers have been extracted. This checklist is preserved for reference when adding new feature modules.

@@ -179,15 +179,30 @@ This document defines the stabilization checklist and definition of done for the
 | 14.6 | No N+1 queries | Review key endpoints | No repeated single-row queries in loops |
 | 14.7 | Bundle size | Monitor | `npm run build` output, track JS size |
 
-## 15. Known Issues
+## 15. Route Architecture Verification
+
+| # | Check | Method | Pass Criteria |
+|---|-------|--------|---------------|
+| 15.1 | No inline handlers in routes.ts | `grep -c 'app\.\(get\|post\|put\|patch\|delete\)(' server/routes.ts` | Output: `0` |
+| 15.2 | routes.ts is orchestrator only | `wc -l server/routes.ts` | ~159 lines |
+| 15.3 | All 46 router files present | `find server/src/routes -name "*.ts" -not -name "index.ts" \| wc -l` | 46 files |
+| 15.4 | Public endpoints respond | `curl /api/products`, `/api/pages/home`, `/api/site-settings` | 200 OK |
+| 15.5 | Admin auth enforced | `curl /api/admin/orders` (no token) | 401 Unauthorized |
+| 15.6 | Fulfillment role blocked | Login as fulfillment, hit `/api/admin/settings` | 403 Forbidden |
+| 15.7 | Webhook endpoints respond | `POST /api/webhook/stripe` (invalid sig) | 400 (not 404) |
+| 15.8 | Customer auth enforced | `curl /api/customer/profile` (no token) | 401 Unauthorized |
+| 15.9 | Multi-router mounts correct | Shipping zones at `/api/admin/shipping/zones`, shipments at `/api/admin/orders/:id/shipments` | 200 or 401 (not 404) |
+| 15.10 | Payment endpoints rate limited | Rapid-fire `POST /api/create-payment-intent` | 429 after threshold |
+
+## 16. Known Issues
 
 Track known issues that are accepted for now but should be addressed:
 
 | # | Issue | Severity | Area | Notes |
 |---|-------|----------|------|-------|
-| 15.1 | React hydration warning in campaign dialog | Low | CMS v2 Generator | Cosmetic only, does not affect functionality |
-| 15.2 | | | | |
-| 15.3 | | | | |
+| 16.1 | React hydration warning in campaign dialog | Low | CMS v2 Generator | Cosmetic only, does not affect functionality |
+| 16.2 | | | | |
+| 16.3 | | | | |
 
 Add issues as they are discovered during stabilization. Each entry should include severity (Critical / High / Medium / Low), the affected area, and any workaround notes.
 

@@ -85,6 +85,36 @@ Date: 2026-02-07
 - `server/storage.ts` — Added `getCustomersByIds()` and `getOrdersByCustomerIds()`
 - `client/src/App.tsx` — React.lazy code splitting for 40+ admin routes
 
+---
+
+## Route Extraction — Architectural Improvement (2026-02-07)
+
+### Monolithic routes.ts Eliminated
+
+**Severity:** Medium (maintainability) | **Impact:** Developer experience, startup performance  
+**Problem:** `server/routes.ts` contained ~4,914 lines with ~187 inline endpoint handlers. All business logic, validation, and Stripe/email calls were co-located in a single file. This made navigation difficult, increased merge conflicts, and slowed IDE performance.
+
+**Fix:** Extracted all ~160 remaining inline handlers into 14 new modular router files (plus 2 relocated helper functions). `routes.ts` is now a 159-line orchestrator (97% reduction) that imports and mounts 46 total router files with appropriate middleware.
+
+**Results:**
+
+| Metric | Before | After |
+|--------|--------|-------|
+| `routes.ts` line count | ~4,914 | 159 |
+| Inline handlers in routes.ts | ~187 | 0 |
+| Total router files | 23 | 46 |
+| Middleware application | Mixed (mount-level + inline) | Mount-level only |
+
+**Performance notes:**
+- No measurable change to request latency — Express router mounting is O(1) regardless of file organization
+- Startup time unchanged — all routers are eagerly imported at boot
+- Developer experience significantly improved: each router file is <500 lines and covers a single domain
+
+**Files created:** 14 new router files + 2 multi-router exports  
+**Files modified:** `server/routes.ts` (reduced from ~4,914 to 159 lines)
+
+---
+
 ## Future Recommendations
 
 1. **Add pagination** to orders/media/sections when dataset exceeds ~500 rows
@@ -92,3 +122,4 @@ Date: 2026-02-07
 3. **Dedicated folder query** for media folders endpoint
 4. **Bundle analysis** — Run `npx vite-bundle-visualizer` to identify remaining large dependencies
 5. **Consider React Query Devtools** in development for cache debugging
+6. **Extract storage.ts** — The 1,666-line `DatabaseStorage` class could be split into domain-specific repositories (similar to the route extraction)
