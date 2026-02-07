@@ -64,6 +64,10 @@ Pre-defined collections of coordinated landing pages for seasonal promotions and
 
 Theme packs bundle color themes, component variant selections, and block style defaults into a single activatable design identity. 5 built-in packs provide curated visual styles. See [Theme Packs](15-THEME-PACKS.md), [Component Variants](16-COMPONENT-VARIANTS.md), and [Block Style Defaults](17-BLOCK-STYLE-DEFAULTS.md).
 
+### Site Presets
+
+Site Presets are full-site composition bundles that package a theme pack, navigation, footer, SEO defaults, CTA defaults, homepage template, and section kits into a single activatable configuration. They provide one-click site identity management with preview, activate, and rollback capabilities. 6 built-in starter presets are available. See [Site Presets Overview](18-SITE-PRESETS-OVERVIEW.md), [Apply Engine + History](19-APPLY-ENGINE-HISTORY.md), [Presets Manager UI](20-PRESETS-MANAGER-UI.md), [Export/Import](21-EXPORT-IMPORT.md), and [Preset-Aware Campaigns](22-PRESET-AWARE-CAMPAIGNS.md).
+
 ### SEO
 
 Every page has full SEO controls: meta title/description, Open Graph, Twitter Cards, canonical URLs, robots directives, and JSON-LD structured data. See [SEO](06-SEO.md).
@@ -79,7 +83,8 @@ Every page has full SEO controls: meta title/description, Open Graph, Twitter Ca
 | `/admin/cms-v2/templates` | Page templates |
 | `/admin/cms-v2/themes` | Theme management with instant activation |
 | `/admin/cms-v2/generator/landing` | Landing Page Generator wizard |
-| `/admin/cms-v2/generator/campaigns` | Campaign Packs generator |
+| `/admin/cms-v2/generator/campaigns` | Campaign Packs generator (preset-aware) |
+| `/admin/cms-v2/presets` | Site Presets manager (create, activate, rollback, export/import) |
 | `/admin/cms-v2/seo` | SEO management |
 
 ## Public Routes
