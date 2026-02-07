@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { Section, Container } from "@/cms/layout";
 import { FadeIn } from "@/cms/motion";
 import { Heading } from "@/cms/typography";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import type { BlockRenderProps } from "./types";
 
 export default function RichTextBlock({ data, settings }: BlockRenderProps) {
@@ -31,7 +32,7 @@ export default function RichTextBlock({ data, settings }: BlockRenderProps) {
               lineHeight: "1.8",
               color: "color-mix(in srgb, var(--pp-text, #f9fafb) 80%, transparent)",
             }}
-            dangerouslySetInnerHTML={{ __html: body }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) }}
           />
         </div>
         </FadeIn>

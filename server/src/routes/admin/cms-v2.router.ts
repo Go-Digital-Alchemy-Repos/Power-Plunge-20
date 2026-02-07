@@ -8,6 +8,7 @@ import { db } from "../../db";
 import { eq } from "drizzle-orm";
 import { isCmsV2Enabled } from "../../config/env";
 import { SECTION_KITS } from "../../data/sectionKits";
+import { validateContentJson, sanitizeHtml } from "../../utils/contentValidation";
 
 const router = Router();
 
@@ -47,6 +48,18 @@ router.get("/pages", async (_req, res) => {
 
 router.post("/pages", async (req, res) => {
   try {
+    if (req.body.contentJson !== undefined && req.body.contentJson !== null) {
+      const result = validateContentJson(req.body.contentJson);
+      if (!result.valid) {
+        return res.status(400).json({ error: result.error });
+      }
+      if (result.warnings.length > 0) {
+        result.warnings.forEach((w) => console.warn("[CMS-V2]", w));
+      }
+    }
+    if (typeof req.body.content === "string") {
+      req.body.content = sanitizeHtml(req.body.content);
+    }
     const parsed = insertPageSchema.parse(req.body);
     const page = await cmsV2Service.createPage(parsed);
     res.status(201).json(page);
@@ -60,6 +73,18 @@ router.post("/pages", async (req, res) => {
 
 router.put("/pages/:id", async (req, res) => {
   try {
+    if (req.body.contentJson !== undefined && req.body.contentJson !== null) {
+      const result = validateContentJson(req.body.contentJson);
+      if (!result.valid) {
+        return res.status(400).json({ error: result.error });
+      }
+      if (result.warnings.length > 0) {
+        result.warnings.forEach((w) => console.warn("[CMS-V2]", w));
+      }
+    }
+    if (typeof req.body.content === "string") {
+      req.body.content = sanitizeHtml(req.body.content);
+    }
     const partial = insertPageSchema.partial().parse(req.body);
     const page = await cmsV2Service.updatePage(req.params.id, partial);
     if (!page) return res.status(404).json({ error: "Page not found" });

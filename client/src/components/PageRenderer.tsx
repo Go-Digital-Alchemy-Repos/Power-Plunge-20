@@ -7,6 +7,7 @@ import UnknownBlock from "@/components/UnknownBlock";
 import { getIconWithFallback } from "@/lib/iconUtils";
 import { getBlock as getLegacyBlock } from "@/lib/blockRegistry";
 import { getBlock as getCmsBlock } from "@/cms/blocks/registry";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface BlockSettings {
   visibility?: 'all' | 'desktop' | 'mobile';
@@ -189,7 +190,7 @@ const RichTextBlock = ({ data, settings }: { data: Record<string, any>; settings
       {title && <h2 className="text-2xl font-bold text-white mb-4">{title}</h2>}
       <div 
         className="prose prose-invert prose-lg max-w-none"
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }}
       />
     </section>
   );
@@ -1213,7 +1214,7 @@ export default function PageRenderer({ contentJson, legacyContent, onAddToCart }
     return (
       <div 
         className="legacy-content max-w-4xl mx-auto px-4 py-12 prose prose-invert prose-lg"
-        dangerouslySetInnerHTML={{ __html: legacyContent }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(legacyContent) }}
         data-testid="page-renderer-legacy"
       />
     );

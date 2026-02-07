@@ -3,6 +3,7 @@ import { useLocation, useParams } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PageRenderer from "@/components/PageRenderer";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface PageBlock {
   id: string;
@@ -77,7 +78,7 @@ export default function PageView() {
           <div className="container mx-auto px-4 py-12 max-w-4xl">
             <article 
               className="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-p:text-slate-300 prose-a:text-cyan-400 prose-strong:text-white prose-li:text-slate-300"
-              dangerouslySetInnerHTML={{ __html: page.content || "" }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.content || "") }}
             />
           </div>
         )}
