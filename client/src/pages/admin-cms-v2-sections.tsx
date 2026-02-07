@@ -3,7 +3,7 @@ import { useAdmin } from "@/hooks/use-admin";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import CmsV2Layout from "@/components/admin/CmsV2Layout";
-import { Layers, Plus, Pencil, Trash2, MoreHorizontal, Copy, FileText } from "lucide-react";
+import { Layers, Plus, Pencil, Trash2, MoreHorizontal, Copy, FileText, PackagePlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ const SECTION_CATEGORIES = [
   { value: "product", label: "Product" },
   { value: "testimonial", label: "Testimonial" },
   { value: "cta", label: "Call to Action" },
+  { value: "kit", label: "Starter Kit" },
 ];
 
 function getCategoryLabel(cat: string | null) {
@@ -114,6 +115,24 @@ export default function AdminCmsV2Sections() {
     },
   });
 
+  const seedKitsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/cms-v2/sections/seed-kits");
+      return res.json();
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cms-v2/sections"] });
+      if (result.created > 0) {
+        toast({ title: "Starter kits loaded", description: `${result.created} kit(s) added.${result.skipped > 0 ? ` ${result.skipped} already existed.` : ""}` });
+      } else {
+        toast({ title: "Kits already loaded", description: "All starter kits are already in your library." });
+      }
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to load kits", description: err.message, variant: "destructive" });
+    },
+  });
+
   function resetForm() { setFormName(""); setFormDescription(""); setFormCategory("general"); }
   function openCreate() { resetForm(); setCreateOpen(true); }
   function openEdit(section: SavedSection) {
@@ -141,10 +160,22 @@ export default function AdminCmsV2Sections() {
               {!isLoading && sections && <span className="text-sm font-normal text-gray-500">{sections.length} total</span>}
             </h1>
           </div>
-          <Button onClick={openCreate} className="bg-cyan-600 hover:bg-cyan-700 text-white h-8 text-xs" data-testid="button-create-section">
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            New Section
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => seedKitsMutation.mutate()}
+              disabled={seedKitsMutation.isPending}
+              className="border-gray-700 text-gray-300 hover:text-white hover:bg-gray-800 h-8 text-xs"
+              data-testid="button-load-starter-kits"
+            >
+              <PackagePlus className="w-3.5 h-3.5 mr-1" />
+              {seedKitsMutation.isPending ? "Loading..." : "Load Starter Kits"}
+            </Button>
+            <Button onClick={openCreate} className="bg-cyan-600 hover:bg-cyan-700 text-white h-8 text-xs" data-testid="button-create-section">
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              New Section
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (

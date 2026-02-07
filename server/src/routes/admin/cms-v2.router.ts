@@ -5,6 +5,8 @@ import { insertPageSchema, insertSavedSectionSchema, siteSettings } from "@share
 import { themePresets } from "@shared/themePresets";
 import { db } from "../../db";
 import { eq } from "drizzle-orm";
+import { isCmsV2Enabled } from "../../config/env";
+import { SECTION_KITS } from "../../data/sectionKits";
 
 const router = Router();
 
@@ -174,6 +176,34 @@ router.delete("/sections/:id", async (req, res) => {
   const section = await sectionsService.remove(req.params.id);
   if (!section) return res.status(404).json({ error: "Section not found" });
   res.json({ success: true });
+});
+
+router.post("/sections/seed-kits", async (_req, res) => {
+  if (!isCmsV2Enabled()) {
+    return res.status(403).json({ error: "CMS v2 is not enabled" });
+  }
+
+  try {
+    const existing = await sectionsService.list();
+    const existingNames = new Set(existing.map((s: any) => s.name));
+
+    const created: any[] = [];
+    const skipped: string[] = [];
+
+    for (const kit of SECTION_KITS) {
+      if (existingNames.has(kit.name)) {
+        skipped.push(kit.name);
+        continue;
+      }
+      const section = await sectionsService.create(kit as any);
+      created.push(section);
+    }
+
+    res.json({ created: created.length, skipped: skipped.length, skippedNames: skipped });
+  } catch (err: any) {
+    console.error("Seed kits error:", err);
+    res.status(500).json({ error: "Failed to seed kits" });
+  }
 });
 
 router.get("/themes", (_req, res) => {
