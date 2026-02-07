@@ -1,7 +1,8 @@
 # Route Architecture Refactor Plan
 
 Date: 2026-02-07  
-Status: COMPLETED — 2026-02-07
+Phase 1 Status: COMPLETED — 2026-02-07 (monolith → 46 router files)  
+Phase 2 Status: IN PROGRESS — Route file relocation into feature subdirectories
 
 ---
 
@@ -638,7 +639,7 @@ This ensures no existing service breaks during repo extraction.
 
 ---
 
-## 8. Files Changed During Migration
+## 8. Files Changed During Phase 1
 
 The following files were modified or created during the refactoring (2026-02-07):
 
@@ -652,3 +653,53 @@ The following files were modified or created during the refactoring (2026-02-07)
 - `server/src/repositories/**` — existing repos (unchanged)
 - `server/index.ts` — app entry point (unchanged)
 - `shared/schema.ts` — Drizzle schema (unchanged)
+
+---
+
+## 9. Phase 2 — Route File Relocation (2026-02-07)
+
+### Problem
+
+12 route files remain at the root of `server/src/routes/` instead of in their proper `admin/`, `customer/`, or `public/` subdirectory. This makes it hard for developers to find endpoints by audience.
+
+### Files to Relocate
+
+| Current Location | Target Location | Mount Path | Audience |
+|-----------------|-----------------|------------|----------|
+| `cmsV2.posts.routes.ts` | `admin/cms-v2-posts-admin.routes.ts` | `/api/admin/cms-v2` | admin |
+| `cmsV2.sitePresets.routes.ts` | `admin/cms-v2-site-presets.routes.ts` | `/api/admin/cms-v2/site-presets` | admin |
+| `cmsV2.siteSettings.routes.ts` | `admin/cms-v2-site-settings.routes.ts` | `/api/admin/cms-v2/site-settings` | admin |
+| `affiliate.routes.ts` | `admin/affiliates-v2.routes.ts` | `/api/admin/affiliates-v2` | admin |
+| `alerts.routes.ts` | `admin/alerts.routes.ts` | `/api/alerts` | admin |
+| `recovery.routes.ts` | `admin/recovery.routes.ts` | `/api/recovery` | admin |
+| `revenue.routes.ts` | `admin/revenue.routes.ts` | `/api/admin/revenue` | admin |
+| `upsell.routes.ts` | `admin/upsells.routes.ts` | `/api/upsells` | admin |
+| `vip.routes.ts` | `admin/vip.routes.ts` | `/api/vip` | admin |
+| `coupon.routes.ts` | `public/coupons.routes.ts` | `/api/coupons` | public |
+| `public.blog.routes.ts` | `public/blog-posts.routes.ts` | `/api/blog` | public |
+| `support.routes.ts` | kept at root (mixed exports) | `/api/admin/support` + `/api/customer/support` | mixed |
+
+### Migration Strategy
+
+1. Copy file to new location with kebab-case naming
+2. Old file becomes a re-export: `export { default } from "./admin/new-name.routes"`
+3. Update `routes.ts` imports to point to new location
+4. Run smoke tests after each batch
+5. Verify all mount paths and response shapes remain identical
+
+### How to Add New Routes (for developers)
+
+1. Determine the audience: `admin/`, `customer/`, `public/`, or `webhooks/`
+2. Create `server/src/routes/<audience>/<domain>.routes.ts`
+3. If business logic > 10 lines, create `server/src/services/<domain>.service.ts`
+4. Import and mount in `server/routes.ts` with appropriate middleware
+5. Add a smoke test entry to `scripts/smoke/apiSmoke.ts`
+6. Use kebab-case for file names: `my-feature.routes.ts`
+
+### Out of Scope (future phases)
+
+- Splitting `support.routes.ts` into separate admin/customer files
+- Consolidating `admin/customers.routes.ts` + `admin/customer-management.routes.ts`
+- Extracting service layer from fat routes (e.g., affiliate.routes.ts at 730 lines)
+- Renaming API paths (e.g., `/api/admin/affiliates-v2` → `/api/admin/affiliates`)
+- Adding `index.ts` barrel exports that mount all routes per audience
