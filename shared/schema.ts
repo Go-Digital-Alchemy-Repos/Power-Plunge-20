@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, decimal, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, decimal, jsonb, real, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1569,3 +1569,91 @@ export const cmsV2Menus = pgTable("cms_v2_menus", {
 export const insertCmsV2MenuSchema = createInsertSchema(cmsV2Menus).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCmsV2Menu = z.infer<typeof insertCmsV2MenuSchema>;
 export type CmsV2Menu = typeof cmsV2Menus.$inferSelect;
+
+// ==================== Blog Posts Data Model ====================
+
+export const postCategories = pgTable("post_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPostCategorySchema = createInsertSchema(postCategories).omit({ id: true, createdAt: true });
+export type InsertPostCategory = z.infer<typeof insertPostCategorySchema>;
+export type PostCategory = typeof postCategories.$inferSelect;
+
+export const postTags = pgTable("post_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPostTagSchema = createInsertSchema(postTags).omit({ id: true, createdAt: true });
+export type InsertPostTag = z.infer<typeof insertPostTagSchema>;
+export type PostTag = typeof postTags.$inferSelect;
+
+export const posts = pgTable("posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  excerpt: text("excerpt"),
+  contentJson: jsonb("content_json"),
+  legacyHtml: text("legacy_html"),
+  status: text("status").notNull().default("draft"),
+  publishedAt: timestamp("published_at"),
+  scheduledAt: timestamp("scheduled_at"),
+  authorId: varchar("author_id").references(() => adminUsers.id),
+  coverImageId: varchar("cover_image_id").references(() => mediaLibrary.id),
+  ogImageId: varchar("og_image_id").references(() => mediaLibrary.id),
+  readingTimeMinutes: integer("reading_time_minutes"),
+  canonicalUrl: text("canonical_url"),
+  featured: boolean("featured").notNull().default(false),
+  allowIndex: boolean("allow_index").notNull().default(true),
+  allowFollow: boolean("allow_follow").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertPostSchema = createInsertSchema(posts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPost = z.infer<typeof insertPostSchema>;
+export type Post = typeof posts.$inferSelect;
+
+export const postCategoryMap = pgTable("post_category_map", {
+  postId: varchar("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  categoryId: varchar("category_id").notNull().references(() => postCategories.id, { onDelete: "cascade" }),
+}, (table) => [primaryKey({ columns: [table.postId, table.categoryId] })]);
+
+export const postTagMap = pgTable("post_tag_map", {
+  postId: varchar("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  tagId: varchar("tag_id").notNull().references(() => postTags.id, { onDelete: "cascade" }),
+}, (table) => [primaryKey({ columns: [table.postId, table.tagId] })]);
+
+export const postRevisions = pgTable("post_revisions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  snapshotJson: jsonb("snapshot_json").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdByUserId: varchar("created_by_user_id").references(() => adminUsers.id),
+});
+
+export const insertPostRevisionSchema = createInsertSchema(postRevisions).omit({ id: true, createdAt: true });
+export type InsertPostRevision = z.infer<typeof insertPostRevisionSchema>;
+export type PostRevision = typeof postRevisions.$inferSelect;
+
+export const postSettings = pgTable("post_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postsPerPage: integer("posts_per_page").notNull().default(12),
+  blogTitle: text("blog_title").notNull().default("Blog"),
+  blogDescription: text("blog_description"),
+  defaultOgImageId: varchar("default_og_image_id").references(() => mediaLibrary.id),
+  rssEnabled: boolean("rss_enabled").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertPostSettingsSchema = createInsertSchema(postSettings).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPostSettings = z.infer<typeof insertPostSettingsSchema>;
+export type PostSettings = typeof postSettings.$inferSelect;
