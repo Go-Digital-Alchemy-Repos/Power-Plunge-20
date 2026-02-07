@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAdmin } from "@/hooks/use-admin";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import CmsV2Layout from "@/components/admin/CmsV2Layout";
@@ -61,6 +61,17 @@ export default function AdminCmsV2Pages() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
+
+  const searchString = useSearch();
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const tmplId = params.get("template");
+    if (tmplId && CMS_TEMPLATES.some((t) => t.id === tmplId)) {
+      setSelectedTemplate(tmplId);
+      setCreateOpen(true);
+      navigate("/admin/cms-v2/pages", { replace: true });
+    }
+  }, []);
 
   const { data: pages, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/cms-v2/pages"],
