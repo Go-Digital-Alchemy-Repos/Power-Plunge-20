@@ -84,6 +84,7 @@ export interface IStorage {
 
   // Customers
   getCustomer(id: string): Promise<Customer | undefined>;
+  getCustomersByIds(ids: string[]): Promise<Customer[]>;
   getCustomerByEmail(email: string): Promise<Customer | undefined>;
   getCustomerByUserId(userId: string): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
@@ -93,6 +94,7 @@ export interface IStorage {
   getOrders(): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
   getOrdersByCustomerId(customerId: string): Promise<Order[]>;
+  getOrdersByCustomerIds(customerIds: string[]): Promise<Order[]>;
   getOrderByStripeSession(sessionId: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrder(id: string, order: Partial<InsertOrder>): Promise<Order | undefined>;
@@ -445,6 +447,11 @@ export class DatabaseStorage implements IStorage {
     return customer || undefined;
   }
 
+  async getCustomersByIds(ids: string[]): Promise<Customer[]> {
+    if (ids.length === 0) return [];
+    return db.select().from(customers).where(inArray(customers.id, ids));
+  }
+
   async getCustomerByEmail(email: string): Promise<Customer | undefined> {
     const [customer] = await db.select().from(customers).where(eq(customers.email, email));
     return customer || undefined;
@@ -477,6 +484,11 @@ export class DatabaseStorage implements IStorage {
 
   async getOrdersByCustomerId(customerId: string): Promise<Order[]> {
     return db.select().from(orders).where(eq(orders.customerId, customerId)).orderBy(desc(orders.createdAt));
+  }
+
+  async getOrdersByCustomerIds(customerIds: string[]): Promise<Order[]> {
+    if (customerIds.length === 0) return [];
+    return db.select().from(orders).where(inArray(orders.customerId, customerIds));
   }
 
   async getOrderByStripeSession(sessionId: string): Promise<Order | undefined> {

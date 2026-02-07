@@ -56,18 +56,37 @@ router.patch("/admin/settings", requireAdmin, asyncHandler(async (req, res) => {
   res.json(settings);
 }));
 
-// Get all VIP customers
+// Get all VIP customers (batch queries to avoid N+1)
 router.get("/admin/customers", requireAdmin, asyncHandler(async (req, res) => {
   const vips = await storage.getVipCustomers();
-  
-  // Get customer details for each VIP
-  const withCustomers = await Promise.all(vips.map(async (vip) => {
-    const customer = await storage.getCustomer(vip.customerId);
-    const orders = await storage.getOrdersByCustomerId(vip.customerId);
+
+  if (vips.length === 0) {
+    return res.json([]);
+  }
+
+  const customerIds = vips.map(v => v.customerId);
+
+  const [allCustomers, allOrders] = await Promise.all([
+    storage.getCustomersByIds(customerIds),
+    storage.getOrdersByCustomerIds(customerIds),
+  ]);
+
+  const customerMap = new Map(allCustomers.map(c => [c.id, c]));
+  const ordersByCustomer = new Map<string, typeof allOrders>();
+  for (const order of allOrders) {
+    if (!order.customerId) continue;
+    const existing = ordersByCustomer.get(order.customerId) || [];
+    existing.push(order);
+    ordersByCustomer.set(order.customerId, existing);
+  }
+
+  const withCustomers = vips.map(vip => {
+    const customer = customerMap.get(vip.customerId) || null;
+    const orders = ordersByCustomer.get(vip.customerId) || [];
     const lifetimeSpend = orders
       .filter(o => ["paid", "shipped", "delivered"].includes(o.status))
       .reduce((sum, o) => sum + o.totalAmount, 0);
-    
+
     return {
       ...vip,
       customer,
@@ -76,7 +95,7 @@ router.get("/admin/customers", requireAdmin, asyncHandler(async (req, res) => {
         orderCount: orders.length,
       },
     };
-  }));
+  });
 
   res.json(withCustomers);
 }));

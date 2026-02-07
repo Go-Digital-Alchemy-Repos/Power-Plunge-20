@@ -1,10 +1,12 @@
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { errorHandler } from "./src/middleware/error.middleware";
 import { requestLoggerMiddleware } from "./src/middleware/request-logger.middleware";
+import { serverTimingMiddleware } from "./src/middleware/server-timing.middleware";
 
 const app = express();
 const httpServer = createServer(app);
@@ -14,6 +16,8 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+app.use(compression());
 
 app.use(
   express.json({
@@ -37,6 +41,7 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+app.use(serverTimingMiddleware);
 app.use(requestLoggerMiddleware);
 
 (async () => {
