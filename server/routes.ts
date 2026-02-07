@@ -39,7 +39,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
-import { insertProductSchema, insertCustomerSchema, insertAffiliateSchema, validateContentJson, validatePageType } from "@shared/schema";
+import { insertProductSchema, insertCustomerSchema, insertAffiliateSchema } from "@shared/schema";
 import { z } from "zod";
 
 // Canonical imports from server/src/
@@ -73,6 +73,14 @@ import alertsRoutes from "./src/routes/alerts.routes";
 import orderTrackingRoutes from "./src/routes/customer/order-tracking.routes";
 import customerAuthRoutes from "./src/routes/customer/auth.routes";
 import publicOrderStatusRoutes from "./src/routes/public/order-status.routes";
+import adminCmsPagesRoutes from "./src/routes/admin/cms-pages.routes";
+import adminCmsSectionsRoutes from "./src/routes/admin/cms-sections.routes";
+import adminCmsTemplatesRoutes from "./src/routes/admin/cms-templates.routes";
+import adminCmsThemeRoutes from "./src/routes/admin/cms-theme.routes";
+import publicCmsPagesRoutes from "./src/routes/public/cms-pages.routes";
+import publicCmsThemeRoutes from "./src/routes/public/cms-theme.routes";
+import publicCmsSettingsRoutes from "./src/routes/public/cms-settings.routes";
+import publicCmsSectionsRoutes from "./src/routes/public/cms-sections.routes";
 import { isCmsV2Enabled } from "./src/config/env";
 import { affiliateCommissionService } from "./src/services/affiliate-commission.service";
 import { couponAnalyticsService } from "./src/services/coupon-analytics.service";
@@ -138,36 +146,22 @@ export async function registerRoutes(
   app.use("/api/customer/auth", customerAuthRoutes);
   app.use("/api/orders", publicOrderStatusRoutes);
 
+  // CMS routes (migrated from legacy inline handlers)
+  app.use("/api/admin/pages", requireFullAccess, adminCmsPagesRoutes);
+  app.use("/api/admin/saved-sections", requireFullAccess, adminCmsSectionsRoutes);
+  app.use("/api/admin/page-templates", requireFullAccess, adminCmsTemplatesRoutes);
+  app.use("/api/admin/theme", requireFullAccess, adminCmsThemeRoutes);
+  app.use("/api/pages", publicCmsPagesRoutes);
+  app.use("/api/theme", publicCmsThemeRoutes);
+  app.use("/api/site-settings", publicCmsSettingsRoutes);
+  app.use("/api/sections", publicCmsSectionsRoutes);
+
   app.get("/api/health/config", (req, res) => {
     res.json({ cmsV2Enabled: isCmsV2Enabled() });
   });
 
-  app.get("/api/theme/active", async (_req, res) => {
-    try {
-      const { themePresets } = await import("@shared/themePresets");
-      const { siteSettings } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      const { db } = await import("./src/db");
-      const [settings] = await db.select({ activeThemeId: siteSettings.activeThemeId }).from(siteSettings).where(eq(siteSettings.id, "main"));
-      const activeId = settings?.activeThemeId || "arctic-default";
-      const preset = themePresets.find((t: any) => t.id === activeId) || themePresets[0];
-      res.json(preset);
-    } catch {
-      const { themePresets } = await import("@shared/themePresets");
-      res.json(themePresets[0]);
-    }
-  });
-
-  app.get("/api/sections/:id", async (req, res) => {
-    try {
-      const { sectionsService } = await import("./src/services/sections.service");
-      const section = await sectionsService.getById(req.params.id);
-      if (!section) return res.status(404).json({ error: "Section not found" });
-      res.json({ id: section.id, name: section.name, blocks: section.blocks });
-    } catch {
-      res.status(500).json({ error: "Failed to fetch section" });
-    }
-  });
+  // /api/theme/active → migrated to publicCmsThemeRoutes
+  // /api/sections/:id → migrated to publicCmsSectionsRoutes
 
   // ==================== PUBLIC ROUTES ====================
   // Note: /api/products routes have been migrated to layered architecture above
@@ -3692,339 +3686,8 @@ ${expirationDate ? `<p style="color: #666; font-size: 13px;">This link expires o
 
   // ==================== ADMIN PAGES (CMS) ====================
 
-  app.get("/api/admin/pages", requireFullAccess, async (req, res) => {
-    try {
-      const pages = await storage.getPages();
-      res.json(pages);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch pages" });
-    }
-  });
-
-  app.get("/api/admin/pages/:id", requireFullAccess, async (req, res) => {
-    try {
-      const page = await storage.getPage(req.params.id);
-      if (!page) {
-        return res.status(404).json({ message: "Page not found" });
-      }
-      res.json(page);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch page" });
-    }
-  });
-
-  app.post("/api/admin/pages", requireFullAccess, async (req, res) => {
-    try {
-      // Validate contentJson structure if provided
-      const contentJsonValidation = validateContentJson(req.body.contentJson);
-      if (!contentJsonValidation.valid) {
-        return res.status(400).json({ 
-          message: "Invalid contentJson structure", 
-          error: contentJsonValidation.error 
-        });
-      }
-      // Validate pageType if provided
-      const pageTypeValidation = validatePageType(req.body.pageType);
-      if (!pageTypeValidation.valid) {
-        return res.status(400).json({ 
-          message: "Invalid pageType", 
-          error: pageTypeValidation.error 
-        });
-      }
-      const page = await storage.createPage(req.body);
-      res.json(page);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to create page" });
-    }
-  });
-
-  app.patch("/api/admin/pages/:id", requireFullAccess, async (req, res) => {
-    try {
-      // Validate contentJson structure if provided
-      if (req.body.contentJson !== undefined) {
-        const contentJsonValidation = validateContentJson(req.body.contentJson);
-        if (!contentJsonValidation.valid) {
-          return res.status(400).json({ 
-            message: "Invalid contentJson structure", 
-            error: contentJsonValidation.error 
-          });
-        }
-      }
-      // Validate pageType if provided
-      if (req.body.pageType !== undefined) {
-        const pageTypeValidation = validatePageType(req.body.pageType);
-        if (!pageTypeValidation.valid) {
-          return res.status(400).json({ 
-            message: "Invalid pageType", 
-            error: pageTypeValidation.error 
-          });
-        }
-      }
-      const page = await storage.updatePage(req.params.id, req.body);
-      if (!page) {
-        return res.status(404).json({ message: "Page not found" });
-      }
-      res.json(page);
-    } catch (error) {
-      console.error("[Pages] Failed to update page:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to update page", error: errorMessage });
-    }
-  });
-
-  app.delete("/api/admin/pages/:id", requireFullAccess, async (req, res) => {
-    try {
-      await storage.deletePage(req.params.id);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete page" });
-    }
-  });
-
-  app.post("/api/admin/pages/:id/set-home", requireFullAccess, async (req, res) => {
-    try {
-      const page = await storage.setHomePage(req.params.id);
-      if (!page) {
-        return res.status(404).json({ message: "Page not found" });
-      }
-      res.json(page);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to set home page" });
-    }
-  });
-
-  app.post("/api/admin/pages/:id/set-shop", requireFullAccess, async (req, res) => {
-    try {
-      const page = await storage.setShopPage(req.params.id);
-      if (!page) {
-        return res.status(404).json({ message: "Page not found" });
-      }
-      res.json(page);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to set shop page" });
-    }
-  });
-
-  // Export page as JSON
-  app.get("/api/admin/pages/:id/export", requireFullAccess, async (req, res) => {
-    try {
-      const page = await storage.getPage(req.params.id);
-      if (!page) {
-        return res.status(404).json({ message: "Page not found" });
-      }
-      
-      // Create export object with relevant fields (exclude internal IDs and timestamps)
-      const exportData = {
-        exportVersion: 1,
-        exportedAt: new Date().toISOString(),
-        page: {
-          title: page.title,
-          slug: page.slug,
-          content: page.content,
-          contentJson: page.contentJson,
-          pageType: page.pageType,
-          template: page.template,
-          isHome: page.isHome,
-          isShop: page.isShop,
-          featuredImage: page.featuredImage,
-          metaTitle: page.metaTitle,
-          metaDescription: page.metaDescription,
-          metaKeywords: page.metaKeywords,
-          canonicalUrl: page.canonicalUrl,
-          ogTitle: page.ogTitle,
-          ogDescription: page.ogDescription,
-          ogImage: page.ogImage,
-          twitterCard: page.twitterCard,
-          twitterTitle: page.twitterTitle,
-          twitterDescription: page.twitterDescription,
-          twitterImage: page.twitterImage,
-          robots: page.robots,
-          status: page.status,
-          showInNav: page.showInNav,
-          navOrder: page.navOrder,
-        }
-      };
-      
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="page-${page.slug}-${Date.now()}.json"`);
-      res.json(exportData);
-    } catch (error) {
-      console.error("Export page error:", error);
-      res.status(500).json({ message: "Failed to export page" });
-    }
-  });
-
-  // Import page from JSON
-  app.post("/api/admin/pages/import", requireFullAccess, async (req, res) => {
-    try {
-      // Validate import request with Zod
-      const importPageSchema = z.object({
-        exportData: z.object({
-          exportVersion: z.number().optional(),
-          exportedAt: z.string().optional(),
-          page: z.object({
-            title: z.string().min(1, "Page title is required"),
-            slug: z.string().min(1, "Page slug is required"),
-            content: z.string().nullable().optional(),
-            contentJson: z.any().nullable().optional(),
-            pageType: z.string().nullable().optional(),
-            template: z.string().nullable().optional(),
-            isHome: z.boolean().optional(),
-            isShop: z.boolean().optional(),
-            featuredImage: z.string().nullable().optional(),
-            metaTitle: z.string().nullable().optional(),
-            metaDescription: z.string().nullable().optional(),
-            metaKeywords: z.string().nullable().optional(),
-            canonicalUrl: z.string().nullable().optional(),
-            ogTitle: z.string().nullable().optional(),
-            ogDescription: z.string().nullable().optional(),
-            ogImage: z.string().nullable().optional(),
-            twitterCard: z.string().nullable().optional(),
-            twitterTitle: z.string().nullable().optional(),
-            twitterDescription: z.string().nullable().optional(),
-            twitterImage: z.string().nullable().optional(),
-            robots: z.string().nullable().optional(),
-            status: z.string().optional(),
-            showInNav: z.boolean().optional(),
-            navOrder: z.number().optional(),
-          }),
-        }),
-        mode: z.enum(['create', 'update']),
-      });
-
-      const parseResult = importPageSchema.safeParse(req.body);
-      if (!parseResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid import data format", 
-          errors: parseResult.error.flatten().fieldErrors 
-        });
-      }
-
-      const { exportData, mode } = parseResult.data;
-      const pageData = exportData.page;
-      
-      // Normalize slug: lowercase, remove special chars, replace spaces with dashes
-      const normalizeSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const normalizedSlug = normalizeSlug(pageData.slug);
-      
-      // Check if slug already exists
-      const existingPage = await storage.getPageBySlug(normalizedSlug);
-      
-      if (mode === 'create' || !existingPage) {
-        // Create new page with unique slug if needed
-        let slug = normalizedSlug;
-        if (existingPage) {
-          slug = `${normalizedSlug}-${Date.now()}`;
-        }
-        
-        const newPage = await storage.createPage({
-          title: pageData.title,
-          slug,
-          content: pageData.content || null,
-          contentJson: pageData.contentJson || null,
-          pageType: pageData.pageType || 'page',
-          template: pageData.template || null,
-          isHome: false, // Never import home/shop flags to avoid conflicts
-          isShop: false,
-          featuredImage: pageData.featuredImage || null,
-          metaTitle: pageData.metaTitle || null,
-          metaDescription: pageData.metaDescription || null,
-          metaKeywords: pageData.metaKeywords || null,
-          canonicalUrl: pageData.canonicalUrl || null,
-          ogTitle: pageData.ogTitle || null,
-          ogDescription: pageData.ogDescription || null,
-          ogImage: pageData.ogImage || null,
-          twitterCard: pageData.twitterCard || null,
-          twitterTitle: pageData.twitterTitle || null,
-          twitterDescription: pageData.twitterDescription || null,
-          twitterImage: pageData.twitterImage || null,
-          robots: pageData.robots || null,
-          status: 'draft', // Always import as draft for safety
-          showInNav: pageData.showInNav || false,
-          navOrder: pageData.navOrder || 0,
-        });
-        
-        res.json({ 
-          message: "Page imported successfully", 
-          page: newPage,
-          action: 'created'
-        });
-      } else if (mode === 'update' && existingPage) {
-        // Update existing page - preserve isHome, isShop, and status flags
-        const updatedPage = await storage.updatePage(existingPage.id, {
-          title: pageData.title,
-          content: pageData.content || null,
-          contentJson: pageData.contentJson || null,
-          pageType: pageData.pageType || existingPage.pageType,
-          template: pageData.template || existingPage.template,
-          // Preserve these flags from existing page - don't overwrite
-          // isHome: existingPage.isHome,
-          // isShop: existingPage.isShop,
-          // status: existingPage.status,
-          featuredImage: pageData.featuredImage || null,
-          metaTitle: pageData.metaTitle || null,
-          metaDescription: pageData.metaDescription || null,
-          metaKeywords: pageData.metaKeywords || null,
-          canonicalUrl: pageData.canonicalUrl || null,
-          ogTitle: pageData.ogTitle || null,
-          ogDescription: pageData.ogDescription || null,
-          ogImage: pageData.ogImage || null,
-          twitterCard: pageData.twitterCard || null,
-          twitterTitle: pageData.twitterTitle || null,
-          twitterDescription: pageData.twitterDescription || null,
-          twitterImage: pageData.twitterImage || null,
-          robots: pageData.robots || null,
-          showInNav: pageData.showInNav ?? existingPage.showInNav,
-          navOrder: pageData.navOrder ?? existingPage.navOrder,
-        });
-        
-        res.json({ 
-          message: "Page updated successfully", 
-          page: updatedPage,
-          action: 'updated'
-        });
-      } else {
-        res.status(400).json({ message: "Invalid import mode" });
-      }
-    } catch (error) {
-      console.error("Import page error:", error);
-      res.status(500).json({ message: "Failed to import page" });
-    }
-  });
-
-  // AI-powered SEO metadata generation
-  app.post("/api/admin/pages/generate-seo", requireFullAccess, async (req, res) => {
-    try {
-      const { openaiService } = await import("./src/integrations/openai/OpenAIService");
-      
-      const isConfigured = await openaiService.isConfigured();
-      if (!isConfigured) {
-        return res.status(400).json({ 
-          message: "OpenAI is not configured. Please add your API key in Settings > Integrations." 
-        });
-      }
-
-      const { title, content, pageType } = req.body;
-      if (!title) {
-        return res.status(400).json({ message: "Page title is required" });
-      }
-
-      const seoData = await openaiService.generatePageSeoRecommendations(
-        title,
-        content || "",
-        pageType || "page"
-      );
-
-      if (!seoData) {
-        return res.status(500).json({ message: "Failed to generate SEO recommendations" });
-      }
-
-      res.json(seoData);
-    } catch (error) {
-      console.error("SEO generation error:", error);
-      res.status(500).json({ message: "Failed to generate SEO metadata" });
-    }
-  });
+  // /api/admin/pages/* → migrated to adminCmsPagesRoutes
+  // /api/admin/pages/generate-seo → migrated to adminCmsPagesRoutes
 
   // AI Content Generation for CMS blocks
   app.post("/api/admin/ai/generate-content", requireFullAccess, async (req, res) => {
@@ -4071,147 +3734,10 @@ Respond with ONLY the generated text - no quotes, no explanations, no formatting
     }
   });
 
-  // Page Templates (JSON presets - no DB)
-  app.get("/api/admin/page-templates", requireFullAccess, async (req, res) => {
-    try {
-      const { pageTemplates } = await import("@shared/pageTemplates");
-      res.json(pageTemplates.map(t => ({ id: t.id, name: t.name, description: t.description })));
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch page templates" });
-    }
-  });
-
-  app.get("/api/admin/page-templates/:id", requireFullAccess, async (req, res) => {
-    try {
-      const { getTemplateById } = await import("@shared/pageTemplates");
-      const template = getTemplateById(req.params.id);
-      if (!template) {
-        return res.status(404).json({ message: "Template not found" });
-      }
-      res.json(template);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch page template" });
-    }
-  });
-
-  // Saved Sections (Reusable Block Groups)
-  app.get("/api/admin/saved-sections", requireFullAccess, async (req, res) => {
-    try {
-      const category = req.query.category as string | undefined;
-      const sections = category 
-        ? await storage.getSavedSectionsByCategory(category)
-        : await storage.getSavedSections();
-      res.json(sections);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch saved sections" });
-    }
-  });
-
-  app.get("/api/admin/saved-sections/:id", requireFullAccess, async (req, res) => {
-    try {
-      const section = await storage.getSavedSection(req.params.id);
-      if (!section) {
-        return res.status(404).json({ message: "Saved section not found" });
-      }
-      res.json(section);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch saved section" });
-    }
-  });
-
-  app.post("/api/admin/saved-sections", requireFullAccess, async (req, res) => {
-    try {
-      const section = await storage.createSavedSection(req.body);
-      res.status(201).json(section);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to create saved section" });
-    }
-  });
-
-  app.patch("/api/admin/saved-sections/:id", requireFullAccess, async (req, res) => {
-    try {
-      const section = await storage.updateSavedSection(req.params.id, req.body);
-      if (!section) {
-        return res.status(404).json({ message: "Saved section not found" });
-      }
-      res.json(section);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to update saved section" });
-    }
-  });
-
-  app.delete("/api/admin/saved-sections/:id", requireFullAccess, async (req, res) => {
-    try {
-      await storage.deleteSavedSection(req.params.id);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete saved section" });
-    }
-  });
-
-  // Public site settings (subset of settings safe for public consumption)
-  app.get("/api/site-settings", async (req, res) => {
-    try {
-      const settings = await storage.getSiteSettings();
-      const themeSettings = await storage.getThemeSettings();
-      res.json({
-        featuredProductId: settings?.featuredProductId || null,
-        heroTitle: themeSettings?.heroTitle || null,
-        heroSubtitle: themeSettings?.heroSubtitle || null,
-        heroImage: themeSettings?.heroImage || null,
-        ctaText: null, // Not in current schema
-        ctaLink: null, // Not in current schema
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch site settings" });
-    }
-  });
-
-  // Public pages
-  app.get("/api/pages", async (req, res) => {
-    try {
-      const pages = await storage.getPublishedPages();
-      res.json(pages);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch pages" });
-    }
-  });
-
-  app.get("/api/pages/home", async (req, res) => {
-    try {
-      const page = await storage.getHomePage();
-      if (!page || page.status !== "published") {
-        return res.status(404).json({ message: "Home page not found" });
-      }
-      res.json(page);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch home page" });
-    }
-  });
-
-  app.get("/api/pages/shop", async (req, res) => {
-    try {
-      const page = await storage.getShopPage();
-      if (!page || page.status !== "published") {
-        return res.status(404).json({ message: "Shop page not found" });
-      }
-      res.json(page);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch shop page" });
-    }
-  });
-
-  app.get("/api/pages/:slug", async (req, res) => {
-    try {
-      const page = await storage.getPageBySlug(req.params.slug);
-      if (!page || page.status !== "published") {
-        return res.status(404).json({ message: "Page not found" });
-      }
-      res.json(page);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch page" });
-    }
-  });
+  // /api/admin/page-templates/* → migrated to adminCmsTemplatesRoutes
+  // /api/admin/saved-sections/* → migrated to adminCmsSectionsRoutes
+  // /api/site-settings → migrated to publicCmsSettingsRoutes
+  // /api/pages/* → migrated to publicCmsPagesRoutes
 
   // ==================== ADMIN SHIPPING ====================
 
@@ -4473,35 +3999,8 @@ Respond with ONLY the generated text - no quotes, no explanations, no formatting
     }
   });
 
-  // ==================== ADMIN THEME SETTINGS ====================
-
-  app.get("/api/admin/theme", requireFullAccess, async (req, res) => {
-    try {
-      const theme = await storage.getThemeSettings();
-      res.json(theme || {});
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch theme settings" });
-    }
-  });
-
-  app.patch("/api/admin/theme", requireFullAccess, async (req, res) => {
-    try {
-      const theme = await storage.updateThemeSettings(req.body);
-      res.json(theme);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to update theme settings" });
-    }
-  });
-
-  // Public theme settings
-  app.get("/api/theme", async (req, res) => {
-    try {
-      const theme = await storage.getThemeSettings();
-      res.json(theme || {});
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch theme settings" });
-    }
-  });
+  // /api/admin/theme → migrated to adminCmsThemeRoutes
+  // /api/theme → migrated to publicCmsThemeRoutes
 
   // ==================== ADMIN EMAIL TEMPLATES ====================
 
