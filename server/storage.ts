@@ -14,6 +14,7 @@ import {
   affiliatePayoutAccounts, type AffiliatePayoutAccount, type InsertAffiliatePayoutAccount,
   affiliateClicks, type AffiliateClick, type InsertAffiliateClick,
   affiliateInvites, type AffiliateInvite, type InsertAffiliateInvite,
+  phoneVerificationCodes, type PhoneVerificationCode, type InsertPhoneVerificationCode,
   categories, type Category, type InsertCategory,
   coupons, type Coupon, type InsertCoupon,
   couponRedemptions, type CouponRedemption, type InsertCouponRedemption,
@@ -161,6 +162,12 @@ export interface IStorage {
   updateAffiliateInvite(id: string, invite: Partial<InsertAffiliateInvite>): Promise<AffiliateInvite | undefined>;
   deleteAffiliateInvite(id: string): Promise<void>;
   incrementAffiliateInviteUsage(id: string): Promise<void>;
+
+  // Phone Verification Codes
+  createPhoneVerificationCode(data: InsertPhoneVerificationCode): Promise<PhoneVerificationCode>;
+  getPhoneVerificationCode(inviteCode: string, phone: string): Promise<PhoneVerificationCode | undefined>;
+  markPhoneVerificationCodeVerified(id: string): Promise<void>;
+  incrementPhoneVerificationAttempts(id: string): Promise<void>;
 
   // Categories
   getCategories(): Promise<Category[]>;
@@ -751,6 +758,35 @@ export class DatabaseStorage implements IStorage {
     await db.update(affiliateInvites).set({
       timesUsed: sql`${affiliateInvites.timesUsed} + 1`,
     }).where(eq(affiliateInvites.id, id));
+  }
+
+  async createPhoneVerificationCode(data: InsertPhoneVerificationCode): Promise<PhoneVerificationCode> {
+    const [code] = await db.insert(phoneVerificationCodes).values(data).returning();
+    return code;
+  }
+
+  async getPhoneVerificationCode(inviteCode: string, phone: string): Promise<PhoneVerificationCode | undefined> {
+    const [code] = await db
+      .select()
+      .from(phoneVerificationCodes)
+      .where(and(
+        eq(phoneVerificationCodes.inviteCode, inviteCode),
+        eq(phoneVerificationCodes.phone, phone),
+        eq(phoneVerificationCodes.verified, false),
+      ))
+      .orderBy(desc(phoneVerificationCodes.createdAt))
+      .limit(1);
+    return code || undefined;
+  }
+
+  async markPhoneVerificationCodeVerified(id: string): Promise<void> {
+    await db.update(phoneVerificationCodes).set({ verified: true }).where(eq(phoneVerificationCodes.id, id));
+  }
+
+  async incrementPhoneVerificationAttempts(id: string): Promise<void> {
+    await db.update(phoneVerificationCodes).set({
+      attempts: sql`${phoneVerificationCodes.attempts} + 1`,
+    }).where(eq(phoneVerificationCodes.id, id));
   }
 
   // Categories

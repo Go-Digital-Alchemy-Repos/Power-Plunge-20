@@ -493,6 +493,7 @@ export const affiliateInvites = pgTable("affiliate_invites", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   inviteCode: text("invite_code").notNull().unique(), // unique code for invite link
   targetEmail: text("target_email"), // optional: if set, only this email can use the invite
+  targetPhone: text("target_phone"), // optional: if set, recipient must verify this phone number via SMS
   targetName: text("target_name"), // optional: pre-fill name for targeted invite
   createdByAdminId: varchar("created_by_admin_id").references(() => adminUsers.id),
   usedByAffiliateId: varchar("used_by_affiliate_id").references(() => affiliates.id), // set when invite is used
@@ -501,6 +502,18 @@ export const affiliateInvites = pgTable("affiliate_invites", {
   maxUses: integer("max_uses").default(1), // for generic invites, how many times it can be used
   timesUsed: integer("times_used").notNull().default(0),
   notes: text("notes"), // admin notes about this invite
+  phoneVerified: boolean("phone_verified").notNull().default(false), // tracks if phone was verified for this invite
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const phoneVerificationCodes = pgTable("phone_verification_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  inviteCode: text("invite_code").notNull(),
+  phone: text("phone").notNull(),
+  code: text("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  verified: boolean("verified").notNull().default(false),
+  attempts: integer("attempts").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -518,6 +531,10 @@ export const affiliateInvitesRelations = relations(affiliateInvites, ({ one }) =
 export const insertAffiliateInviteSchema = createInsertSchema(affiliateInvites).omit({ id: true, createdAt: true, timesUsed: true });
 export type InsertAffiliateInvite = z.infer<typeof insertAffiliateInviteSchema>;
 export type AffiliateInvite = typeof affiliateInvites.$inferSelect;
+
+export const insertPhoneVerificationCodeSchema = createInsertSchema(phoneVerificationCodes).omit({ id: true, createdAt: true });
+export type InsertPhoneVerificationCode = z.infer<typeof insertPhoneVerificationCodeSchema>;
+export type PhoneVerificationCode = typeof phoneVerificationCodes.$inferSelect;
 
 // Product Categories
 export const categories = pgTable("categories", {
