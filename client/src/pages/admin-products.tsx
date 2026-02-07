@@ -148,7 +148,7 @@ export default function AdminProducts() {
     queryFn: async () => {
       const res = await fetch("/api/admin/products");
       if (res.status === 401) {
-        setLocation("/admin");
+        setLocation("/admin/login");
         return [];
       }
       if (!res.ok) throw new Error("Failed to fetch products");

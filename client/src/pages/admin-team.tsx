@@ -45,7 +45,7 @@ export default function AdminTeam() {
     queryFn: async () => {
       const res = await fetch("/api/admin/team");
       if (res.status === 401) {
-        setLocation("/admin");
+        setLocation("/admin/login");
         return [];
       }
       if (!res.ok) throw new Error("Failed to fetch team");

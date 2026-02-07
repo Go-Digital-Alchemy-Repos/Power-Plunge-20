@@ -83,7 +83,7 @@ export default function AdminCustomers() {
     queryFn: async () => {
       const res = await fetch("/api/admin/customers");
       if (res.status === 401) {
-        setLocation("/admin");
+        setLocation("/admin/login");
         return [];
       }
       if (!res.ok) throw new Error("Failed to fetch customers");

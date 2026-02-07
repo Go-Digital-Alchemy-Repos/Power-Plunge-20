@@ -51,7 +51,7 @@ export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps)
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
-    navigate("/admin");
+    navigate("/admin/login");
   };
 
   const isActive = (page: string) => currentPage === page;

@@ -183,7 +183,7 @@ export default function AdminAffiliateInviteSender() {
   }
 
   if (!isAuthenticated || !hasFullAccess) {
-    setLocation("/admin");
+    setLocation("/admin/login");
     return null;
   }
 

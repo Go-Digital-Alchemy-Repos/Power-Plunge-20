@@ -74,7 +74,7 @@ export default function AdminUserManagement() {
     queryKey: ["/api/admin/customers"],
     queryFn: async () => {
       const res = await fetch("/api/admin/customers");
-      if (res.status === 401) { setLocation("/admin"); return []; }
+      if (res.status === 401) { setLocation("/admin/login"); return []; }
       if (!res.ok) throw new Error("Failed to fetch customers");
       return res.json();
     },
@@ -84,7 +84,7 @@ export default function AdminUserManagement() {
     queryKey: ["/api/admin/team"],
     queryFn: async () => {
       const res = await fetch("/api/admin/team");
-      if (res.status === 401) { setLocation("/admin"); return []; }
+      if (res.status === 401) { setLocation("/admin/login"); return []; }
       if (!res.ok) throw new Error("Failed to fetch admins");
       return res.json();
     },
@@ -230,7 +230,7 @@ export default function AdminUserManagement() {
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
-    setLocation("/admin");
+    setLocation("/admin/login");
   };
 
   const resetCustomerForm = () => {

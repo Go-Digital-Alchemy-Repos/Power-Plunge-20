@@ -198,7 +198,7 @@ export default function AdminRevenue() {
     queryFn: async () => {
       const res = await fetch(`/api/admin/revenue/metrics?${queryParams}`);
       if (res.status === 401) {
-        setLocation("/admin");
+        setLocation("/admin/login");
         throw new Error("Unauthorized");
       }
       if (!res.ok) throw new Error("Failed to fetch metrics");

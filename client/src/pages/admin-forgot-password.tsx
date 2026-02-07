@@ -66,7 +66,7 @@ export default function AdminForgotPassword() {
               <Button variant="outline" onClick={() => setEmailSent(false)} data-testid="button-try-again">
                 Try another email
               </Button>
-              <Link href="/admin">
+              <Link href="/admin/login">
                 <Button variant="ghost" className="w-full gap-2">
                   <ArrowLeft className="w-4 h-4" />
                   Back to Login
@@ -109,7 +109,7 @@ export default function AdminForgotPassword() {
             </Button>
           </form>
           <div className="mt-6 text-center">
-            <Link href="/admin">
+            <Link href="/admin/login">
               <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Login

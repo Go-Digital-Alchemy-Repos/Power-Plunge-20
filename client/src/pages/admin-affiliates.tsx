@@ -257,7 +257,7 @@ export default function AdminAffiliates() {
     queryFn: async () => {
       const res = await fetch("/api/admin/affiliates-v2/leaderboard?limit=50");
       if (res.status === 401) {
-        setLocation("/admin");
+        setLocation("/admin/login");
         return [];
       }
       if (!res.ok) throw new Error("Failed to fetch leaderboard");

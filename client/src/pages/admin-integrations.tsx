@@ -157,7 +157,7 @@ export default function AdminIntegrations() {
     queryFn: async () => {
       const res = await fetch("/api/admin/integrations");
       if (res.status === 401) {
-        setLocation("/admin");
+        setLocation("/admin/login");
         return null;
       }
       if (!res.ok) throw new Error("Failed to fetch integrations");

@@ -47,7 +47,7 @@ export default function AdminAffiliateSettings() {
     queryFn: async () => {
       const res = await fetch("/api/admin/affiliate-settings");
       if (res.status === 401) {
-        setLocation("/admin");
+        setLocation("/admin/login");
         return null;
       }
       if (!res.ok) throw new Error("Failed to fetch settings");
@@ -88,7 +88,7 @@ export default function AdminAffiliateSettings() {
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
-    setLocation("/admin");
+    setLocation("/admin/login");
   };
 
   const handleSubmit = (e: React.FormEvent) => {

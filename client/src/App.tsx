@@ -1,5 +1,5 @@
-import { Switch, Route } from "wouter";
-import { lazy, Suspense } from "react";
+import { Switch, Route, useLocation } from "wouter";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -73,6 +73,36 @@ const AdminCmsV2PostEditor = lazy(() => import("@/pages/admin-cms-v2-post-editor
 const AdminCmsV2PostBuilder = lazy(() => import("@/pages/admin-cms-v2-post-builder"));
 const AdminCmsV2Menus = lazy(() => import("@/pages/admin-cms-v2-menus"));
 
+function AdminRedirect() {
+  const [, setLocation] = useLocation();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/me", { credentials: "include" })
+      .then((res) => {
+        if (res.ok) {
+          setLocation("/admin/dashboard", { replace: true });
+        } else {
+          setLocation("/admin/login", { replace: true });
+        }
+      })
+      .catch(() => {
+        setLocation("/admin/login", { replace: true });
+      })
+      .finally(() => setChecking(false));
+  }, []);
+
+  if (checking) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400" />
+      </div>
+    );
+  }
+
+  return null;
+}
+
 function LazyFallback() {
   return (
     <div className="flex items-center justify-center min-h-[200px]">
@@ -101,7 +131,8 @@ function Router() {
         <Route path="/blog/:slug">{() => <BlogPostPage />}</Route>
         <Route path="/blog">{() => <BlogIndexPage />}</Route>
         <Route path="/page/:slug" component={PageView} />
-        <Route path="/admin" component={AdminLogin} />
+        <Route path="/admin" component={AdminRedirect} />
+        <Route path="/admin/login" component={AdminLogin} />
         <Route path="/admin/forgot-password" component={AdminForgotPassword} />
         <Route path="/admin/reset-password" component={AdminResetPassword} />
         <Route path="/admin/dashboard" component={AdminDashboard} />

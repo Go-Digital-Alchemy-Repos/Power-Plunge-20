@@ -121,7 +121,7 @@ export default function AdminResetPassword() {
                   Request New Reset Link
                 </Button>
               </Link>
-              <Link href="/admin">
+              <Link href="/admin/login">
                 <Button variant="ghost" className="w-full gap-2">
                   <ArrowLeft className="w-4 h-4" />
                   Back to Login
@@ -146,7 +146,7 @@ export default function AdminResetPassword() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/admin">
+            <Link href="/admin/login">
               <Button className="w-full" data-testid="button-login">
                 Sign In with New Password
               </Button>
