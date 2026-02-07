@@ -1,7 +1,7 @@
 import { useAdmin } from "@/hooks/use-admin";
 import { Link } from "wouter";
 import CmsV2Layout from "@/components/admin/CmsV2Layout";
-import { FileText, Layers, BookTemplate, Palette, Search, Globe, Plus, ArrowRight, Clock, Settings } from "lucide-react";
+import { FileText, Layers, BookTemplate, Palette, Search, Globe, Plus, ArrowRight, Clock, Settings, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -38,6 +38,14 @@ const dashboardCards = [
     href: "/admin/cms-v2/themes",
     action: "Manage Themes",
     testId: "card-cms-v2-themes",
+  },
+  {
+    title: "Landing Page Generator",
+    description: "Build landing pages in 4 steps with live preview",
+    icon: Wand2,
+    href: "/admin/cms-v2/generator/landing",
+    action: "Generate Landing Page",
+    testId: "card-cms-v2-generator-landing",
   },
   {
     title: "SEO Toolkit",

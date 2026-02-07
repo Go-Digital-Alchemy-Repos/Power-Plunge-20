@@ -36,12 +36,28 @@ interface CmsV2LayoutProps {
   activeNav?: string;
 }
 
-const NAV_ITEMS = [
+interface NavItem {
+  id: string;
+  label: string;
+  icon: any;
+  href: string;
+  children?: { id: string; label: string; href: string }[];
+}
+
+const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/admin/cms-v2" },
   { id: "pages", label: "Pages", icon: FileText, href: "/admin/cms-v2/pages" },
   { id: "sections", label: "Sections", icon: Layers, href: "/admin/cms-v2/sections" },
   { id: "templates", label: "Templates", icon: BookTemplate, href: "/admin/cms-v2/templates" },
-  { id: "generator", label: "Generator", icon: Wand2, href: "/admin/cms-v2/generator/landing" },
+  {
+    id: "generators",
+    label: "Generators",
+    icon: Wand2,
+    href: "/admin/cms-v2/generator/landing",
+    children: [
+      { id: "generator-landing", label: "Landing Pages", href: "/admin/cms-v2/generator/landing" },
+    ],
+  },
   { id: "themes", label: "Themes", icon: Palette, href: "/admin/cms-v2/themes" },
   { id: "seo", label: "SEO", icon: Search, href: "/admin/cms-v2/seo" },
   { id: "settings", label: "Settings", icon: Settings, href: "/admin/cms-v2/settings" },
@@ -52,9 +68,17 @@ export default function CmsV2Layout({ children, breadcrumbs, activeNav }: CmsV2L
   const [collapsed, setCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const resolvedActiveNav = activeNav || NAV_ITEMS.find(
-    (item) => item.id !== "dashboard" && location.startsWith(item.href)
-  )?.id || (location === "/admin/cms-v2" ? "dashboard" : undefined);
+  const resolvedActiveNav = activeNav || (() => {
+    for (const item of NAV_ITEMS) {
+      if (item.children) {
+        for (const child of item.children) {
+          if (location.startsWith(child.href)) return item.id;
+        }
+      }
+      if (item.id !== "dashboard" && location.startsWith(item.href)) return item.id;
+    }
+    return location === "/admin/cms-v2" ? "dashboard" : undefined;
+  })();
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex" data-testid="cms-v2-layout">
@@ -85,8 +109,45 @@ export default function CmsV2Layout({ children, breadcrumbs, activeNav }: CmsV2L
         <nav className="flex-1 py-2 space-y-0.5 px-2" data-testid="cms-v2-nav">
           {NAV_ITEMS.map((item) => {
             const isActive = resolvedActiveNav === item.id;
+
+            if (item.children && !collapsed) {
+              return (
+                <div key={item.id}>
+                  <Link href={item.href}>
+                    <div
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition-colors",
+                        isActive
+                          ? "bg-cyan-900/30 text-cyan-400"
+                          : "text-gray-400 hover:text-white hover:bg-gray-800/60"
+                      )}
+                      data-testid={`nav-${item.id}`}
+                    >
+                      <item.icon className={cn("w-4 h-4 flex-shrink-0", isActive ? "text-cyan-400" : "text-gray-500")} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                  </Link>
+                  {isActive && item.children.map((child) => (
+                    <Link key={child.id} href={child.href}>
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 pl-10 pr-3 py-1.5 rounded-md text-xs cursor-pointer transition-colors",
+                          location.startsWith(child.href)
+                            ? "text-cyan-300"
+                            : "text-gray-500 hover:text-white"
+                        )}
+                        data-testid={`nav-${child.id}`}
+                      >
+                        <span className="truncate">{child.label}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              );
+            }
+
             return (
-              <Link key={item.id} href={item.href}>
+              <Link key={item.id} href={item.children ? item.href : item.href}>
                 <div
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition-colors",
