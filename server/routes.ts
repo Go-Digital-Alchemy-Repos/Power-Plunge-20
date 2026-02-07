@@ -25,6 +25,8 @@ import upsellRoutes from "./src/routes/upsell.routes";
 import supportRoutes, { adminSupportRouter } from "./src/routes/support.routes";
 import docsRouter from "./src/routes/admin/docs.router";
 import cmsV2Router from "./src/routes/admin/cms-v2.router";
+import cmsV2PostsRoutes from "./src/routes/admin/cms-v2-posts.routes";
+import cmsV2MenusRoutes from "./src/routes/admin/cms-v2-menus.routes";
 import sitePresetsRouter from "./src/routes/cmsV2.sitePresets.routes";
 import siteSettingsRouter from "./src/routes/cmsV2.siteSettings.routes";
 import vipRoutes from "./src/routes/vip.routes";
@@ -42,6 +44,7 @@ import publicCmsPagesRoutes from "./src/routes/public/cms-pages.routes";
 import publicCmsThemeRoutes from "./src/routes/public/cms-theme.routes";
 import publicCmsSettingsRoutes from "./src/routes/public/cms-settings.routes";
 import publicCmsSectionsRoutes from "./src/routes/public/cms-sections.routes";
+import publicBlogRoutes, { publicMenuRoutes } from "./src/routes/public/blog.routes";
 
 // Newly-extracted route modules
 import paymentsRoutes from "./src/routes/public/payments.routes";
@@ -100,6 +103,8 @@ export async function registerRoutes(
   app.use("/api/admin/support", requireFullAccess, adminSupportRouter);
   app.use("/api/admin/docs", requireFullAccess, docsRouter);
   app.use("/api/admin/cms-v2", requireFullAccess, cmsV2Router);
+  app.use("/api/admin/cms-v2/posts", requireFullAccess, cmsV2PostsRoutes);
+  app.use("/api/admin/cms-v2/menus", requireFullAccess, cmsV2MenusRoutes);
   app.use("/api/admin/cms-v2/site-presets", requireFullAccess, sitePresetsRouter);
   app.use("/api/admin/cms-v2/site-settings", requireFullAccess, siteSettingsRouter);
   app.use("/api/customer/orders", orderTrackingRoutes);
@@ -115,6 +120,10 @@ export async function registerRoutes(
   app.use("/api/theme", publicCmsThemeRoutes);
   app.use("/api/site-settings", publicCmsSettingsRoutes);
   app.use("/api/sections", publicCmsSectionsRoutes);
+
+  // Public blog + menu routes (additive, no auth)
+  app.use("/api/blog", publicBlogRoutes);
+  app.use("/api/menus", publicMenuRoutes);
 
   app.get("/api/health/config", (req, res) => {
     res.json({ cmsV2Enabled: isCmsV2Enabled() });

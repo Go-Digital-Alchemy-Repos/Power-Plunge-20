@@ -24,6 +24,8 @@ import {
   ArrowLeft,
   Wand2,
   Globe,
+  PenLine,
+  Menu,
 } from "lucide-react";
 
 interface Breadcrumb {
@@ -48,6 +50,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/admin/cms-v2" },
   { id: "pages", label: "Pages", icon: FileText, href: "/admin/cms-v2/pages" },
+  { id: "posts", label: "Posts", icon: PenLine, href: "/admin/cms-v2/posts" },
+  { id: "menus", label: "Menus", icon: Menu, href: "/admin/cms-v2/menus" },
   { id: "sections", label: "Sections", icon: Layers, href: "/admin/cms-v2/sections" },
   { id: "templates", label: "Templates", icon: BookTemplate, href: "/admin/cms-v2/templates" },
   {
