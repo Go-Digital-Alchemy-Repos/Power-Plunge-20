@@ -1,0 +1,129 @@
+# Smoke Test Flows
+
+Manual verification checklist for critical CMS v2 and public-facing flows.
+Run these after any stabilization change to confirm nothing is broken.
+
+---
+
+## ADMIN CMS v2
+
+### A1. Load CMS v2 Dashboard
+1. Log in at `/admin` with admin credentials.
+2. Navigate to `/admin/cms-v2`.
+3. **Verify:** Dashboard cards render (Pages, Sections, Templates, Themes, SEO, Settings, Generator, Presets).
+4. **Verify:** No console errors.
+
+### A2. Open Pages Library
+1. From the CMS v2 dashboard, click **Manage Pages** (or navigate to `/admin/cms-v2/pages`).
+2. **Verify:** Page list loads. If pages exist, they appear with title, slug, status badge.
+3. **Verify:** "Create Page" button is visible.
+
+### A3. Create a Draft Page
+1. On the Pages library, click **Create Page**.
+2. Fill in Title (e.g. "Smoke Test Page") and Slug (e.g. "smoke-test").
+3. Leave status as Draft.
+4. Click **Save** / **Create**.
+5. **Verify:** Page appears in the list with "Draft" status badge.
+6. **Verify:** No errors in console or toast.
+
+### A4. Open Puck Builder
+1. From the Pages list, click the **Edit** / **Builder** button on the smoke test page.
+2. **Verify:** Puck editor loads at `/admin/cms-v2/pages/:id/builder`.
+3. **Verify:** Block palette is visible on the left side.
+4. **Verify:** Canvas area renders without errors.
+
+### A5. Add 2 Blocks and Save
+1. In the Puck builder, drag or click to add a **Hero** block.
+2. Configure any placeholder text.
+3. Add a second block (e.g. **Rich Text** or **Features**).
+4. Click **Save**.
+5. **Verify:** Toast confirms save success.
+6. **Verify:** Both blocks appear in the canvas and component tree.
+
+### A6. Publish and Preview Public Rendering
+1. In the builder or pages list, click **Publish** on the smoke test page.
+2. **Verify:** Status changes to "Published".
+3. Open a new tab and navigate to `/page/smoke-test`.
+4. **Verify:** The page renders with the 2 blocks added in A5.
+5. **Verify:** No 404 or blank page.
+
+### A7. Create a Section and Insert into Page (sectionRef)
+1. Navigate to `/admin/cms-v2/sections`.
+2. Click **Create Section**.
+3. Name it (e.g. "Smoke CTA Section"), choose a type, add content.
+4. Save the section.
+5. **Verify:** Section appears in the sections list.
+6. Go back to the Puck builder for the smoke test page.
+7. Add a **Section Reference** block and select the newly created section.
+8. Save the page.
+9. **Verify:** The section content renders in the builder preview.
+
+### A8. Detach Section
+1. In the Puck builder, find the section reference block from A7.
+2. Click the **Detach** / **Unlink** action on the section reference.
+3. **Verify:** The block converts to inline content (no longer linked to the saved section).
+4. Save the page.
+5. **Verify:** Save succeeds. The block content persists but is now independent.
+
+### A9. Create Template from a Page
+1. Navigate to `/admin/cms-v2/templates`.
+2. Click **Create Template** (or use the "Save as Template" action from a page).
+3. Select the smoke test page as source (if applicable) or configure manually.
+4. **Verify:** Template appears in the templates list.
+5. **Verify:** Template shows a preview or metadata of its blocks.
+
+### A10. Switch Theme, Preview, Activate
+1. Navigate to `/admin/cms-v2/themes`.
+2. **Verify:** Theme list loads with available themes/theme packs.
+3. Click on a different theme to preview.
+4. **Verify:** Preview shows the updated colors/fonts.
+5. Click **Activate** on the new theme.
+6. **Verify:** Toast confirms activation.
+7. Navigate to the public home page `/` in a new tab.
+8. **Verify:** Theme change is reflected (colors, fonts match activated theme).
+
+---
+
+## PUBLIC
+
+### P1. Load Home Page
+1. Navigate to `/`.
+2. **Verify:** Hero section renders with product imagery.
+3. **Verify:** Product cards or featured product visible.
+4. **Verify:** No blank page or error screen.
+
+### P2. Load a Published Block Page by Slug
+1. Navigate to `/page/smoke-test` (or any known published page slug).
+2. **Verify:** Page renders with block content (hero, text, etc.).
+3. **Verify:** No 404 unless the page was unpublished or deleted.
+
+### P3. Load a Legacy HTML Page (If Exists)
+1. If a page with legacy HTML content exists (no `contentJson` blocks), navigate to its slug.
+2. **Verify:** The HTML content renders via the legacy renderer.
+3. **Verify:** No blank output or crash.
+4. *Note:* If no legacy pages exist, this test can be skipped.
+
+### P4. Verify Head SEO Tags
+1. On any published page, open browser DevTools → Elements.
+2. Inspect `<head>`.
+3. **Verify:** `<title>` tag is present and matches page title or site default.
+4. **Verify:** `og:title`, `og:description` meta tags are present.
+5. **Verify:** `twitter:card` meta tag is present.
+6. *Note:* Custom `metaTitle`/`metaDescription` from the page should override defaults if set.
+
+---
+
+## Cleanup
+
+After completing smoke tests, optionally delete the "Smoke Test Page" and "Smoke CTA Section" created during testing to keep the environment clean.
+
+---
+
+## Status Key
+
+| Symbol | Meaning |
+|--------|---------|
+| PASS   | Flow completed without errors |
+| FAIL   | Flow hit a blocking error (document the error) |
+| SKIP   | Flow not applicable (e.g. no legacy pages exist) |
+| WARN   | Flow completed with non-blocking warnings (document them) |

@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ThemeProvider from "@/components/ThemeProvider";
+import CmsV2ErrorBoundary from "@/components/CmsV2ErrorBoundary";
 import "@/cms/blocks/init";
 import Home from "@/pages/home";
 import Checkout from "@/pages/checkout";
@@ -112,17 +113,17 @@ function Router() {
       <Route path="/admin/media" component={AdminMediaLibrary} />
       <Route path="/admin/support" component={AdminSupport} />
       <Route path="/admin/affiliate-invite-sender" component={AdminAffiliateInviteSender} />
-      <Route path="/admin/cms-v2/presets" component={AdminCmsV2Presets} />
-      <Route path="/admin/cms-v2/generator/campaigns" component={AdminCmsV2GeneratorCampaigns} />
-      <Route path="/admin/cms-v2/generator/landing" component={AdminCmsV2GeneratorLanding} />
-      <Route path="/admin/cms-v2/pages/:id/builder" component={AdminCmsV2Builder} />
-      <Route path="/admin/cms-v2/pages" component={AdminCmsV2Pages} />
-      <Route path="/admin/cms-v2/sections" component={AdminCmsV2Sections} />
-      <Route path="/admin/cms-v2/templates" component={AdminCmsV2Templates} />
-      <Route path="/admin/cms-v2/themes" component={AdminCmsV2Themes} />
-      <Route path="/admin/cms-v2/seo" component={AdminCmsV2Seo} />
-      <Route path="/admin/cms-v2/settings" component={AdminCmsV2Settings} />
-      <Route path="/admin/cms-v2" component={AdminCmsV2} />
+      <Route path="/admin/cms-v2/presets">{() => <CmsV2ErrorBoundary><AdminCmsV2Presets /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2/generator/campaigns">{() => <CmsV2ErrorBoundary><AdminCmsV2GeneratorCampaigns /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2/generator/landing">{() => <CmsV2ErrorBoundary><AdminCmsV2GeneratorLanding /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2/pages/:id/builder">{() => <CmsV2ErrorBoundary><AdminCmsV2Builder /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2/pages">{() => <CmsV2ErrorBoundary><AdminCmsV2Pages /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2/sections">{() => <CmsV2ErrorBoundary><AdminCmsV2Sections /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2/templates">{() => <CmsV2ErrorBoundary><AdminCmsV2Templates /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2/themes">{() => <CmsV2ErrorBoundary><AdminCmsV2Themes /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2/seo">{() => <CmsV2ErrorBoundary><AdminCmsV2Seo /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2/settings">{() => <CmsV2ErrorBoundary><AdminCmsV2Settings /></CmsV2ErrorBoundary>}</Route>
+      <Route path="/admin/cms-v2">{() => <CmsV2ErrorBoundary><AdminCmsV2 /></CmsV2ErrorBoundary>}</Route>
       <Route component={NotFound} />
     </Switch>
   );
