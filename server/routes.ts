@@ -44,7 +44,8 @@ import publicCmsPagesRoutes from "./src/routes/public/cms-pages.routes";
 import publicCmsThemeRoutes from "./src/routes/public/cms-theme.routes";
 import publicCmsSettingsRoutes from "./src/routes/public/cms-settings.routes";
 import publicCmsSectionsRoutes from "./src/routes/public/cms-sections.routes";
-import publicBlogRoutes, { publicMenuRoutes } from "./src/routes/public/blog.routes";
+import { publicMenuRoutes } from "./src/routes/public/blog.routes";
+import publicBlogRoutes from "./src/routes/public.blog.routes";
 
 // Newly-extracted route modules
 import paymentsRoutes from "./src/routes/public/payments.routes";
