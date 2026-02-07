@@ -18,19 +18,7 @@ const updateSiteSettingsSchema = z.object({
 
 class CmsV2SiteSettingsService {
   async get() {
-    const settings = await sitePresetsRepo.getCmsV2Settings();
-    if (!settings) {
-      return {
-        activeThemeId: "arctic-default",
-        activePresetId: null,
-        navPreset: null,
-        footerPreset: null,
-        seoDefaults: null,
-        globalCtaDefaults: null,
-        updatedAt: new Date(),
-      };
-    }
-    return settings;
+    return sitePresetsRepo.getCmsV2Settings();
   }
 
   async update(body: unknown, adminEmail?: string) {
@@ -40,9 +28,6 @@ class CmsV2SiteSettingsService {
     }
 
     const updated = await sitePresetsRepo.updateCmsV2Settings(parsed.data);
-    if (!updated) {
-      return { error: "Site settings row not found. Ensure site_settings is initialized." };
-    }
 
     await sitePresetsRepo.logAudit(
       adminEmail || "system",

@@ -63,17 +63,33 @@ class SitePresetsRepository {
     return deleted || undefined;
   }
 
+  private readonly settingsFields = {
+    activeThemeId: siteSettings.activeThemeId,
+    activePresetId: siteSettings.activePresetId,
+    navPreset: siteSettings.navPreset,
+    footerPreset: siteSettings.footerPreset,
+    seoDefaults: siteSettings.seoDefaults,
+    globalCtaDefaults: siteSettings.globalCtaDefaults,
+    updatedAt: siteSettings.updatedAt,
+  };
+
+  async ensureMainRow() {
+    const [existing] = await db.select({ id: siteSettings.id })
+      .from(siteSettings).where(eq(siteSettings.id, "main"));
+    if (!existing) {
+      await db.insert(siteSettings).values({
+        id: "main",
+        activeThemeId: "arctic-default",
+        updatedAt: new Date(),
+      });
+    }
+  }
+
   async getCmsV2Settings() {
-    const [settings] = await db.select({
-      activeThemeId: siteSettings.activeThemeId,
-      activePresetId: siteSettings.activePresetId,
-      navPreset: siteSettings.navPreset,
-      footerPreset: siteSettings.footerPreset,
-      seoDefaults: siteSettings.seoDefaults,
-      globalCtaDefaults: siteSettings.globalCtaDefaults,
-      updatedAt: siteSettings.updatedAt,
-    }).from(siteSettings).where(eq(siteSettings.id, "main"));
-    return settings || null;
+    await this.ensureMainRow();
+    const [settings] = await db.select(this.settingsFields)
+      .from(siteSettings).where(eq(siteSettings.id, "main"));
+    return settings;
   }
 
   async updateCmsV2Settings(values: {
@@ -84,18 +100,11 @@ class SitePresetsRepository {
     seoDefaults?: unknown;
     globalCtaDefaults?: unknown;
   }) {
+    await this.ensureMainRow();
     const [updated] = await db.update(siteSettings)
       .set({ ...values, updatedAt: new Date() })
       .where(eq(siteSettings.id, "main"))
-      .returning({
-        activeThemeId: siteSettings.activeThemeId,
-        activePresetId: siteSettings.activePresetId,
-        navPreset: siteSettings.navPreset,
-        footerPreset: siteSettings.footerPreset,
-        seoDefaults: siteSettings.seoDefaults,
-        globalCtaDefaults: siteSettings.globalCtaDefaults,
-        updatedAt: siteSettings.updatedAt,
-      });
+      .returning(this.settingsFields);
     return updated || null;
   }
 
