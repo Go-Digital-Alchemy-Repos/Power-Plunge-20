@@ -9,7 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/use-admin";
 import AdminNav from "@/components/admin/AdminNav";
-import { Mail, Copy, Check, Loader2, Link2, UserPlus, Share2, MessageSquare, ChevronDown, ChevronUp, Phone, ShieldCheck } from "lucide-react";
+import {
+  Mail, Copy, Check, Loader2, Link2, UserPlus, Share2,
+  MessageSquare, ChevronDown, ChevronUp, Phone, ShieldCheck,
+  ContactRound, PenLine,
+} from "lucide-react";
 
 interface InviteResponse {
   invite: {
@@ -26,11 +30,14 @@ interface InviteResponse {
   emailError: string | null;
 }
 
+type InviteMode = "quick" | "manual";
+
 export default function AdminAffiliateInviteSender() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { admin, isLoading: adminLoading, isAuthenticated, role, hasFullAccess } = useAdmin();
 
+  const [mode, setMode] = useState<InviteMode>("quick");
   const [formData, setFormData] = useState({
     targetEmail: "",
     targetPhone: "",
@@ -43,6 +50,8 @@ export default function AdminAffiliateInviteSender() {
   const [lastResult, setLastResult] = useState<InviteResponse | null>(null);
   const [copied, setCopied] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const supportsNativeShare = typeof navigator !== "undefined" && !!navigator.share;
 
   const sendInviteMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -66,6 +75,10 @@ export default function AdminAffiliateInviteSender() {
     onSuccess: async (data) => {
       setLastResult(data);
 
+      if (mode === "quick") {
+        await triggerNativeShare(data);
+      }
+
       if (data.emailSent) {
         toast({
           title: "Invite Sent!",
@@ -74,7 +87,9 @@ export default function AdminAffiliateInviteSender() {
       } else {
         toast({
           title: "Invite Created",
-          description: "Share the link using the options below.",
+          description: mode === "quick"
+            ? "Share the link using your preferred app."
+            : "Use the options below to send it.",
         });
       }
 
@@ -101,10 +116,6 @@ export default function AdminAffiliateInviteSender() {
           text: shareText,
           url: data.inviteUrl,
         });
-        toast({
-          title: "Shared!",
-          description: "Invite link shared successfully.",
-        });
       } catch (err: any) {
         if (err.name !== "AbortError") {
           toast({
@@ -116,7 +127,11 @@ export default function AdminAffiliateInviteSender() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleQuickCreate = () => {
+    sendInviteMutation.mutate({ ...formData, targetEmail: "", targetPhone: "", targetName: "" });
+  };
+
+  const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendInviteMutation.mutate(formData);
   };
@@ -124,9 +139,6 @@ export default function AdminAffiliateInviteSender() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      toast({ title: "Copied!", description: "Invite link copied to clipboard" });
-      setTimeout(() => setCopied(false), 2000);
     } catch {
       const textarea = document.createElement("textarea");
       textarea.value = text;
@@ -134,15 +146,10 @@ export default function AdminAffiliateInviteSender() {
       textarea.select();
       document.execCommand("copy");
       document.body.removeChild(textarea);
-      setCopied(true);
-      toast({ title: "Copied!", description: "Invite link copied to clipboard" });
-      setTimeout(() => setCopied(false), 2000);
     }
-  };
-
-  const handleShareAgain = async () => {
-    if (!lastResult) return;
-    await triggerNativeShare(lastResult);
+    setCopied(true);
+    toast({ title: "Copied!", description: "Invite link copied to clipboard" });
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSmsShare = () => {
@@ -150,7 +157,7 @@ export default function AdminAffiliateInviteSender() {
     const body = lastResult.invite.targetName
       ? `Hi ${lastResult.invite.targetName}, here's your Power Plunge affiliate signup link: ${lastResult.inviteUrl}`
       : `Here's your Power Plunge affiliate signup link: ${lastResult.inviteUrl}`;
-    window.open(`sms:?body=${encodeURIComponent(body)}`, "_self");
+    window.open(`sms:${lastResult.invite.targetPhone || ""}?body=${encodeURIComponent(body)}`, "_self");
   };
 
   const handleEmailShare = () => {
@@ -163,7 +170,9 @@ export default function AdminAffiliateInviteSender() {
     window.open(mailto, "_self");
   };
 
-  const supportsNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+  const handleNewInvite = () => {
+    setLastResult(null);
+  };
 
   if (adminLoading) {
     return (
@@ -181,7 +190,7 @@ export default function AdminAffiliateInviteSender() {
   return (
     <div className="min-h-screen bg-background">
       <AdminNav currentPage="affiliates" role={role} />
-      
+
       <div className="max-w-lg mx-auto px-4 py-6 sm:py-10">
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
@@ -193,251 +202,342 @@ export default function AdminAffiliateInviteSender() {
           </p>
         </div>
 
-        <Card data-testid="card-invite-form">
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <Button
-                type="submit"
-                disabled={sendInviteMutation.isPending}
-                className="w-full h-14 text-base font-semibold"
-                data-testid="button-send-invite"
-              >
-                {sendInviteMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="w-5 h-5 mr-2" />
-                    Create & Share Invite
-                  </>
-                )}
-              </Button>
-
-              {supportsNativeShare && (
-                <p className="text-xs text-center text-muted-foreground -mt-2">
-                  Opens Messages, Mail, WhatsApp, or other apps to send the invite
-                </p>
-              )}
-
+        {!lastResult ? (
+          <>
+            <div className="flex rounded-lg border border-border overflow-hidden mb-5" data-testid="mode-toggle">
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                data-testid="button-toggle-options"
+                onClick={() => setMode("quick")}
+                className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-4 text-sm font-medium transition-colors ${
+                  mode === "quick"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+                data-testid="button-mode-quick"
               >
-                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                {showAdvanced ? "Hide options" : "Add email, name, or other options"}
+                <ContactRound className="w-4 h-4" />
+                Quick Share
               </button>
+              <button
+                type="button"
+                onClick={() => setMode("manual")}
+                className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-4 text-sm font-medium transition-colors ${
+                  mode === "manual"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+                data-testid="button-mode-manual"
+              >
+                <PenLine className="w-4 h-4" />
+                Enter Details
+              </button>
+            </div>
 
-              {showAdvanced && (
-                <div className="space-y-4 pt-2 border-t border-border">
-                  <div className="space-y-2">
-                    <Label htmlFor="targetEmail">Email address (optional)</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <Input
-                        id="targetEmail"
-                        type="email"
-                        placeholder="affiliate@example.com"
-                        value={formData.targetEmail}
-                        onChange={(e) => setFormData({ ...formData, targetEmail: e.target.value })}
-                        className="pl-11 h-12 text-base"
-                        autoComplete="email"
-                        data-testid="input-target-email"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      If provided, the invite will be locked to this email and an email will also be sent automatically.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="targetPhone">Phone number (optional)</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <Input
-                        id="targetPhone"
-                        type="tel"
-                        placeholder="(555) 123-4567"
-                        value={formData.targetPhone}
-                        onChange={(e) => setFormData({ ...formData, targetPhone: e.target.value })}
-                        className="pl-11 h-12 text-base"
-                        autoComplete="tel"
-                        data-testid="input-target-phone"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      If provided, the recipient must verify this phone number via SMS code before they can sign up.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="targetName">Name (optional)</Label>
-                    <Input
-                      id="targetName"
-                      type="text"
-                      placeholder="Jane Smith"
-                      value={formData.targetName}
-                      onChange={(e) => setFormData({ ...formData, targetName: e.target.value })}
-                      className="h-12 text-base"
-                      data-testid="input-target-name"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+            {mode === "quick" ? (
+              <Card data-testid="card-quick-share">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Share from Contacts</CardTitle>
+                  <CardDescription>
+                    {supportsNativeShare
+                      ? "Creates an invite link and opens your share sheet so you can pick a contact and send it via Messages, WhatsApp, email, or any app."
+                      : "Creates an invite link you can copy and send to anyone."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full h-14 text-base font-semibold"
+                    onClick={handleQuickCreate}
+                    disabled={sendInviteMutation.isPending}
+                    data-testid="button-quick-create"
+                  >
+                    {sendInviteMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-5 h-5 mr-2" />
+                        {supportsNativeShare ? "Create & Share" : "Create Invite Link"}
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card data-testid="card-manual-entry">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Enter Recipient Details</CardTitle>
+                  <CardDescription>
+                    Fill in the details below. After creating, you'll get options to text or email the invite.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleManualSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="maxUses">Max uses</Label>
+                      <Label htmlFor="targetName">Name</Label>
                       <Input
-                        id="maxUses"
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={formData.maxUses}
-                        onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
+                        id="targetName"
+                        type="text"
+                        placeholder="Jane Smith"
+                        value={formData.targetName}
+                        onChange={(e) => setFormData({ ...formData, targetName: e.target.value })}
                         className="h-12 text-base"
-                        data-testid="input-max-uses"
+                        data-testid="input-target-name"
                       />
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="expiresInDays">Expires in (days)</Label>
-                      <Input
-                        id="expiresInDays"
-                        type="number"
-                        min="1"
-                        max="365"
-                        value={formData.expiresInDays}
-                        onChange={(e) => setFormData({ ...formData, expiresInDays: e.target.value })}
-                        className="h-12 text-base"
-                        data-testid="input-expires-days"
-                      />
+                      <Label htmlFor="targetEmail">Email address</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <Input
+                          id="targetEmail"
+                          type="email"
+                          placeholder="affiliate@example.com"
+                          value={formData.targetEmail}
+                          onChange={(e) => setFormData({ ...formData, targetEmail: e.target.value })}
+                          className="pl-11 h-12 text-base"
+                          autoComplete="email"
+                          data-testid="input-target-email"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        If provided, the invite will be locked to this email and a notification email is sent automatically.
+                      </p>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Notes (optional)</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Internal notes about this invite..."
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      rows={2}
-                      className="text-base"
-                      data-testid="input-notes"
-                    />
-                  </div>
-                </div>
-              )}
-            </form>
-          </CardContent>
-        </Card>
+                    <div className="space-y-2">
+                      <Label htmlFor="targetPhone">Phone number</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <Input
+                          id="targetPhone"
+                          type="tel"
+                          placeholder="(555) 123-4567"
+                          value={formData.targetPhone}
+                          onChange={(e) => setFormData({ ...formData, targetPhone: e.target.value })}
+                          className="pl-11 h-12 text-base"
+                          autoComplete="tel"
+                          data-testid="input-target-phone"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        If provided, the recipient must verify this phone via SMS before signing up.
+                      </p>
+                    </div>
 
-        {lastResult && (
-          <Card className="mt-6 border-primary/30" data-testid="card-invite-result">
+                    <button
+                      type="button"
+                      className="flex items-center justify-center gap-2 w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      data-testid="button-toggle-options"
+                    >
+                      {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {showAdvanced ? "Hide advanced options" : "Advanced options"}
+                    </button>
+
+                    {showAdvanced && (
+                      <div className="space-y-4 pt-2 border-t border-border">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="maxUses">Max uses</Label>
+                            <Input
+                              id="maxUses"
+                              type="number"
+                              min="1"
+                              max="100"
+                              value={formData.maxUses}
+                              onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
+                              className="h-12 text-base"
+                              data-testid="input-max-uses"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="expiresInDays">Expires in (days)</Label>
+                            <Input
+                              id="expiresInDays"
+                              type="number"
+                              min="1"
+                              max="365"
+                              value={formData.expiresInDays}
+                              onChange={(e) => setFormData({ ...formData, expiresInDays: e.target.value })}
+                              className="h-12 text-base"
+                              data-testid="input-expires-days"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="notes">Notes (internal only)</Label>
+                          <Textarea
+                            id="notes"
+                            placeholder="Internal notes about this invite..."
+                            value={formData.notes}
+                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                            rows={2}
+                            className="text-base"
+                            data-testid="input-notes"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={sendInviteMutation.isPending}
+                      className="w-full h-14 text-base font-semibold"
+                      data-testid="button-send-invite"
+                    >
+                      {sendInviteMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-5 h-5 mr-2" />
+                          Create Invite
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        ) : (
+          <Card className="border-primary/30" data-testid="card-invite-result">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Link2 className="w-5 h-5 text-primary" />
-                Invite Created
+                <Check className="w-5 h-5 text-green-500" />
+                Invite Ready
               </CardTitle>
               <CardDescription>
                 {lastResult.emailSent
-                  ? `Email sent to ${lastResult.invite.targetEmail}`
-                  : lastResult.invite.targetEmail
-                    ? "Share the link below or use the share options"
-                    : "Share this link with anyone you'd like to invite"}
+                  ? `A notification email was also sent to ${lastResult.invite.targetEmail}.`
+                  : "Send the invite using one of the options below."}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={lastResult.inviteUrl}
-                  readOnly
-                  className="text-sm font-mono flex-1"
-                  data-testid="input-invite-url"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0 h-10 w-10"
-                  onClick={() => copyToClipboard(lastResult.inviteUrl)}
-                  data-testid="button-copy-url"
-                >
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                </Button>
+            <CardContent className="space-y-5">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Invite Link</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={lastResult.inviteUrl}
+                    readOnly
+                    className="text-sm font-mono flex-1"
+                    data-testid="input-invite-url"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-10 w-10"
+                    onClick={() => copyToClipboard(lastResult.inviteUrl)}
+                    data-testid="button-copy-url"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Send Invite</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-12 text-base"
+                    onClick={handleSmsShare}
+                    data-testid="button-share-sms"
+                  >
+                    <MessageSquare className="w-5 h-5 mr-2" />
+                    Text Invite
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-12 text-base"
+                    onClick={handleEmailShare}
+                    data-testid="button-share-email"
+                  >
+                    <Mail className="w-5 h-5 mr-2" />
+                    Email Invite
+                  </Button>
+                </div>
                 {supportsNativeShare && (
                   <Button
-                    variant="default"
-                    className="w-full h-12 text-base font-semibold"
-                    onClick={handleShareAgain}
-                    data-testid="button-share-again"
+                    variant="outline"
+                    className="w-full h-12 text-base"
+                    onClick={() => triggerNativeShare(lastResult)}
+                    data-testid="button-share-native"
                   >
                     <Share2 className="w-5 h-5 mr-2" />
-                    Share via Messages, WhatsApp, etc.
+                    More Sharing Options
                   </Button>
                 )}
-
-                {!supportsNativeShare && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      className="h-12 text-base"
-                      onClick={handleSmsShare}
-                      data-testid="button-share-sms"
-                    >
-                      <MessageSquare className="w-5 h-5 mr-2" />
-                      Text / SMS
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12 text-base"
-                      onClick={handleEmailShare}
-                      data-testid="button-share-email"
-                    >
-                      <Mail className="w-5 h-5 mr-2" />
-                      Email
-                    </Button>
-                  </div>
-                )}
-
                 <Button
-                  variant="outline"
-                  className="w-full h-12 text-base"
+                  variant="ghost"
+                  className="w-full h-10 text-sm"
                   onClick={() => copyToClipboard(lastResult.inviteUrl)}
                   data-testid="button-copy-link"
                 >
-                  {copied ? <Check className="w-5 h-5 mr-2 text-green-500" /> : <Copy className="w-5 h-5 mr-2" />}
+                  {copied ? <Check className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
                   {copied ? "Copied!" : "Copy Link"}
                 </Button>
               </div>
 
               {!lastResult.emailSent && lastResult.emailError && lastResult.invite.targetEmail && (
                 <p className="text-sm text-amber-600" data-testid="text-email-warning">
-                  Email not sent: {lastResult.emailError}
+                  Auto-email not sent: {lastResult.emailError}
                 </p>
               )}
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Code: {lastResult.invite.inviteCode}</p>
+
+              <div className="pt-3 border-t border-border space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Code</span>
+                  <span className="font-mono">{lastResult.invite.inviteCode}</span>
+                </div>
+                {lastResult.invite.targetName && (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Name</span>
+                    <span>{lastResult.invite.targetName}</span>
+                  </div>
+                )}
                 {lastResult.invite.targetEmail && (
-                  <p>Locked to email: {lastResult.invite.targetEmail}</p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Locked to email</span>
+                    <span>{lastResult.invite.targetEmail}</span>
+                  </div>
                 )}
                 {lastResult.invite.targetPhone && (
-                  <p className="flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-primary" />
-                    Phone verified: {lastResult.invite.targetPhone}
-                  </p>
-                )}
-                {!lastResult.invite.targetEmail && !lastResult.invite.targetPhone && (
-                  <p>Open invite — anyone with this link can sign up</p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-primary" />
+                      Phone verification
+                    </span>
+                    <span>{lastResult.invite.targetPhone}</span>
+                  </div>
                 )}
                 {lastResult.invite.expiresAt && (
-                  <p>Expires: {new Date(lastResult.invite.expiresAt).toLocaleDateString()}</p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Expires</span>
+                    <span>{new Date(lastResult.invite.expiresAt).toLocaleDateString()}</span>
+                  </div>
                 )}
-                <p>Max uses: {lastResult.invite.maxUses}</p>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Max uses</span>
+                  <span>{lastResult.invite.maxUses}</span>
+                </div>
               </div>
+
+              <Button
+                variant="ghost"
+                className="w-full mt-2"
+                onClick={handleNewInvite}
+                data-testid="button-new-invite"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Create Another Invite
+              </Button>
             </CardContent>
           </Card>
         )}
