@@ -22,6 +22,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   ArrowLeft,
+  Wand2,
 } from "lucide-react";
 
 interface Breadcrumb {
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { id: "pages", label: "Pages", icon: FileText, href: "/admin/cms-v2/pages" },
   { id: "sections", label: "Sections", icon: Layers, href: "/admin/cms-v2/sections" },
   { id: "templates", label: "Templates", icon: BookTemplate, href: "/admin/cms-v2/templates" },
+  { id: "generator", label: "Generator", icon: Wand2, href: "/admin/cms-v2/generator/landing" },
   { id: "themes", label: "Themes", icon: Palette, href: "/admin/cms-v2/themes" },
   { id: "seo", label: "SEO", icon: Search, href: "/admin/cms-v2/seo" },
   { id: "settings", label: "Settings", icon: Settings, href: "/admin/cms-v2/settings" },
