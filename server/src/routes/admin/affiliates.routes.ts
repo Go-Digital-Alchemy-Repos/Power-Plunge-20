@@ -278,6 +278,7 @@ router.post("/affiliate-invites/send", async (req: any, res) => {
   try {
     const sendInviteSchema = z.object({
       targetEmail: z.string().email("Valid email is required").optional().or(z.literal("")),
+      targetPhone: z.string().optional().or(z.literal("")),
       targetName: z.string().optional(),
       expiresAt: z.string().optional(),
       expiresInDays: z.number().positive().optional(),
@@ -293,8 +294,14 @@ router.post("/affiliate-invites/send", async (req: any, res) => {
       });
     }
 
-    const { targetEmail, targetName, expiresAt, expiresInDays, maxUses, notes } = parseResult.data;
+    const { targetEmail, targetPhone, targetName, expiresAt, expiresInDays, maxUses, notes } = parseResult.data;
     const normalizedEmail = targetEmail?.trim().toLowerCase() || null;
+
+    let normalizedPhone: string | null = null;
+    if (targetPhone && targetPhone.trim()) {
+      const { smsService } = await import("../../services/sms.service");
+      normalizedPhone = smsService.normalizePhone(targetPhone.trim());
+    }
 
     let expirationDate: Date | null = null;
     if (expiresAt) {
@@ -313,6 +320,7 @@ router.post("/affiliate-invites/send", async (req: any, res) => {
     const invite = await storage.createAffiliateInvite({
       inviteCode,
       targetEmail: normalizedEmail,
+      targetPhone: normalizedPhone,
       targetName: targetName || null,
       createdByAdminId: req.adminUser?.id || null,
       expiresAt: expirationDate,
@@ -363,6 +371,7 @@ ${expirationDate ? `<p style="color: #666; font-size: 13px;">This link expires o
       metadata: {
         inviteCode,
         targetEmail: normalizedEmail,
+        targetPhone: normalizedPhone,
         targetName,
         emailSent: emailResult.success,
         emailError: emailResult.error || null,

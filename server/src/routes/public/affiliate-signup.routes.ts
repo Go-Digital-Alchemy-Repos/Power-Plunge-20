@@ -46,6 +46,8 @@ router.get("/", async (req: Request, res: Response) => {
         error: inviteError,
         targetEmail: invite.targetEmail,
         targetName: invite.targetName,
+        requiresPhoneVerification: !!invite.targetPhone && !invite.phoneVerified,
+        phoneLastFour: invite.targetPhone ? invite.targetPhone.slice(-4) : null,
       } : null,
       inviteError: inviteError,
       programEnabled: settings?.programActive ?? true,
@@ -99,6 +101,10 @@ router.post("/", async (req: Request, res: Response) => {
     
     if (invite.targetEmail && invite.targetEmail.toLowerCase() !== email.toLowerCase()) {
       return res.status(400).json({ message: "This invite is for a different email address" });
+    }
+
+    if (invite.targetPhone && !invite.phoneVerified) {
+      return res.status(403).json({ message: "This invite requires phone verification before signup. Please verify your phone number first." });
     }
 
     const existingCustomer = await storage.getCustomerByEmail(email);
@@ -220,6 +226,126 @@ router.post("/", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Affiliate signup error:", error);
     res.status(500).json({ message: "Failed to create affiliate account" });
+  }
+});
+
+router.post("/send-verification", async (req: Request, res: Response) => {
+  try {
+    const schema = z.object({
+      inviteCode: z.string().min(1, "Invite code is required"),
+    });
+
+    const parseResult = schema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ message: parseResult.error.errors[0].message });
+    }
+
+    const { inviteCode } = parseResult.data;
+    const invite = await storage.getAffiliateInviteByCode(inviteCode);
+
+    if (!invite) {
+      return res.status(400).json({ message: "Invalid invite code" });
+    }
+
+    if (!invite.targetPhone) {
+      return res.status(400).json({ message: "This invite does not require phone verification" });
+    }
+
+    if (invite.phoneVerified) {
+      return res.json({ success: true, alreadyVerified: true });
+    }
+
+    const recentCount = await storage.countRecentPhoneVerificationCodes(inviteCode, 5);
+    if (recentCount >= 3) {
+      return res.status(429).json({ message: "Too many verification attempts. Please wait a few minutes before trying again." });
+    }
+
+    await storage.invalidatePhoneVerificationCodes(inviteCode, invite.targetPhone);
+
+    const { smsService } = await import("../../services/sms.service");
+    const code = smsService.generateCode();
+
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    await storage.createPhoneVerificationCode({
+      inviteCode,
+      phone: invite.targetPhone,
+      code,
+      expiresAt,
+      verified: false,
+      attempts: 0,
+    });
+
+    const smsResult = await smsService.sendVerificationCode(invite.targetPhone, code);
+
+    if (!smsResult.success) {
+      return res.status(500).json({ message: "Failed to send verification code. Please try again." });
+    }
+
+    res.json({
+      success: true,
+      phoneLastFour: invite.targetPhone.slice(-4),
+    });
+  } catch (error: any) {
+    console.error("Send phone verification error:", error);
+    res.status(500).json({ message: "Failed to send verification code" });
+  }
+});
+
+router.post("/verify-phone", async (req: Request, res: Response) => {
+  try {
+    const schema = z.object({
+      inviteCode: z.string().min(1, "Invite code is required"),
+      code: z.string().min(1, "Verification code is required"),
+    });
+
+    const parseResult = schema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ message: parseResult.error.errors[0].message });
+    }
+
+    const { inviteCode, code } = parseResult.data;
+    const invite = await storage.getAffiliateInviteByCode(inviteCode);
+
+    if (!invite) {
+      return res.status(400).json({ message: "Invalid invite code" });
+    }
+
+    if (!invite.targetPhone) {
+      return res.status(400).json({ message: "This invite does not require phone verification" });
+    }
+
+    if (invite.phoneVerified) {
+      return res.json({ success: true, alreadyVerified: true });
+    }
+
+    const verification = await storage.getPhoneVerificationCode(inviteCode, invite.targetPhone);
+
+    if (!verification) {
+      return res.status(400).json({ message: "No verification code found. Please request a new one." });
+    }
+
+    if (verification.attempts >= 5) {
+      return res.status(429).json({ message: "Too many attempts. Please request a new verification code." });
+    }
+
+    if (new Date() > new Date(verification.expiresAt)) {
+      return res.status(400).json({ message: "Verification code has expired. Please request a new one." });
+    }
+
+    if (verification.code !== code) {
+      await storage.incrementPhoneVerificationAttempts(verification.id);
+      return res.status(400).json({ message: "Incorrect verification code. Please try again." });
+    }
+
+    await storage.markPhoneVerificationCodeVerified(verification.id);
+    await storage.updateAffiliateInvite(invite.id, { phoneVerified: true } as any);
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("Verify phone error:", error);
+    res.status(500).json({ message: "Failed to verify phone number" });
   }
 });
 

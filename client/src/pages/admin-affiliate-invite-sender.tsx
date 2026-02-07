@@ -9,13 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/use-admin";
 import AdminNav from "@/components/admin/AdminNav";
-import { Mail, Copy, Check, Loader2, Link2, UserPlus, Share2, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { Mail, Copy, Check, Loader2, Link2, UserPlus, Share2, MessageSquare, ChevronDown, ChevronUp, Phone, ShieldCheck } from "lucide-react";
 
 interface InviteResponse {
   invite: {
     id: string;
     inviteCode: string;
     targetEmail: string | null;
+    targetPhone: string | null;
     targetName: string | null;
     expiresAt: string | null;
     maxUses: number;
@@ -32,6 +33,7 @@ export default function AdminAffiliateInviteSender() {
 
   const [formData, setFormData] = useState({
     targetEmail: "",
+    targetPhone: "",
     targetName: "",
     maxUses: "1",
     expiresInDays: "7",
@@ -50,6 +52,7 @@ export default function AdminAffiliateInviteSender() {
         credentials: "include",
         body: JSON.stringify({
           targetEmail: data.targetEmail.trim() || undefined,
+          targetPhone: data.targetPhone.trim() || undefined,
           targetName: data.targetName.trim() || undefined,
           maxUses: parseInt(data.maxUses) || 1,
           expiresInDays: parseInt(data.expiresInDays) || undefined,
@@ -75,7 +78,7 @@ export default function AdminAffiliateInviteSender() {
         });
       }
 
-      setFormData(prev => ({ ...prev, targetEmail: "", targetName: "", notes: "" }));
+      setFormData(prev => ({ ...prev, targetEmail: "", targetPhone: "", targetName: "", notes: "" }));
 
       await triggerNativeShare(data);
     },
@@ -253,6 +256,26 @@ export default function AdminAffiliateInviteSender() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="targetPhone">Phone number (optional)</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="targetPhone"
+                        type="tel"
+                        placeholder="(555) 123-4567"
+                        value={formData.targetPhone}
+                        onChange={(e) => setFormData({ ...formData, targetPhone: e.target.value })}
+                        className="pl-11 h-12 text-base"
+                        autoComplete="tel"
+                        data-testid="input-target-phone"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      If provided, the recipient must verify this phone number via SMS code before they can sign up.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="targetName">Name (optional)</Label>
                     <Input
                       id="targetName"
@@ -401,9 +424,15 @@ export default function AdminAffiliateInviteSender() {
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>Code: {lastResult.invite.inviteCode}</p>
                 {lastResult.invite.targetEmail && (
-                  <p>Locked to: {lastResult.invite.targetEmail}</p>
+                  <p>Locked to email: {lastResult.invite.targetEmail}</p>
                 )}
-                {!lastResult.invite.targetEmail && (
+                {lastResult.invite.targetPhone && (
+                  <p className="flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-primary" />
+                    Phone verified: {lastResult.invite.targetPhone}
+                  </p>
+                )}
+                {!lastResult.invite.targetEmail && !lastResult.invite.targetPhone && (
                   <p>Open invite — anyone with this link can sign up</p>
                 )}
                 {lastResult.invite.expiresAt && (

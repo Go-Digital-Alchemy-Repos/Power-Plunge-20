@@ -168,6 +168,8 @@ export interface IStorage {
   getPhoneVerificationCode(inviteCode: string, phone: string): Promise<PhoneVerificationCode | undefined>;
   markPhoneVerificationCodeVerified(id: string): Promise<void>;
   incrementPhoneVerificationAttempts(id: string): Promise<void>;
+  invalidatePhoneVerificationCodes(inviteCode: string, phone: string): Promise<void>;
+  countRecentPhoneVerificationCodes(inviteCode: string, minutesAgo: number): Promise<number>;
 
   // Categories
   getCategories(): Promise<Category[]>;
@@ -787,6 +789,29 @@ export class DatabaseStorage implements IStorage {
     await db.update(phoneVerificationCodes).set({
       attempts: sql`${phoneVerificationCodes.attempts} + 1`,
     }).where(eq(phoneVerificationCodes.id, id));
+  }
+
+  async invalidatePhoneVerificationCodes(inviteCode: string, phone: string): Promise<void> {
+    await db.update(phoneVerificationCodes).set({ verified: true }).where(
+      and(
+        eq(phoneVerificationCodes.inviteCode, inviteCode),
+        eq(phoneVerificationCodes.phone, phone),
+        eq(phoneVerificationCodes.verified, false),
+      )
+    );
+  }
+
+  async countRecentPhoneVerificationCodes(inviteCode: string, minutesAgo: number): Promise<number> {
+    const cutoff = new Date();
+    cutoff.setMinutes(cutoff.getMinutes() - minutesAgo);
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(phoneVerificationCodes)
+      .where(and(
+        eq(phoneVerificationCodes.inviteCode, inviteCode),
+        sql`${phoneVerificationCodes.createdAt} > ${cutoff}`,
+      ));
+    return Number(result[0]?.count || 0);
   }
 
   // Categories

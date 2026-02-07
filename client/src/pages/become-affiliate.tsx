@@ -42,6 +42,8 @@ interface SignupInfo {
     error: string | null;
     targetEmail: string | null;
     targetName: string | null;
+    requiresPhoneVerification: boolean;
+    phoneLastFour: string | null;
   } | null;
 }
 
@@ -103,6 +105,13 @@ export default function BecomeAffiliate() {
 
   const [customCode, setCustomCode] = useState("");
   const [editingCode, setEditingCode] = useState(false);
+
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [phoneVerifyError, setPhoneVerifyError] = useState<string | null>(null);
 
   const { data: signupInfo, isLoading: infoLoading } = useQuery<SignupInfo>({
     queryKey: ["/api/affiliate-signup", inviteCode],
@@ -382,6 +391,151 @@ export default function BecomeAffiliate() {
               <Link href="/">
                 <Button className="w-full" data-testid="button-return-store">Return to Store</Button>
               </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const needsPhoneVerification = signupInfo?.invite?.requiresPhoneVerification && !phoneVerified;
+
+  const handleSendVerificationCode = async () => {
+    setSendingCode(true);
+    setPhoneVerifyError(null);
+    try {
+      const res = await fetch("/api/affiliate-signup/send-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to send code");
+      if (data.alreadyVerified) {
+        setPhoneVerified(true);
+        return;
+      }
+      setCodeSent(true);
+      toast({ title: "Code Sent!", description: `Verification code sent to phone ending in ${signupInfo?.invite?.phoneLastFour}` });
+    } catch (err: any) {
+      setPhoneVerifyError(err.message);
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const handleVerifyPhone = async () => {
+    setVerifyingCode(true);
+    setPhoneVerifyError(null);
+    try {
+      const res = await fetch("/api/affiliate-signup/verify-phone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteCode, code: verificationCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Verification failed");
+      setPhoneVerified(true);
+      toast({ title: "Verified!", description: "Phone number verified successfully." });
+    } catch (err: any) {
+      setPhoneVerifyError(err.message);
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
+
+  if (needsPhoneVerification) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
+        <nav className="p-4">
+          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to store</span>
+          </Link>
+        </nav>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md" data-testid="card-phone-verification">
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-4 bg-primary/10 rounded-full">
+                  <Lock className="w-8 h-8 text-primary" />
+                </div>
+              </div>
+              <CardTitle className="text-xl" data-testid="text-phone-verify-title">
+                Phone Verification Required
+              </CardTitle>
+              <CardDescription className="mt-2">
+                This invite is secured to a specific phone number ending in <strong>****{signupInfo?.invite?.phoneLastFour}</strong>. 
+                Please verify your phone to continue.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!codeSent ? (
+                <Button
+                  className="w-full h-12 text-base"
+                  onClick={handleSendVerificationCode}
+                  disabled={sendingCode}
+                  data-testid="button-send-code"
+                >
+                  {sendingCode ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Verification Code"
+                  )}
+                </Button>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="verificationCode">Enter the 6-digit code</Label>
+                    <Input
+                      id="verificationCode"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className="h-14 text-center text-2xl tracking-[0.5em] font-mono"
+                      autoFocus
+                      data-testid="input-verification-code"
+                    />
+                  </div>
+                  <Button
+                    className="w-full h-12 text-base"
+                    onClick={handleVerifyPhone}
+                    disabled={verifyingCode || verificationCode.length !== 6}
+                    data-testid="button-verify-code"
+                  >
+                    {verifyingCode ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      "Verify & Continue"
+                    )}
+                  </Button>
+                  <button
+                    type="button"
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                    onClick={handleSendVerificationCode}
+                    disabled={sendingCode}
+                    data-testid="button-resend-code"
+                  >
+                    {sendingCode ? "Sending..." : "Resend code"}
+                  </button>
+                </>
+              )}
+
+              {phoneVerifyError && (
+                <div className="flex items-start gap-2 p-3 bg-destructive/10 rounded-lg" data-testid="text-phone-verify-error">
+                  <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+                  <p className="text-sm text-destructive">{phoneVerifyError}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
