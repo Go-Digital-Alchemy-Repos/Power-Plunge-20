@@ -28,6 +28,10 @@ import SafetyChecklistBlock from "./SafetyChecklistBlock";
 import GuaranteeAndWarrantyBlock from "./GuaranteeAndWarrantyBlock";
 import DeliveryAndSetupBlock from "./DeliveryAndSetupBlock";
 import FinancingAndPaymentBlock from "./FinancingAndPaymentBlock";
+import ObjectionBustersBlock from "./ObjectionBustersBlock";
+import BeforeAfterExpectationsBlock from "./BeforeAfterExpectationsBlock";
+import PressMentionsBlock from "./PressMentionsBlock";
+import SocialProofStatsBlock from "./SocialProofStatsBlock";
 
 export function registerCmsV1Blocks() {
   registerBlock({
@@ -645,6 +649,112 @@ export function registerCmsV1Blocks() {
       financingDisclaimer: textareaField("Financing Disclaimer"),
       bullets: arrayField("Payment Options", {
         value: textField("Option"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "objectionBusters",
+    label: "Objection Busters",
+    category: "marketing",
+    version: 1,
+    description: "Address common concerns with clear, reassuring responses",
+    renderComponent: ObjectionBustersBlock,
+    defaultProps: {
+      title: "Common Questions & Concerns",
+      items: [
+        { objection: "Isn't cold plunging dangerous?", response: "When used responsibly and following our safety guidelines, cold plunging is practiced safely by millions of people worldwide. We include comprehensive safety documentation and recommend consulting your physician before starting." },
+        { objection: "I can't handle cold water.", response: "Most people start at warmer temperatures (58–60°F) for just 1–2 minutes and gradually build tolerance. Our digital controller lets you set the exact temperature that's right for you." },
+        { objection: "It seems too expensive.", response: "A Power Plunge pays for itself compared to ongoing cryotherapy sessions, spa memberships, or ice deliveries. We also offer flexible financing options to fit your budget." },
+        { objection: "I don't have room for it.", response: "Our units have a compact footprint similar to a standard bathtub and can be placed indoors or outdoors. Many customers set up in garages, patios, or spare bathrooms." },
+      ],
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      items: arrayField("Objections", {
+        objection: textField("Objection / Concern"),
+        response: textareaField("Response"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "beforeAfterExpectations",
+    label: "Before & After Expectations",
+    category: "marketing",
+    version: 1,
+    description: "Set realistic expectations with compliant 'what to expect' messaging",
+    renderComponent: BeforeAfterExpectationsBlock,
+    defaultProps: {
+      title: "What to Expect",
+      expectations: [
+        { label: "First Session", description: "Your first plunge may feel intense — that's normal. Many users report an invigorating rush followed by a sense of calm and alertness." },
+        { label: "First Week", description: "With consistent use, most people begin to notice improved tolerance to the cold and may experience better sleep quality and reduced muscle soreness." },
+        { label: "First Month", description: "Regular cold plungers often report sustained improvements in energy, mood, and recovery times. Individual results vary based on frequency and protocol." },
+        { label: "Ongoing Practice", description: "Cold plunging can become a cornerstone of your wellness routine. Many long-term users describe it as one of their most valued daily habits." },
+      ],
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      expectations: arrayField("Expectations", {
+        label: textField("Label / Milestone"),
+        description: textareaField("Description"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "pressMentions",
+    label: "Press Mentions",
+    category: "trust",
+    version: 1,
+    description: "Display press and media logos for credibility",
+    renderComponent: PressMentionsBlock,
+    defaultProps: {
+      title: "As Seen In",
+      logos: [
+        { src: "https://placehold.co/160x40/111827/9ca3af?text=Forbes", alt: "Forbes", href: "" },
+        { src: "https://placehold.co/160x40/111827/9ca3af?text=Men's+Health", alt: "Men's Health", href: "" },
+        { src: "https://placehold.co/160x40/111827/9ca3af?text=ESPN", alt: "ESPN", href: "" },
+        { src: "https://placehold.co/160x40/111827/9ca3af?text=GQ", alt: "GQ", href: "" },
+        { src: "https://placehold.co/160x40/111827/9ca3af?text=Wired", alt: "Wired", href: "" },
+      ],
+      noteText: "Replace placeholder logos with your actual press mention images.",
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      noteText: textField("Note Text"),
+      logos: arrayField("Logos", {
+        src: textField("Logo Image URL"),
+        alt: textField("Alt Text"),
+        href: textField("Link URL (optional)"),
+      }),
+    },
+  });
+
+  registerBlock({
+    type: "socialProofStats",
+    label: "Social Proof Stats",
+    category: "trust",
+    version: 1,
+    description: "Key statistics that demonstrate social proof and credibility",
+    renderComponent: SocialProofStatsBlock,
+    defaultProps: {
+      title: "By the Numbers",
+      stats: [
+        { value: "10,000+", label: "Units Sold" },
+        { value: "4.9/5", label: "Customer Rating" },
+        { value: "50+", label: "Pro Teams" },
+        { value: "2 Year", label: "Warranty" },
+      ],
+      disclaimer: "Statistics reflect cumulative data as of the most recent reporting period.",
+    },
+    puckFields: {
+      title: textField("Section Title"),
+      disclaimer: textField("Disclaimer Text"),
+      stats: arrayField("Stats", {
+        value: textField("Value"),
+        label: textField("Label"),
       }),
     },
   });

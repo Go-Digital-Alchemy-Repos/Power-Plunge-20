@@ -243,6 +243,53 @@ export const financingAndPaymentSchema = z.object({
 });
 export type FinancingAndPaymentProps = z.infer<typeof financingAndPaymentSchema>;
 
+export const objectionItemSchema = z.object({
+  objection: z.string().min(1),
+  response: z.string().default(""),
+});
+
+export const objectionBustersSchema = z.object({
+  title: z.string().default(""),
+  items: z.array(objectionItemSchema).default([]),
+});
+export type ObjectionBustersProps = z.infer<typeof objectionBustersSchema>;
+
+export const expectationSchema = z.object({
+  label: z.string().min(1),
+  description: z.string().default(""),
+});
+
+export const beforeAfterExpectationsSchema = z.object({
+  title: z.string().default(""),
+  expectations: z.array(expectationSchema).default([]),
+});
+export type BeforeAfterExpectationsProps = z.infer<typeof beforeAfterExpectationsSchema>;
+
+export const pressLogoSchema = z.object({
+  src: z.string().min(1),
+  alt: z.string().default(""),
+  href: z.string().optional(),
+});
+
+export const pressMentionsSchema = z.object({
+  title: z.string().default(""),
+  logos: z.array(pressLogoSchema).default([]),
+  noteText: z.string().optional(),
+});
+export type PressMentionsProps = z.infer<typeof pressMentionsSchema>;
+
+export const statSchema = z.object({
+  value: z.string().min(1),
+  label: z.string().default(""),
+});
+
+export const socialProofStatsSchema = z.object({
+  title: z.string().default(""),
+  stats: z.array(statSchema).default([]),
+  disclaimer: z.string().optional(),
+});
+export type SocialProofStatsProps = z.infer<typeof socialProofStatsSchema>;
+
 const blockSchemaMap: Record<string, z.ZodTypeAny> = {
   hero: heroSchema,
   richText: richTextSchema,
@@ -264,6 +311,10 @@ const blockSchemaMap: Record<string, z.ZodTypeAny> = {
   guaranteeAndWarranty: guaranteeAndWarrantySchema,
   deliveryAndSetup: deliveryAndSetupSchema,
   financingAndPayment: financingAndPaymentSchema,
+  objectionBusters: objectionBustersSchema,
+  beforeAfterExpectations: beforeAfterExpectationsSchema,
+  pressMentions: pressMentionsSchema,
+  socialProofStats: socialProofStatsSchema,
 };
 
 export function validateBlockData(
