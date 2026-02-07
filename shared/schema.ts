@@ -1519,3 +1519,53 @@ export const insertThemePackSchema = createInsertSchema(themePacks, {
 
 export type InsertThemePack = z.infer<typeof insertThemePackSchema>;
 export type ThemePack = typeof themePacks.$inferSelect;
+
+// ==================== CMS V2: Blog Posts ====================
+export const cmsV2Posts = pgTable("cms_v2_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  body: text("body").notNull().default(""),
+  excerpt: text("excerpt"),
+  featuredImage: text("featured_image"),
+  authorName: text("author_name"),
+  authorId: varchar("author_id").references(() => adminUsers.id),
+  tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
+  category: text("category"),
+  status: text("status").notNull().default("draft"),
+  publishedAt: timestamp("published_at"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  ogImage: text("og_image"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCmsV2PostSchema = createInsertSchema(cmsV2Posts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCmsV2Post = z.infer<typeof insertCmsV2PostSchema>;
+export type CmsV2Post = typeof cmsV2Posts.$inferSelect;
+
+// ==================== CMS V2: Navigation Menus ====================
+export const menuItemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  url: z.string(),
+  target: z.enum(["_self", "_blank"]).default("_self"),
+  order: z.number().default(0),
+  children: z.lazy((): z.ZodTypeAny => z.array(menuItemSchema)).default([]),
+});
+export type MenuItem = z.infer<typeof menuItemSchema>;
+
+export const cmsV2Menus = pgTable("cms_v2_menus", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  location: text("location").notNull().default("header"),
+  items: jsonb("items").notNull().default(sql`'[]'::jsonb`),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCmsV2MenuSchema = createInsertSchema(cmsV2Menus).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCmsV2Menu = z.infer<typeof insertCmsV2MenuSchema>;
+export type CmsV2Menu = typeof cmsV2Menus.$inferSelect;
