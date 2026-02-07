@@ -60,6 +60,10 @@ Pre-defined collections of coordinated landing pages for seasonal promotions and
 
 10 built-in CSS-variable theme presets control colors, typography, and border radius across the entire storefront. Themes are activated instantly from the admin. See [Themes](07-THEMES.md).
 
+### Theme Packs
+
+Theme packs bundle color themes, component variant selections, and block style defaults into a single activatable design identity. 5 built-in packs provide curated visual styles. See [Theme Packs](15-THEME-PACKS.md), [Component Variants](16-COMPONENT-VARIANTS.md), and [Block Style Defaults](17-BLOCK-STYLE-DEFAULTS.md).
+
 ### SEO
 
 Every page has full SEO controls: meta title/description, Open Graph, Twitter Cards, canonical URLs, robots directives, and JSON-LD structured data. See [SEO](06-SEO.md).

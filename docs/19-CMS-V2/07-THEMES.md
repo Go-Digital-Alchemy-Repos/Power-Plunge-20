@@ -202,3 +202,9 @@ To add a new token group:
 2. Add defaults to `themeTokens.defaults.ts`
 3. Add the CSS variable mapping to `TOKEN_TO_CSS_VAR` in `applyTheme.ts`
 4. Update `flattenTokens()` if the mapping requires special logic
+
+## Related Documentation
+
+- [Theme Packs](15-THEME-PACKS.md) — Curated bundles that combine color tokens, component variants, and block style defaults into a single design identity
+- [Component Variants](16-COMPONENT-VARIANTS.md) — Shape and spacing controls for buttons, cards, heroes, and other UI components
+- [Block Style Defaults](17-BLOCK-STYLE-DEFAULTS.md) — Default layout and feature toggle settings per block type
