@@ -26,6 +26,13 @@ router.get("/pages/shop", async (_req, res) => {
   res.json(page);
 });
 
+router.get("/pages/check-slug", async (req, res) => {
+  const slug = req.query.slug as string;
+  if (!slug) return res.status(400).json({ error: "slug query param required" });
+  const result = await cmsV2Service.checkSlug(slug);
+  res.json(result);
+});
+
 router.get("/pages/:id", async (req, res) => {
   const page = await cmsV2Service.getPageById(req.params.id);
   if (!page) return res.status(404).json({ error: "Page not found" });

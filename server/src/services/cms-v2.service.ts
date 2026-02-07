@@ -23,6 +23,11 @@ export class CmsV2Service {
     return cmsV2Repository.findShop();
   }
 
+  async checkSlug(slug: string) {
+    const existing = await cmsV2Repository.findBySlug(slug);
+    return { available: !existing, slug };
+  }
+
   async createPage(data: InsertPage) {
     return cmsV2Repository.create(data);
   }

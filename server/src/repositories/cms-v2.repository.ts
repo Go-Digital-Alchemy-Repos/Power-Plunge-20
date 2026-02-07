@@ -13,6 +13,11 @@ export class CmsV2Repository {
     return page || undefined;
   }
 
+  async findBySlug(slug: string) {
+    const [page] = await db.select().from(pages).where(eq(pages.slug, slug));
+    return page || undefined;
+  }
+
   async findHome() {
     const [page] = await db.select().from(pages).where(eq(pages.isHome, true));
     return page || undefined;
