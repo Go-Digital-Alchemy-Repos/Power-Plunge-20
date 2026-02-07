@@ -76,7 +76,7 @@ console.log("=== contentJson Validation ===\n");
     blocks: [
       { id: "b1", type: "hero", data: {} },
       { id: "b2", type: "unknownWidget", data: {} },
-      { id: "b3", type: "cta", data: {} },
+      { id: "b3", type: "callToAction", data: {} },
     ],
   });
   assert("mixed known + unknown blocks accepted", r.valid === true);
