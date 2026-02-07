@@ -75,40 +75,75 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", async (req: any, res) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
     
-    const customer = await storage.getCustomerByEmail(email);
-    if (!customer) {
+    const [customer, admin] = await Promise.all([
+      storage.getCustomerByEmail(email),
+      storage.getAdminUserByEmail(email),
+    ]);
+    
+    let authenticated = false;
+    let adminAuthenticated = false;
+    let customerRecord = customer;
+    
+    if (admin) {
+      const adminPasswordMatch = await bcrypt.compare(password, admin.password);
+      if (adminPasswordMatch) {
+        authenticated = true;
+        adminAuthenticated = true;
+        if (req.session) {
+          req.session.adminId = admin.id;
+        }
+      }
+    }
+    
+    if (!authenticated && customerRecord) {
+      if (!customerRecord.passwordHash) {
+        return res.status(401).json({ 
+          message: "This account uses email link login. Please use 'Send login link' instead.",
+          requireMagicLink: true 
+        });
+      }
+      
+      if (customerRecord.isDisabled) {
+        return res.status(403).json({ message: "This account has been disabled" });
+      }
+      
+      const passwordMatch = await bcrypt.compare(password, customerRecord.passwordHash);
+      if (passwordMatch) {
+        authenticated = true;
+      }
+    }
+    
+    if (!authenticated) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
     
-    if (!customer.passwordHash) {
-      return res.status(401).json({ 
-        message: "This account uses email link login. Please use 'Send login link' instead.",
-        requireMagicLink: true 
+    if (!customerRecord) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      customerRecord = await storage.createCustomer({
+        email,
+        name: admin!.name,
+        passwordHash,
       });
     }
     
-    if (customer.isDisabled) {
+    if (customerRecord.isDisabled) {
       return res.status(403).json({ message: "This account has been disabled" });
     }
     
-    const passwordMatch = await bcrypt.compare(password, customer.passwordHash);
-    if (!passwordMatch) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
+    const sessionToken = createSessionToken(customerRecord.id, email);
     
-    const sessionToken = createSessionToken(customer.id, email);
-    
-    res.json({
+    return res.json({
       success: true,
       sessionToken,
+      isAdmin: adminAuthenticated,
       customer: {
-        id: customer.id,
-        email: customer.email,
-        name: customer.name,
+        id: customerRecord.id,
+        email: customerRecord.email,
+        name: customerRecord.name,
       },
     });
   } catch (error: any) {

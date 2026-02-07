@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { storage } from "../../../storage";
+import { createSessionToken } from "../../middleware/customer-auth.middleware";
 
 const router = Router();
 
@@ -39,8 +40,21 @@ router.post("/setup", async (req: any, res) => {
     });
 
     req.session.adminId = admin.id;
+
+    let customerRecord = await storage.getCustomerByEmail(email);
+    if (!customerRecord) {
+      const customerHash = await bcrypt.hash(password, 10);
+      customerRecord = await storage.createCustomer({
+        email,
+        name,
+        passwordHash: customerHash,
+      });
+    }
+    const sessionToken = createSessionToken(customerRecord.id, email);
+
     res.status(201).json({ 
       success: true, 
+      sessionToken,
       admin: { id: admin.id, email: admin.email, name: admin.name } 
     });
   } catch (error) {
@@ -67,7 +81,23 @@ router.post("/login", async (req: any, res) => {
     }
 
     req.session.adminId = admin.id;
-    res.json({ success: true, admin: { id: admin.id, email: admin.email, name: admin.name } });
+
+    let customerRecord = await storage.getCustomerByEmail(email);
+    if (!customerRecord) {
+      const customerHash = await bcrypt.hash(password, 10);
+      customerRecord = await storage.createCustomer({
+        email,
+        name: admin.name,
+        passwordHash: customerHash,
+      });
+    }
+    const sessionToken = createSessionToken(customerRecord.id, email);
+
+    res.json({ 
+      success: true, 
+      sessionToken,
+      admin: { id: admin.id, email: admin.email, name: admin.name } 
+    });
   } catch (error) {
     res.status(500).json({ message: "Login failed" });
   }

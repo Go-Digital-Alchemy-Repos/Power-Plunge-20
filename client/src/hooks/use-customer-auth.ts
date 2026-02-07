@@ -82,6 +82,7 @@ export function useCustomerAuth() {
       const response = await fetch("/api/customer/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 

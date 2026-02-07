@@ -44,6 +44,7 @@ export default function AdminLogin() {
       const response = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email: formData.email, password: formData.password }),
       });
 
@@ -51,6 +52,10 @@ export default function AdminLogin() {
 
       if (!response.ok) {
         throw new Error(data.message || "Login failed");
+      }
+
+      if (data.sessionToken) {
+        localStorage.setItem("customerSessionToken", data.sessionToken);
       }
 
       toast({
@@ -97,6 +102,7 @@ export default function AdminLogin() {
       const response = await fetch("/api/admin/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ 
           email: formData.email, 
           password: formData.password,
@@ -108,6 +114,10 @@ export default function AdminLogin() {
 
       if (!response.ok) {
         throw new Error(data.message || "Setup failed");
+      }
+
+      if (data.sessionToken) {
+        localStorage.setItem("customerSessionToken", data.sessionToken);
       }
 
       toast({
