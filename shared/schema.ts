@@ -709,6 +709,27 @@ export const insertSavedSectionSchema = createInsertSchema(savedSections).omit({
 export type InsertSavedSection = z.infer<typeof insertSavedSectionSchema>;
 export type SavedSection = typeof savedSections.$inferSelect;
 
+// Site Presets - Full site look + structure definitions
+export const sitePresets = pgTable("site_presets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  tags: jsonb("tags"), // string[]
+  previewImage: text("preview_image"),
+  config: jsonb("config").notNull(), // Full SitePreset config (themePackId, nav, footer, seo, etc.)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSitePresetDbSchema = createInsertSchema(sitePresets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSitePresetDb = z.infer<typeof insertSitePresetDbSchema>;
+export type SitePresetDb = typeof sitePresets.$inferSelect;
+
 // Media Library - Centralized media asset management
 export const mediaLibrary = pgTable("media_library", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
