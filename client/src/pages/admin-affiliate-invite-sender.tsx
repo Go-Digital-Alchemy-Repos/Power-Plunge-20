@@ -79,8 +79,6 @@ export default function AdminAffiliateInviteSender() {
       }
 
       setFormData(prev => ({ ...prev, targetEmail: "", targetPhone: "", targetName: "", notes: "" }));
-
-      await triggerNativeShare(data);
     },
     onError: (error: any) => {
       toast({
