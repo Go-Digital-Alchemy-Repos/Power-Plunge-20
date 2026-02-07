@@ -3,6 +3,7 @@ import { cmsV2Service } from "../../services/cms-v2.service";
 import { sectionsService } from "../../services/sections.service";
 import { insertPageSchema, insertSavedSectionSchema, siteSettings } from "@shared/schema";
 import { themePresets } from "@shared/themePresets";
+import { themePackPresets } from "@shared/themePackPresets";
 import { db } from "../../db";
 import { eq } from "drizzle-orm";
 import { isCmsV2Enabled } from "../../config/env";
@@ -239,6 +240,35 @@ router.post("/themes/activate", async (req, res) => {
     res.json(preset);
   } catch {
     res.status(500).json({ error: "Failed to activate theme" });
+  }
+});
+
+router.get("/theme-packs", (_req, res) => {
+  res.json(themePackPresets);
+});
+
+router.get("/theme-packs/active", async (_req, res) => {
+  try {
+    const [settings] = await db.select({ activeThemeId: siteSettings.activeThemeId }).from(siteSettings).where(eq(siteSettings.id, "main"));
+    const activeId = settings?.activeThemeId || "";
+    const pack = themePackPresets.find((p) => p.id === activeId);
+    res.json(pack || null);
+  } catch {
+    res.json(null);
+  }
+});
+
+router.post("/theme-packs/activate", async (req, res) => {
+  const { packId } = req.body;
+  const pack = themePackPresets.find((p) => p.id === packId);
+  if (!packId || !pack) {
+    return res.status(400).json({ error: "Invalid theme pack ID" });
+  }
+  try {
+    await db.update(siteSettings).set({ activeThemeId: packId }).where(eq(siteSettings.id, "main"));
+    res.json(pack);
+  } catch {
+    res.status(500).json({ error: "Failed to activate theme pack" });
   }
 });
 
