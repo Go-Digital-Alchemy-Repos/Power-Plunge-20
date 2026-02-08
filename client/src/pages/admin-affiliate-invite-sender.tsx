@@ -12,7 +12,7 @@ import AdminNav from "@/components/admin/AdminNav";
 import {
   Mail, Copy, Check, Loader2, Link2, UserPlus, Share2,
   MessageSquare, ChevronDown, ChevronUp, Phone, ShieldCheck,
-  ContactRound, PenLine,
+  PenLine,
 } from "lucide-react";
 
 interface InviteResponse {
@@ -198,7 +198,7 @@ export default function AdminAffiliateInviteSender() {
           </div>
           <h1 className="text-2xl font-bold" data-testid="text-page-title">Invite Affiliate</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Create an invite link and share it via text, email, or any app
+            Create and share an invite link.
           </p>
         </div>
 
@@ -215,8 +215,8 @@ export default function AdminAffiliateInviteSender() {
                 }`}
                 data-testid="button-mode-quick"
               >
-                <ContactRound className="w-4 h-4" />
-                Quick Share
+                <Share2 className="w-4 h-4" />
+                Share from Contacts
               </button>
               <button
                 type="button"
@@ -239,8 +239,8 @@ export default function AdminAffiliateInviteSender() {
                   <CardTitle className="text-base">Share from Contacts</CardTitle>
                   <CardDescription>
                     {supportsNativeShare
-                      ? "Creates an invite link and opens your share sheet so you can pick a contact and send it via Messages, WhatsApp, email, or any app."
-                      : "Creates an invite link you can copy and send to anyone."}
+                      ? "Create a link and share it with a contact."
+                      : "Create a link you can copy and send."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -267,9 +267,9 @@ export default function AdminAffiliateInviteSender() {
             ) : (
               <Card data-testid="card-manual-entry">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Enter Recipient Details</CardTitle>
+                  <CardTitle className="text-base">Enter Details</CardTitle>
                   <CardDescription>
-                    Fill in the details below. After creating, you'll get options to text or email the invite.
+                    Add name, email, or phone for the invite.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
