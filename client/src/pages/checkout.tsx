@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { US_STATE_OPTIONS } from "@shared/us-states";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CreditCard, Loader2, ShoppingBag, Lock, Shield, CheckCircle, XCircle, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CreditCard, Loader2, ShoppingBag, Lock, Shield, CheckCircle, XCircle, Users } from "lucide-react";
 import logoImage from "@assets/powerplungelogo_1767907611722.png";
 
 interface CartItem {
@@ -35,6 +35,7 @@ interface CheckoutFormProps {
     email: string;
     phone: string;
     address: string;
+    address2: string;
     city: string;
     state: string;
     zipCode: string;
@@ -69,6 +70,7 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
               phone: billingDetails.phone,
               address: {
                 line1: billingDetails.address,
+                line2: billingDetails.address2 || undefined,
                 city: billingDetails.city,
                 state: billingDetails.state,
                 postal_code: billingDetails.zipCode,
@@ -128,6 +130,8 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
 
           localStorage.removeItem("cart");
           localStorage.removeItem("checkoutSessionId");
+          sessionStorage.removeItem("checkoutFormData");
+          sessionStorage.removeItem("checkoutBillingData");
           setLocation(`/order-success?order_id=${orderId}`);
         } else if (paymentIntent.status === "requires_action" || paymentIntent.status === "requires_confirmation") {
           // Payment requires additional action - Stripe should handle redirect
@@ -225,44 +229,128 @@ export default function Checkout() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
   const [taxInfo, setTaxInfo] = useState<{ subtotal: number; taxAmount: number; total: number } | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
+  const formRef = useRef<HTMLFormElement>(null);
+  const [formData, setFormData] = useState(() => {
+    const defaults = { name: "", email: "", phone: "", address: "", address2: "", city: "", state: "", zipCode: "" };
+    const saved = sessionStorage.getItem("checkoutFormData");
+    if (saved) {
+      try { return { ...defaults, ...JSON.parse(saved) }; } catch {}
+    }
+    return defaults;
   });
   const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
-  const [billingData, setBillingData] = useState({
-    name: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
+  const [billingData, setBillingData] = useState(() => {
+    const defaults = { name: "", address: "", address2: "", city: "", state: "", zipCode: "" };
+    const saved = sessionStorage.getItem("checkoutBillingData");
+    if (saved) {
+      try { return { ...defaults, ...JSON.parse(saved) }; } catch {}
+    }
+    return defaults;
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    sessionStorage.setItem("checkoutFormData", JSON.stringify(formData));
+  }, [formData]);
+
+  useEffect(() => {
+    sessionStorage.setItem("checkoutBillingData", JSON.stringify(billingData));
+  }, [billingData]);
+
+  const validateField = useCallback((field: string, value: string): string | null => {
+    switch (field) {
+      case "name":
+        return value.trim().length < 2 ? "Full name is required (min 2 characters)" : null;
+      case "email":
+        return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()) ? "Valid email is required" : null;
+      case "phone":
+        if (!value.trim()) return null;
+        return !/^[\d\s\-\+\(\)]{7,15}$/.test(value.trim()) ? "Please enter a valid phone number" : null;
+      case "address":
+        return value.trim().length < 3 ? "Street address is required" : null;
+      case "city":
+        return value.trim().length < 2 ? "City is required" : null;
+      case "state":
+        return !value ? "Please select a state" : null;
+      case "zipCode":
+        return !/^\d{5}(-\d{4})?$/.test(value.trim()) ? "Valid ZIP code required (e.g. 12345)" : null;
+      default:
+        return null;
+    }
+  }, []);
+
+  const billingErrorKeyMap: Record<string, string> = {
+    name: "billingName",
+    address: "billingAddress",
+    city: "billingCity",
+    state: "billingState",
+    zipCode: "billingZip",
+  };
+
+  const handleBlur = useCallback((field: string, value: string, isBilling = false) => {
+    const errorKey = isBilling ? (billingErrorKeyMap[field] || field) : field;
+    const error = validateField(field, value);
+    setFieldErrors(prev => {
+      if (error) return { ...prev, [errorKey]: error };
+      const next = { ...prev };
+      delete next[errorKey];
+      return next;
+    });
+  }, [validateField]);
+
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-    if (formData.name.trim().length < 2) errors.name = "Full name is required (min 2 characters)";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) errors.email = "Valid email is required";
-    if (formData.address.trim().length < 3) errors.address = "Street address is required";
-    if (formData.city.trim().length < 2) errors.city = "City is required";
-    if (!formData.state) errors.state = "Please select a state";
-    if (!/^\d{5}(-\d{4})?$/.test(formData.zipCode.trim())) errors.zipCode = "Valid ZIP code required (e.g. 12345)";
+    const trimmedForm = {
+      ...formData,
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      address: formData.address.trim(),
+      address2: formData.address2.trim(),
+      city: formData.city.trim(),
+      zipCode: formData.zipCode.trim(),
+    };
+
+    if (trimmedForm.name.length < 2) errors.name = "Full name is required (min 2 characters)";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedForm.email)) errors.email = "Valid email is required";
+    if (trimmedForm.phone && !/^[\d\s\-\+\(\)]{7,15}$/.test(trimmedForm.phone)) errors.phone = "Please enter a valid phone number";
+    if (trimmedForm.address.length < 3) errors.address = "Street address is required";
+    if (trimmedForm.city.length < 2) errors.city = "City is required";
+    if (!trimmedForm.state) errors.state = "Please select a state";
+    if (!/^\d{5}(-\d{4})?$/.test(trimmedForm.zipCode)) errors.zipCode = "Valid ZIP code required (e.g. 12345)";
 
     if (!billingSameAsShipping) {
-      if (billingData.name.trim().length < 2) errors.billingName = "Full name is required (min 2 characters)";
-      if (billingData.address.trim().length < 3) errors.billingAddress = "Street address is required";
-      if (billingData.city.trim().length < 2) errors.billingCity = "City is required";
-      if (!billingData.state) errors.billingState = "Please select a state";
-      if (!/^\d{5}(-\d{4})?$/.test(billingData.zipCode.trim())) errors.billingZip = "Valid ZIP code required (e.g. 12345)";
+      const trimmedBilling = {
+        ...billingData,
+        name: billingData.name.trim(),
+        address: billingData.address.trim(),
+        address2: billingData.address2.trim(),
+        city: billingData.city.trim(),
+        zipCode: billingData.zipCode.trim(),
+      };
+      if (trimmedBilling.name.length < 2) errors.billingName = "Full name is required (min 2 characters)";
+      if (trimmedBilling.address.length < 3) errors.billingAddress = "Street address is required";
+      if (trimmedBilling.city.length < 2) errors.billingCity = "City is required";
+      if (!trimmedBilling.state) errors.billingState = "Please select a state";
+      if (!/^\d{5}(-\d{4})?$/.test(trimmedBilling.zipCode)) errors.billingZip = "Valid ZIP code required (e.g. 12345)";
     }
 
     setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+
+    if (Object.keys(errors).length > 0) {
+      const firstErrorKey = Object.keys(errors)[0];
+      const elementId = firstErrorKey === "billingZip" ? "billingZip" : firstErrorKey;
+      setTimeout(() => {
+        const el = document.getElementById(elementId);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.focus();
+        }
+      }, 100);
+      return false;
+    }
+
+    return true;
   };
 
   const [referralCode, setReferralCode] = useState("");
@@ -302,8 +390,14 @@ export default function Checkout() {
     }
   };
 
-  const cartString = typeof window !== "undefined" ? localStorage.getItem("cart") : null;
-  const cart: CartItem[] = cartString ? JSON.parse(cartString) : [];
+  const [cart] = useState<CartItem[]>(() => {
+    try {
+      const cartString = typeof window !== "undefined" ? localStorage.getItem("cart") : null;
+      return cartString ? JSON.parse(cartString) : [];
+    } catch {
+      return [];
+    }
+  });
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   useEffect(() => {
@@ -357,22 +451,27 @@ export default function Checkout() {
     e.preventDefault();
     setIsLoading(true);
 
-    setFormData(prev => ({
-      ...prev,
-      name: prev.name.trim(),
-      email: prev.email.trim(),
-      phone: prev.phone.trim(),
-      address: prev.address.trim(),
-      city: prev.city.trim(),
-      zipCode: prev.zipCode.trim(),
-    }));
-    setBillingData(prev => ({
-      ...prev,
-      name: prev.name.trim(),
-      address: prev.address.trim(),
-      city: prev.city.trim(),
-      zipCode: prev.zipCode.trim(),
-    }));
+    const trimmedForm = {
+      ...formData,
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      address: formData.address.trim(),
+      address2: formData.address2.trim(),
+      city: formData.city.trim(),
+      zipCode: formData.zipCode.trim(),
+    };
+    setFormData(trimmedForm);
+
+    const trimmedBilling = {
+      ...billingData,
+      name: billingData.name.trim(),
+      address: billingData.address.trim(),
+      address2: billingData.address2.trim(),
+      city: billingData.city.trim(),
+      zipCode: billingData.zipCode.trim(),
+    };
+    setBillingData(trimmedBilling);
 
     if (!validateForm()) {
       setIsLoading(false);
@@ -401,8 +500,14 @@ export default function Checkout() {
             productId: item.id,
             quantity: item.quantity,
           })),
-          customer: formData,
-          billingAddress: billingSameAsShipping ? null : billingData,
+          customer: {
+            ...formData,
+            address: formData.address2 ? `${formData.address}, ${formData.address2}` : formData.address,
+          },
+          billingAddress: billingSameAsShipping ? null : {
+            ...billingData,
+            address: billingData.address2 ? `${billingData.address}, ${billingData.address2}` : billingData.address,
+          },
           billingSameAsShipping,
           affiliateCode,
         }),
@@ -493,7 +598,7 @@ export default function Checkout() {
                   <CardTitle>Shipping Information</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleShippingSubmit} className="space-y-4">
+                  <form ref={formRef} onSubmit={handleShippingSubmit} className="space-y-4">
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="name">Full Name</Label>
@@ -501,6 +606,7 @@ export default function Checkout() {
                           id="name"
                           value={formData.name}
                           onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['name']; return next; }); }}
+                          onBlur={(e) => handleBlur("name", e.target.value)}
                           autoComplete="shipping name"
                           required
                           data-testid="input-name"
@@ -516,6 +622,7 @@ export default function Checkout() {
                           type="email"
                           value={formData.email}
                           onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['email']; return next; }); }}
+                          onBlur={(e) => handleBlur("email", e.target.value)}
                           autoComplete="email"
                           required
                           data-testid="input-email"
@@ -527,12 +634,13 @@ export default function Checkout() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
+                      <Label htmlFor="phone">Phone Number <span className="text-muted-foreground font-normal">(optional)</span></Label>
                       <Input
                         id="phone"
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['phone']; return next; }); }}
+                        onBlur={(e) => handleBlur("phone", e.target.value)}
                         autoComplete="tel"
                         data-testid="input-phone"
                       />
@@ -547,6 +655,7 @@ export default function Checkout() {
                         id="address"
                         value={formData.address}
                         onChange={(e) => { setFormData({ ...formData, address: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['address']; return next; }); }}
+                        onBlur={(e) => handleBlur("address", e.target.value)}
                         autoComplete="shipping address-line1"
                         required
                         data-testid="input-address"
@@ -554,6 +663,17 @@ export default function Checkout() {
                       {fieldErrors.address && (
                         <p className="text-xs text-red-500 mt-1" data-testid="error-address">{fieldErrors.address}</p>
                       )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address2">Apt, Suite, Unit <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                      <Input
+                        id="address2"
+                        value={formData.address2}
+                        onChange={(e) => setFormData({ ...formData, address2: e.target.value })}
+                        autoComplete="shipping address-line2"
+                        data-testid="input-address2"
+                      />
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded px-3 py-2">
@@ -568,6 +688,7 @@ export default function Checkout() {
                           id="city"
                           value={formData.city}
                           onChange={(e) => { setFormData({ ...formData, city: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['city']; return next; }); }}
+                          onBlur={(e) => handleBlur("city", e.target.value)}
                           autoComplete="shipping address-level2"
                           required
                           data-testid="input-city"
@@ -604,6 +725,7 @@ export default function Checkout() {
                           id="zipCode"
                           value={formData.zipCode}
                           onChange={(e) => { setFormData({ ...formData, zipCode: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['zipCode']; return next; }); }}
+                          onBlur={(e) => handleBlur("zipCode", e.target.value)}
                           autoComplete="shipping postal-code"
                           inputMode="numeric"
                           placeholder="12345"
@@ -639,6 +761,7 @@ export default function Checkout() {
                               id="billingName"
                               value={billingData.name}
                               onChange={(e) => { setBillingData({ ...billingData, name: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['billingName']; return next; }); }}
+                              onBlur={(e) => handleBlur("name", e.target.value, true)}
                               autoComplete="billing name"
                               required={!billingSameAsShipping}
                               data-testid="input-billing-name"
@@ -653,6 +776,7 @@ export default function Checkout() {
                               id="billingAddress"
                               value={billingData.address}
                               onChange={(e) => { setBillingData({ ...billingData, address: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['billingAddress']; return next; }); }}
+                              onBlur={(e) => handleBlur("address", e.target.value, true)}
                               autoComplete="billing address-line1"
                               required={!billingSameAsShipping}
                               data-testid="input-billing-address"
@@ -661,9 +785,19 @@ export default function Checkout() {
                               <p className="text-xs text-red-500 mt-1" data-testid="error-billingAddress">{fieldErrors.billingAddress}</p>
                             )}
                           </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="billingAddress2">Apt, Suite, Unit <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                            <Input
+                              id="billingAddress2"
+                              value={billingData.address2}
+                              onChange={(e) => setBillingData({ ...billingData, address2: e.target.value })}
+                              autoComplete="billing address-line2"
+                              data-testid="input-billing-address2"
+                            />
+                          </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded px-3 py-2">
                             <span>🇺🇸</span>
-                            <span>Shipping to United States only</span>
+                            <span>United States only</span>
                           </div>
                           <div className="grid sm:grid-cols-3 gap-4">
                             <div className="space-y-2">
@@ -672,6 +806,7 @@ export default function Checkout() {
                                 id="billingCity"
                                 value={billingData.city}
                                 onChange={(e) => { setBillingData({ ...billingData, city: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['billingCity']; return next; }); }}
+                                onBlur={(e) => handleBlur("city", e.target.value, true)}
                                 autoComplete="billing address-level2"
                                 required={!billingSameAsShipping}
                                 data-testid="input-billing-city"
@@ -708,6 +843,7 @@ export default function Checkout() {
                                 id="billingZip"
                                 value={billingData.zipCode}
                                 onChange={(e) => { setBillingData({ ...billingData, zipCode: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['billingZip']; return next; }); }}
+                                onBlur={(e) => handleBlur("zipCode", e.target.value, true)}
                                 autoComplete="billing postal-code"
                                 inputMode="numeric"
                                 placeholder="12345"
@@ -788,7 +924,7 @@ export default function Checkout() {
                       ) : (
                         <>
                           Continue to Payment
-                          <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                          <ArrowRight className="w-4 h-4 ml-2" />
                         </>
                       )}
                     </Button>
@@ -819,18 +955,17 @@ export default function Checkout() {
                     <p className="text-sm text-muted-foreground mb-1">Shipping to:</p>
                     <p className="font-medium">{formData.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {formData.address}, {formData.city}, {formData.state} {formData.zipCode}
+                      {formData.address}{formData.address2 ? `, ${formData.address2}` : ""}, {formData.city}, {formData.state} {formData.zipCode}
                     </p>
                     <p className="text-sm text-muted-foreground">{formData.email}</p>
                   </div>
 
-                  {/* Billing Summary - only shown if different from shipping */}
                   {!billingSameAsShipping && (
                     <div className="bg-muted/30 rounded-lg p-4 mb-6">
                       <p className="text-sm text-muted-foreground mb-1">Billing to:</p>
                       <p className="font-medium">{billingData.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {billingData.address}, {billingData.city}, {billingData.state} {billingData.zipCode}
+                        {billingData.address}{billingData.address2 ? `, ${billingData.address2}` : ""}, {billingData.city}, {billingData.state} {billingData.zipCode}
                       </p>
                     </div>
                   )}
@@ -863,6 +998,7 @@ export default function Checkout() {
                           email: formData.email,
                           phone: formData.phone,
                           address: billingData.address,
+                          address2: billingData.address2,
                           city: billingData.city,
                           state: billingData.state,
                           zipCode: billingData.zipCode,
