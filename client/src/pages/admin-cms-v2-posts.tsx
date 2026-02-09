@@ -280,16 +280,16 @@ export default function AdminCmsV2Posts() {
                                 <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
+                            <DropdownMenuContent align="end" className="bg-gray-900 border-gray-700 text-foreground">
                               <DropdownMenuItem
-                                className="cursor-pointer hover:bg-muted focus:bg-muted gap-2"
+                                className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground gap-2"
                                 onClick={() => navigate(`/admin/cms-v2/posts/${post.id}/edit`)}
                                 data-testid={`button-edit-post-${post.id}`}
                               >
                                 <Pencil className="w-4 h-4" />Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="cursor-pointer hover:bg-muted focus:bg-muted gap-2"
+                                className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground gap-2"
                                 onClick={() => navigate(`/admin/cms-v2/posts/${post.id}/builder`)}
                                 data-testid={`button-builder-post-${post.id}`}
                               >
@@ -297,17 +297,17 @@ export default function AdminCmsV2Posts() {
                               </DropdownMenuItem>
                               {post.status === "published" && (
                                 <DropdownMenuItem
-                                  className="cursor-pointer hover:bg-muted focus:bg-muted gap-2"
+                                  className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground gap-2"
                                   onClick={() => window.open(`/blog/${post.slug}`, "_blank")}
                                   data-testid={`button-preview-post-${post.id}`}
                                 >
                                   <Eye className="w-4 h-4" />Preview
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuSeparator className="bg-muted" />
+                              <DropdownMenuSeparator className="bg-gray-700" />
                               {post.status !== "published" && (
                                 <DropdownMenuItem
-                                  className="cursor-pointer hover:bg-muted focus:bg-muted gap-2"
+                                  className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground gap-2"
                                   onClick={() => publishMutation.mutate(post.id)}
                                   data-testid={`button-publish-post-${post.id}`}
                                 >
@@ -316,7 +316,7 @@ export default function AdminCmsV2Posts() {
                               )}
                               {post.status === "published" && (
                                 <DropdownMenuItem
-                                  className="cursor-pointer hover:bg-muted focus:bg-muted gap-2"
+                                  className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground gap-2"
                                   onClick={() => unpublishMutation.mutate(post.id)}
                                   data-testid={`button-unpublish-post-${post.id}`}
                                 >
@@ -325,16 +325,16 @@ export default function AdminCmsV2Posts() {
                               )}
                               {post.status !== "archived" && (
                                 <DropdownMenuItem
-                                  className="cursor-pointer hover:bg-muted focus:bg-muted gap-2"
+                                  className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground gap-2"
                                   onClick={() => archiveMutation.mutate(post.id)}
                                   data-testid={`button-archive-post-${post.id}`}
                                 >
                                   <Archive className="w-4 h-4" />Archive
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuSeparator className="bg-muted" />
+                              <DropdownMenuSeparator className="bg-gray-700" />
                               <DropdownMenuItem
-                                className="cursor-pointer hover:bg-red-900/30 focus:bg-red-900/30 gap-2 text-red-400"
+                                className="cursor-pointer hover:!bg-red-900/40 focus:!bg-red-900/40 gap-2 text-red-400 hover:!text-red-300 focus:!text-red-300"
                                 onClick={() => {
                                   if (window.confirm("Delete this post?")) {
                                     deleteMutation.mutate(post.id);

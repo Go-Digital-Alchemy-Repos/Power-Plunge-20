@@ -350,9 +350,9 @@ export default function AdminCmsV2Pages() {
                               <MoreHorizontal className="w-3.5 h-3.5" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
+                          <DropdownMenuContent align="end" className="bg-gray-900 border-gray-700 text-foreground">
                             <DropdownMenuItem
-                              className="cursor-pointer hover:bg-muted focus:bg-muted text-xs"
+                              className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground text-xs"
                               onClick={() => navigate(`/admin/cms-v2/pages/${page.id}/builder`)}
                               data-testid={`action-open-builder-${page.id}`}
                             >
@@ -361,7 +361,7 @@ export default function AdminCmsV2Pages() {
                             </DropdownMenuItem>
                             {page.status === "published" && page.slug && (
                               <DropdownMenuItem
-                                className="cursor-pointer hover:bg-muted focus:bg-muted text-xs"
+                                className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground text-xs"
                                 onClick={() => window.open(`/page/${page.slug}`, "_blank")}
                                 data-testid={`action-preview-${page.id}`}
                               >
@@ -371,9 +371,9 @@ export default function AdminCmsV2Pages() {
                             )}
                             {page.content && page.content.trim() && !(page.contentJson?.blocks?.length > 0) && (
                               <>
-                                <DropdownMenuSeparator className="bg-muted" />
+                                <DropdownMenuSeparator className="bg-gray-700" />
                                 <DropdownMenuItem
-                                  className="cursor-pointer text-primary hover:bg-muted focus:bg-muted focus:text-primary text-xs"
+                                  className="cursor-pointer text-primary hover:!bg-gray-700/70 focus:!bg-gray-700/70 focus:!text-primary text-xs"
                                   onClick={() => migrateMutation.mutate(page.id)}
                                   disabled={migrateMutation.isPending}
                                   data-testid={`action-migrate-${page.id}`}
@@ -383,10 +383,10 @@ export default function AdminCmsV2Pages() {
                                 </DropdownMenuItem>
                               </>
                             )}
-                            <DropdownMenuSeparator className="bg-muted" />
+                            <DropdownMenuSeparator className="bg-gray-700" />
                             {page.status === "draft" ? (
                               <DropdownMenuItem
-                                className="cursor-pointer text-green-400 hover:bg-muted focus:bg-muted focus:text-green-400 text-xs"
+                                className="cursor-pointer text-green-400 hover:!bg-gray-700/70 focus:!bg-gray-700/70 focus:!text-green-400 text-xs"
                                 onClick={() => publishMutation.mutate({ id: page.id, action: "publish" })}
                                 data-testid={`action-publish-${page.id}`}
                               >
@@ -395,7 +395,7 @@ export default function AdminCmsV2Pages() {
                               </DropdownMenuItem>
                             ) : (
                               <DropdownMenuItem
-                                className="cursor-pointer text-yellow-400 hover:bg-muted focus:bg-muted focus:text-yellow-400 text-xs"
+                                className="cursor-pointer text-yellow-400 hover:!bg-gray-700/70 focus:!bg-gray-700/70 focus:!text-yellow-400 text-xs"
                                 onClick={() => publishMutation.mutate({ id: page.id, action: "unpublish" })}
                                 data-testid={`action-unpublish-${page.id}`}
                               >
@@ -403,9 +403,9 @@ export default function AdminCmsV2Pages() {
                                 Unpublish
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuSeparator className="bg-muted" />
+                            <DropdownMenuSeparator className="bg-gray-700" />
                             <DropdownMenuItem
-                              className="cursor-pointer text-red-400 hover:bg-muted focus:bg-muted focus:text-red-400 text-xs"
+                              className="cursor-pointer text-red-400 hover:!bg-red-900/40 focus:!bg-red-900/40 hover:!text-red-300 focus:!text-red-300 text-xs"
                               onClick={() => setDeleteTarget({ id: page.id, title: page.title })}
                               data-testid={`action-delete-${page.id}`}
                             >
