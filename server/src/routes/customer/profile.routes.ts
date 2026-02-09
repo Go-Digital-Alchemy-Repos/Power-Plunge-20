@@ -1,16 +1,20 @@
 import { Router } from "express";
 import { storage } from "../../../storage";
+import { db } from "../../../db";
+import { customers, orders as ordersTable } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { passwordResetLimiter } from "../../middleware/rate-limiter";
+import { customerIdentityService, normalizeEmail } from "../../services/customer-identity.service";
 
 const router = Router();
 
 router.get("/orders", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const customer = await storage.getCustomerByUserId(userId);
-    if (!customer) {
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
       return res.json({ orders: [] });
     }
+    const customer = identityResult.identity.customer;
     const orders = await storage.getOrdersByCustomerId(customer.id);
     
     const ordersWithItems = await Promise.all(
@@ -30,11 +34,11 @@ router.get("/orders", async (req: any, res) => {
 
 router.get("/orders/:id", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const customer = await storage.getCustomerByUserId(userId);
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
+      return res.status(identityResult.error.httpStatus).json({ message: identityResult.error.message });
     }
+    const customer = identityResult.identity.customer;
     
     const order = await storage.getOrder(req.params.id);
     if (!order || order.customerId !== customer.id) {
@@ -51,26 +55,29 @@ router.get("/orders/:id", async (req: any, res) => {
 
 router.post("/link", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Platform authentication required" });
+    }
     const { customerId, sessionId } = req.body;
 
     if (!customerId) {
       return res.status(400).json({ message: "Customer ID required" });
     }
 
+    const userEmail = normalizeEmail(req.user.claims.email || "");
+
     if (sessionId) {
       const order = await storage.getOrderByStripeSession(sessionId);
       if (!order || order.customerId !== customerId) {
         const customer = await storage.getCustomer(customerId);
-        const userEmail = req.user.claims.email;
-        if (!customer || customer.email.toLowerCase() !== userEmail?.toLowerCase()) {
+        if (!customer || normalizeEmail(customer.email) !== userEmail) {
           return res.status(403).json({ message: "Invalid verification" });
         }
       }
     } else {
       const customer = await storage.getCustomer(customerId);
-      const userEmail = req.user.claims.email;
-      if (!customer || customer.email.toLowerCase() !== userEmail?.toLowerCase()) {
+      if (!customer || normalizeEmail(customer.email) !== userEmail) {
         return res.status(403).json({ message: "Email mismatch - cannot link customer" });
       }
     }
@@ -86,11 +93,18 @@ router.post("/link", async (req: any, res) => {
 
     const existingCustomer = await storage.getCustomerByUserId(userId);
     if (existingCustomer && existingCustomer.id !== customerId) {
-      const guestOrders = await storage.getOrdersByCustomerId(customerId);
-      for (const order of guestOrders) {
-        await storage.updateOrder(order.id, { customerId: existingCustomer.id });
-      }
-      await storage.updateCustomer(customerId, { userId });
+      await db.transaction(async (tx) => {
+        const guestOrders = await storage.getOrdersByCustomerId(customerId);
+        for (const order of guestOrders) {
+          await tx.update(ordersTable)
+            .set({ customerId: existingCustomer.id })
+            .where(eq(ordersTable.id, order.id));
+        }
+        await tx.update(customers)
+          .set({ mergedIntoCustomerId: existingCustomer.id, userId: null })
+          .where(eq(customers.id, customerId));
+        console.log(`[MERGE] Customer ${customerId} merged into ${existingCustomer.id}, ${guestOrders.length} orders moved`);
+      });
       return res.json({ 
         success: true, 
         message: "Orders merged with existing account",
@@ -108,7 +122,10 @@ router.post("/link", async (req: any, res) => {
 
 router.get("/profile", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
     const user = await storage.getUser(userId);
     const customer = await storage.getCustomerByUserId(userId);
     
@@ -124,20 +141,25 @@ router.get("/profile", async (req: any, res) => {
 
 router.patch("/profile", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
     const { firstName, lastName, email, phone, address, city, state, zipCode, country } = req.body;
+    
+    const normalizedProfileEmail = email ? normalizeEmail(email) : undefined;
     
     const updatedUser = await storage.updateUser(userId, {
       firstName,
       lastName,
-      email,
+      email: normalizedProfileEmail,
     });
     
     let customer = await storage.getCustomerByUserId(userId);
     if (customer) {
       customer = await storage.updateCustomer(customer.id, {
         name: `${firstName || ''} ${lastName || ''}`.trim(),
-        email: email || customer.email,
+        email: normalizedProfileEmail || customer.email,
         phone: phone || customer.phone,
         address: address || customer.address,
         city: city || customer.city,
@@ -149,7 +171,7 @@ router.patch("/profile", async (req: any, res) => {
       customer = await storage.createCustomer({
         userId,
         name: `${firstName || ''} ${lastName || ''}`.trim(),
-        email: email || updatedUser?.email || '',
+        email: normalizedProfileEmail || updatedUser?.email || '',
         phone,
         address,
         city,
@@ -172,7 +194,10 @@ router.patch("/profile", async (req: any, res) => {
 
 router.post("/change-password", passwordResetLimiter, async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
     const { currentPassword, newPassword } = req.body;
     
     if (!newPassword || newPassword.length < 8) {

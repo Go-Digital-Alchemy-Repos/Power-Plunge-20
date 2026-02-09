@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { storage } from "../../../storage";
+import { customerIdentityService, normalizeEmail } from "../../services/customer-identity.service";
 
 function generateAffiliateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -92,17 +93,15 @@ publicAffiliateRoutes.get("/agreement", async (req, res) => {
 
 router.get("/affiliate", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const customer = await storage.getCustomerByUserId(userId);
-    
     let settings = await storage.getAffiliateSettings();
     if (!settings) {
       settings = await storage.updateAffiliateSettings({
         agreementText: getDefaultAffiliateAgreement(),
       });
     }
-    
-    if (!customer) {
+
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
       return res.json({ 
         affiliate: null, 
         referrals: [],
@@ -113,6 +112,7 @@ router.get("/affiliate", async (req: any, res) => {
         agreementText: settings.agreementText,
       });
     }
+    const customer = identityResult.identity.customer;
 
     const affiliate = await storage.getAffiliateByCustomerId(customer.id);
     
@@ -205,23 +205,27 @@ router.get("/affiliate", async (req: any, res) => {
 
 router.post("/affiliate", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user?.claims?.sub;
     const { signatureName, paypalEmail } = req.body;
 
     if (!signatureName) {
       return res.status(400).json({ message: "Signature name required" });
     }
 
-    let customer = await storage.getCustomerByUserId(userId);
-    
-    if (!customer) {
-      const userEmail = req.user.claims.email || `user_${userId}@example.com`;
+    const identityResult = await customerIdentityService.resolve(req);
+    let customer;
+    if (identityResult.ok) {
+      customer = identityResult.identity.customer;
+    } else if (userId) {
+      const userEmail = normalizeEmail(req.user.claims.email || `user_${userId}@example.com`);
       const userName = req.user.claims.name || signatureName;
       customer = await storage.createCustomer({
         userId,
         email: userEmail,
         name: userName,
       });
+    } else {
+      return res.status(401).json({ message: "Authentication required" });
     }
 
     const existingAffiliate = await storage.getAffiliateByCustomerId(customer.id);
@@ -270,12 +274,11 @@ router.post("/affiliate", async (req: any, res) => {
 
 router.post("/affiliate/payout", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const customer = await storage.getCustomerByUserId(userId);
-    
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
+      return res.status(identityResult.error.httpStatus).json({ message: identityResult.error.message });
     }
+    const customer = identityResult.identity.customer;
 
     const affiliate = await storage.getAffiliateByCustomerId(customer.id);
     if (!affiliate) {
@@ -310,13 +313,13 @@ router.post("/affiliate/payout", async (req: any, res) => {
 
 router.patch("/affiliate", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
     const { paypalEmail } = req.body;
 
-    const customer = await storage.getCustomerByUserId(userId);
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
+      return res.status(identityResult.error.httpStatus).json({ message: identityResult.error.message });
     }
+    const customer = identityResult.identity.customer;
 
     const affiliate = await storage.getAffiliateByCustomerId(customer.id);
     if (!affiliate) {
@@ -332,12 +335,11 @@ router.patch("/affiliate", async (req: any, res) => {
 
 router.post("/affiliate/connect/start", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const customer = await storage.getCustomerByUserId(userId);
-    
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
+      return res.status(identityResult.error.httpStatus).json({ message: identityResult.error.message });
     }
+    const customer = identityResult.identity.customer;
 
     const affiliate = await storage.getAffiliateByCustomerId(customer.id);
     if (!affiliate) {
@@ -395,12 +397,11 @@ router.post("/affiliate/connect/start", async (req: any, res) => {
 
 router.get("/affiliate/connect/status", async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const customer = await storage.getCustomerByUserId(userId);
-    
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
+      return res.status(identityResult.error.httpStatus).json({ message: identityResult.error.message });
     }
+    const customer = identityResult.identity.customer;
 
     const affiliate = await storage.getAffiliateByCustomerId(customer.id);
     if (!affiliate) {

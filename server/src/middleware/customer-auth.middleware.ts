@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
+import { storage } from "../../storage";
 
 export interface CustomerSession {
   customerId: string;
@@ -60,7 +61,7 @@ export function verifySessionToken(token: string): { valid: boolean; customerId?
   }
 }
 
-export function requireCustomerAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+export async function requireCustomerAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Authentication required" });
@@ -71,6 +72,17 @@ export function requireCustomerAuth(req: AuthenticatedRequest, res: Response, ne
 
   if (!result.valid) {
     return res.status(401).json({ message: "Invalid or expired session" });
+  }
+
+  const customer = await storage.getCustomer(result.customerId!);
+  if (!customer) {
+    return res.status(401).json({ message: "Customer account not found" });
+  }
+  if (customer.mergedIntoCustomerId) {
+    return res.status(409).json({ 
+      message: "This account has been merged. Please use your primary account.",
+      mergedInto: customer.mergedIntoCustomerId
+    });
   }
 
   req.customerSession = { customerId: result.customerId!, email: result.email! };

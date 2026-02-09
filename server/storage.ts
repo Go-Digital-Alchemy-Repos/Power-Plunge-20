@@ -52,7 +52,7 @@ import {
 } from "@shared/schema";
 import { users, type User, type UpsertUser } from "@shared/models/auth";
 import { db } from "./db";
-import { eq, desc, and, or, sql, gte, lte, count, sum, inArray, ne, like } from "drizzle-orm";
+import { eq, desc, and, or, sql, gte, lte, count, sum, inArray, ne, like, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Users (Replit Auth)
@@ -470,22 +470,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCustomerByEmail(email: string): Promise<Customer | undefined> {
-    const [customer] = await db.select().from(customers).where(eq(customers.email, email));
+    const normalizedEmail = email.trim().toLowerCase();
+    const [customer] = await db.select().from(customers).where(sql`LOWER(TRIM(${customers.email})) = ${normalizedEmail}`);
     return customer || undefined;
   }
 
   async getCustomerByUserId(userId: string): Promise<Customer | undefined> {
-    const [customer] = await db.select().from(customers).where(eq(customers.userId, userId));
+    const [customer] = await db.select().from(customers)
+      .where(and(eq(customers.userId, userId), isNull(customers.mergedIntoCustomerId)));
     return customer || undefined;
   }
 
   async createCustomer(customer: InsertCustomer): Promise<Customer> {
-    const [newCustomer] = await db.insert(customers).values(customer).returning();
+    const normalizedData = {
+      ...customer,
+      email: customer.email.trim().toLowerCase(),
+    };
+    const [newCustomer] = await db.insert(customers).values(normalizedData).returning();
     return newCustomer;
   }
 
   async updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined> {
-    const [updated] = await db.update(customers).set(customer).where(eq(customers.id, id)).returning();
+    const updateData = { ...customer };
+    if (updateData.email) {
+      updateData.email = updateData.email.trim().toLowerCase();
+    }
+    const [updated] = await db.update(customers).set(updateData).where(eq(customers.id, id)).returning();
     return updated || undefined;
   }
 

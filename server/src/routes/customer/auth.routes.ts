@@ -10,6 +10,7 @@ import {
   requireCustomerAuth,
   AuthenticatedRequest 
 } from "../../middleware/customer-auth.middleware";
+import { normalizeEmail } from "../../services/customer-identity.service";
 
 const router = Router();
 
@@ -21,7 +22,9 @@ const registerSchema = z.object({
 
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, name } = registerSchema.parse(req.body);
+    const parsed = registerSchema.parse(req.body);
+    const email = normalizeEmail(parsed.email);
+    const { password, name } = parsed;
     
     const existingCustomer = await storage.getCustomerByEmail(email);
     if (existingCustomer) {
@@ -77,7 +80,9 @@ const loginSchema = z.object({
 
 router.post("/login", async (req: any, res) => {
   try {
-    const { email, password } = loginSchema.parse(req.body);
+    const parsed = loginSchema.parse(req.body);
+    const email = normalizeEmail(parsed.email);
+    const { password } = parsed;
     
     const [customer, admin] = await Promise.all([
       storage.getCustomerByEmail(email),
@@ -161,7 +166,8 @@ const magicLinkSchema = z.object({
 
 router.post("/magic-link", async (req, res) => {
   try {
-    const { email } = magicLinkSchema.parse(req.body);
+    const parsed = magicLinkSchema.parse(req.body);
+    const email = normalizeEmail(parsed.email);
     
     await customerEmailService.sendMagicLinkEmail(email);
     
@@ -335,7 +341,8 @@ const forgotPasswordSchema = z.object({
 
 router.post("/forgot-password", async (req, res) => {
   try {
-    const { email } = forgotPasswordSchema.parse(req.body);
+    const parsed = forgotPasswordSchema.parse(req.body);
+    const email = normalizeEmail(parsed.email);
 
     const customer = await storage.getCustomerByEmail(email);
     if (customer) {

@@ -10,6 +10,7 @@ import {
   AuthenticatedRequest 
 } from "../../middleware/customer-auth.middleware";
 import { stripeService } from "../../integrations/stripe/StripeService";
+import { customerIdentityService } from "../../services/customer-identity.service";
 
 const router = Router();
 
@@ -55,18 +56,13 @@ async function createAuditLog(
   }
 }
 
-// Get affiliate portal data for logged-in customer
 router.get("/portal", async (req: any, res: Response) => {
   try {
-    const userId = req.user?.claims?.sub;
-    if (!userId) {
-      return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Not authenticated" } });
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
+      return res.status(identityResult.error.httpStatus).json({ error: { code: identityResult.error.code, message: identityResult.error.message } });
     }
-
-    const customer = await storage.getCustomerByUserId(userId);
-    if (!customer) {
-      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Customer not found" } });
-    }
+    const customer = identityResult.identity.customer;
 
     const affiliate = await storage.getAffiliateByCustomerId(customer.id);
     if (!affiliate) {
@@ -111,17 +107,13 @@ router.post(
   validateBody(payoutRequestSchema),
   async (req: any, res: Response) => {
     try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Not authenticated" } });
+      const identityResult = await customerIdentityService.resolve(req);
+      if (!identityResult.ok) {
+        return res.status(identityResult.error.httpStatus).json({ error: { code: identityResult.error.code, message: identityResult.error.message } });
       }
+      const customer = identityResult.identity.customer;
 
       const { amount: requestedAmount, notes } = req.body;
-
-      const customer = await storage.getCustomerByUserId(userId);
-      if (!customer) {
-        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Customer not found" } });
-      }
 
       const affiliate = await storage.getAffiliateByCustomerId(customer.id);
       if (!affiliate) {
@@ -231,18 +223,13 @@ router.post(
   }
 );
 
-// Get payout history for logged-in affiliate
 router.get("/payouts", async (req: any, res: Response) => {
   try {
-    const userId = req.user?.claims?.sub;
-    if (!userId) {
-      return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Not authenticated" } });
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
+      return res.status(identityResult.error.httpStatus).json({ error: { code: identityResult.error.code, message: identityResult.error.message } });
     }
-
-    const customer = await storage.getCustomerByUserId(userId);
-    if (!customer) {
-      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Customer not found" } });
-    }
+    const customer = identityResult.identity.customer;
 
     const affiliate = await storage.getAffiliateByCustomerId(customer.id);
     if (!affiliate) {
@@ -269,18 +256,13 @@ router.get("/payouts", async (req: any, res: Response) => {
   }
 });
 
-// Get commissions for logged-in affiliate
 router.get("/commissions", async (req: any, res: Response) => {
   try {
-    const userId = req.user?.claims?.sub;
-    if (!userId) {
-      return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Not authenticated" } });
+    const identityResult = await customerIdentityService.resolve(req);
+    if (!identityResult.ok) {
+      return res.status(identityResult.error.httpStatus).json({ error: { code: identityResult.error.code, message: identityResult.error.message } });
     }
-
-    const customer = await storage.getCustomerByUserId(userId);
-    if (!customer) {
-      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Customer not found" } });
-    }
+    const customer = identityResult.identity.customer;
 
     const affiliate = await storage.getAffiliateByCustomerId(customer.id);
     if (!affiliate) {

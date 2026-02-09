@@ -95,6 +95,7 @@ export const customers = pgTable("customers", {
   isDisabled: boolean("is_disabled").default(false),
   passwordHash: text("password_hash"), // For email/password login
   sessionInvalidatedAt: timestamp("session_invalidated_at"), // For force logout
+  mergedIntoCustomerId: varchar("merged_into_customer_id"), // Set when this record was merged into another customer
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

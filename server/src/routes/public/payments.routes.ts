@@ -3,6 +3,7 @@ import { storage } from "../../../storage";
 import { insertCustomerSchema } from "@shared/schema";
 import { checkoutLimiter, paymentLimiter } from "../../middleware/rate-limiter";
 import { affiliateCommissionService } from "../../services/affiliate-commission.service";
+import { normalizeEmail } from "../../services/customer-identity.service";
 
 const router = Router();
 
@@ -39,7 +40,8 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
       return res.status(400).json({ message: "Stripe is not configured" });
     }
 
-    const customerData = insertCustomerSchema.parse(customer);
+    const parsedCustomer = insertCustomerSchema.parse(customer);
+    const customerData = { ...parsedCustomer, email: normalizeEmail(parsedCustomer.email) };
 
     let affiliateSessionId: string | null = null;
     let cookieAffiliateId: string | null = null;
@@ -64,10 +66,22 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
 
     const userId = req.user?.claims?.sub;
 
+    if (affiliate && affiliate.status === "active") {
+      const affiliateCustomer = await storage.getCustomer(affiliate.customerId);
+      if (affiliateCustomer && normalizeEmail(affiliateCustomer.email) === customerData.email) {
+        console.log(`[SELF-REFERRAL] Blocked self-referral: customer email ${customerData.email} matches affiliate ${affiliate.affiliateCode} owner`);
+        affiliate = null;
+      }
+    }
+
     let existingCustomer = await storage.getCustomerByEmail(customerData.email);
     if (!existingCustomer) {
       existingCustomer = await storage.createCustomer({ ...customerData, userId });
     } else {
+      if (affiliate && affiliate.status === "active" && existingCustomer.id === affiliate.customerId) {
+        console.log(`[SELF-REFERRAL] Blocked self-referral: customerId ${existingCustomer.id} is affiliate owner for ${affiliate.affiliateCode}`);
+        affiliate = null;
+      }
       const updated = await storage.updateCustomer(existingCustomer.id, {
         ...customerData,
         userId: existingCustomer.userId || userId,
@@ -281,7 +295,8 @@ router.post("/checkout", checkoutLimiter, async (req: any, res) => {
   try {
     const { items, customer, affiliateCode } = req.body;
 
-    const customerData = insertCustomerSchema.parse(customer);
+    const parsedCheckoutCustomer = insertCustomerSchema.parse(customer);
+    const customerData = { ...parsedCheckoutCustomer, email: normalizeEmail(parsedCheckoutCustomer.email) };
 
     let affiliateSessionId: string | null = null;
     let cookieAffiliateId: string | null = null;
@@ -305,11 +320,23 @@ router.post("/checkout", checkoutLimiter, async (req: any, res) => {
     }
 
     const userId = req.user?.claims?.sub;
+
+    if (affiliate && affiliate.status === "active") {
+      const affiliateCustomer = await storage.getCustomer(affiliate.customerId);
+      if (affiliateCustomer && normalizeEmail(affiliateCustomer.email) === customerData.email) {
+        console.log(`[SELF-REFERRAL] Blocked self-referral in checkout: customer email ${customerData.email} matches affiliate ${affiliate.affiliateCode} owner`);
+        affiliate = null;
+      }
+    }
     
     let existingCustomer = await storage.getCustomerByEmail(customerData.email);
     if (!existingCustomer) {
       existingCustomer = await storage.createCustomer({ ...customerData, userId });
     } else {
+      if (affiliate && affiliate.status === "active" && existingCustomer.id === affiliate.customerId) {
+        console.log(`[SELF-REFERRAL] Blocked self-referral in checkout: customerId ${existingCustomer.id} is affiliate owner for ${affiliate.affiliateCode}`);
+        affiliate = null;
+      }
       const updated = await storage.updateCustomer(existingCustomer.id, { 
         ...customerData, 
         userId: existingCustomer.userId || userId 
