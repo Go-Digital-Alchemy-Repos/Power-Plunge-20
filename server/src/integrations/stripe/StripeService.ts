@@ -59,17 +59,55 @@ class StripeService {
       }
     }
 
-    // Fallback to environment variables
-    // Check for test key first (for development), then fall back to live key
-    const envSecretKey = process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY_LIVE;
-    const envPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY_TEST || process.env.STRIPE_PUBLISHABLE_KEY_LIVE;
-    const envWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET_TEST || process.env.STRIPE_WEBHOOK_SECRET_LIVE;
+    // Fallback to environment variables with explicit mode-driven selection
+    // Determine mode: if STRIPE_MODE is set, use it; otherwise detect from available keys
+    const configuredMode = process.env.STRIPE_MODE as "test" | "live" | undefined;
+    
+    let envSecretKey = "";
+    let envPublishableKey = "";
+    let envWebhookSecret = "";
+    let resolvedMode: "test" | "live" = "test";
+
+    if (configuredMode === "live") {
+      envSecretKey = process.env.STRIPE_SECRET_KEY_LIVE || "";
+      envPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY_LIVE || "";
+      envWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET_LIVE || "";
+      resolvedMode = "live";
+      if (!envSecretKey) {
+        console.warn("[STRIPE] Mode set to 'live' but STRIPE_SECRET_KEY_LIVE is missing. Falling back to test keys.");
+        envSecretKey = process.env.STRIPE_SECRET_KEY_TEST || "";
+        envPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY_TEST || "";
+        envWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET_TEST || "";
+        resolvedMode = "test";
+      }
+    } else {
+      envSecretKey = process.env.STRIPE_SECRET_KEY_TEST || "";
+      envPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY_TEST || "";
+      envWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET_TEST || "";
+      resolvedMode = "test";
+      if (!envSecretKey && process.env.STRIPE_SECRET_KEY_LIVE) {
+        console.warn("[STRIPE] No test keys found. Falling back to live keys.");
+        envSecretKey = process.env.STRIPE_SECRET_KEY_LIVE;
+        envPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY_LIVE || "";
+        envWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET_LIVE || "";
+        resolvedMode = "live";
+      }
+    }
+
+    // Validate key/mode consistency
+    if (envSecretKey) {
+      const keyMode = envSecretKey.startsWith("sk_live_") ? "live" : "test";
+      if (keyMode !== resolvedMode) {
+        console.warn(`[STRIPE] Key mode mismatch: resolved mode is '${resolvedMode}' but secret key is for '${keyMode}' mode.`);
+        resolvedMode = keyMode;
+      }
+    }
 
     this.configCache = {
-      publishableKey: envPublishableKey || "",
-      secretKey: envSecretKey || "",
-      webhookSecret: envWebhookSecret || "",
-      mode: envSecretKey?.startsWith("sk_live_") ? "live" : "test",
+      publishableKey: envPublishableKey,
+      secretKey: envSecretKey,
+      webhookSecret: envWebhookSecret,
+      mode: resolvedMode,
       configured: !!envSecretKey,
     };
     this.lastConfigFetch = now;

@@ -4,14 +4,21 @@ import { insertCustomerSchema } from "@shared/schema";
 import { checkoutLimiter, paymentLimiter } from "../../middleware/rate-limiter";
 import { affiliateCommissionService } from "../../services/affiliate-commission.service";
 import { normalizeEmail } from "../../services/customer-identity.service";
+import { normalizeState } from "@shared/us-states";
+import { stripeService } from "../../integrations/stripe/StripeService";
 
 const router = Router();
 
-router.get("/stripe/config", (req, res) => {
-  const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY_TEST || process.env.STRIPE_PUBLISHABLE_KEY_LIVE;
-  res.json({
-    publishableKey: publishableKey || null,
-  });
+router.get("/stripe/config", async (req, res) => {
+  try {
+    const config = await stripeService.getConfig();
+    res.json({
+      publishableKey: config.publishableKey || null,
+    });
+  } catch (error) {
+    console.error("[STRIPE] Failed to get config:", error);
+    res.json({ publishableKey: null });
+  }
 });
 
 router.get("/validate-referral-code/:code", async (req, res) => {
@@ -35,13 +42,30 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
   try {
     const { items, customer, affiliateCode } = req.body;
 
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY_LIVE;
-    if (!stripeSecretKey) {
+    const stripeClient = await stripeService.getClient();
+    if (!stripeClient) {
       return res.status(400).json({ message: "Stripe is not configured" });
     }
 
     const parsedCustomer = insertCustomerSchema.parse(customer);
     const customerData = { ...parsedCustomer, email: normalizeEmail(parsedCustomer.email) };
+
+    const normalizedState = normalizeState(customerData.state || "");
+    if (!normalizedState) {
+      return res.status(400).json({
+        message: "Invalid shipping state. Please select a valid US state.",
+        field: "state",
+      });
+    }
+    customerData.state = normalizedState;
+
+    if (!customerData.zipCode || !/^\d{5}(-\d{4})?$/.test(customerData.zipCode.trim())) {
+      return res.status(400).json({
+        message: "Invalid ZIP code. Please enter a valid 5-digit US ZIP code.",
+        field: "zipCode",
+      });
+    }
+    customerData.zipCode = customerData.zipCode.trim();
 
     let affiliateSessionId: string | null = null;
     let cookieAffiliateId: string | null = null;
@@ -111,9 +135,6 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
       });
     }
 
-    const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(stripeSecretKey);
-
     let taxAmount = 0;
     let taxCalculationId: string | null = null;
     
@@ -125,15 +146,15 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
         tax_code: "txcd_99999999",
       }));
 
-      const taxCalculation = await stripe.tax.calculations.create({
+      const taxCalculation = await stripeClient.tax.calculations.create({
         currency: "usd",
         line_items: taxLineItems,
         customer_details: {
           address: {
             line1: customerData.address || "",
             city: customerData.city || "",
-            state: customerData.state || "",
-            postal_code: customerData.zipCode || "",
+            state: normalizedState,
+            postal_code: customerData.zipCode,
             country: "US",
           },
           address_source: "shipping",
@@ -142,15 +163,13 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
 
       taxAmount = taxCalculation.tax_amount_exclusive;
       taxCalculationId = taxCalculation.id;
-      console.log(`Tax calculated: $${(taxAmount / 100).toFixed(2)} for ${customerData.state}`);
-      console.log(`Tax calculation details:`, JSON.stringify({
-        id: taxCalculation.id,
-        amount_total: taxCalculation.amount_total,
-        tax_amount: taxCalculation.tax_amount_exclusive,
-        tax_breakdown: taxCalculation.tax_breakdown,
-      }, null, 2));
+      console.log(`[TAX] Calculated: $${(taxAmount / 100).toFixed(2)} for ${normalizedState} ${customerData.zipCode}`);
     } catch (taxError: any) {
-      console.error("Tax calculation error:", taxError.message);
+      console.error(`[TAX] Calculation failed for ${normalizedState} ${customerData.zipCode}:`, taxError.message);
+      return res.status(422).json({
+        message: "Unable to calculate tax. Please verify your shipping state and ZIP code.",
+        field: "address",
+      });
     }
 
     const totalAmount = subtotalAmount + taxAmount;
@@ -172,7 +191,7 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
       });
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await stripeClient.paymentIntents.create({
       amount: totalAmount,
       currency: "usd",
       metadata: {
@@ -212,15 +231,12 @@ router.post("/confirm-payment", paymentLimiter, async (req: any, res) => {
       return res.status(400).json({ message: "Missing orderId or paymentIntentId" });
     }
 
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY_LIVE;
-    if (!stripeSecretKey) {
+    const stripeClient = await stripeService.getClient();
+    if (!stripeClient) {
       return res.status(400).json({ message: "Stripe is not configured" });
     }
 
-    const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(stripeSecretKey);
-
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const paymentIntent = await stripeClient.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== "succeeded") {
       return res.status(400).json({ message: "Payment not completed" });
@@ -259,7 +275,7 @@ router.post("/confirm-payment", paymentLimiter, async (req: any, res) => {
 
       if (order.stripeTaxCalculationId) {
         try {
-          await stripe.tax.transactions.createFromCalculation({
+          await stripeClient.tax.transactions.createFromCalculation({
             calculation: order.stripeTaxCalculationId,
             reference: orderId,
           });
@@ -366,8 +382,8 @@ router.post("/checkout", checkoutLimiter, async (req: any, res) => {
       });
     }
 
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY_LIVE;
-    if (!stripeSecretKey) {
+    const checkoutStripeClient = await stripeService.getClient();
+    if (!checkoutStripeClient) {
       const order = await storage.createOrder({
         customerId: existingCustomer.id,
         status: "pending",
@@ -416,9 +432,6 @@ router.post("/checkout", checkoutLimiter, async (req: any, res) => {
       });
     }
 
-    const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(stripeSecretKey);
-
     const lineItems = orderItems.map((item) => ({
       price_data: {
         currency: "usd",
@@ -433,7 +446,7 @@ router.post("/checkout", checkoutLimiter, async (req: any, res) => {
 
     const baseUrl = process.env.BASE_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
 
-    const stripeSession = await stripe.checkout.sessions.create({
+    const stripeSession = await checkoutStripeClient.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",

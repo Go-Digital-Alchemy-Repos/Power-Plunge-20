@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { US_STATE_OPTIONS } from "@shared/us-states";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CreditCard, Loader2, ShoppingBag, Lock, Shield, CheckCircle, XCircle, Users } from "lucide-react";
 import logoImage from "@assets/powerplungelogo_1767907611722.png";
@@ -332,6 +334,26 @@ export default function Checkout() {
     e.preventDefault();
     setIsLoading(true);
 
+    if (!formData.state) {
+      toast({
+        title: "Missing State",
+        description: "Please select a shipping state.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (!billingSameAsShipping && !billingData.state) {
+      toast({
+        title: "Missing Billing State",
+        description: "Please select a billing state.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     // Use the manually validated referral code, or fall back to localStorage (from referral link)
     let affiliateCode: string | null = null;
     if (referralStatus === "valid" && referralCode) {
@@ -504,13 +526,22 @@ export default function Checkout() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="state">State</Label>
-                        <Input
-                          id="state"
+                        <Select
                           value={formData.state}
-                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                          onValueChange={(value) => setFormData({ ...formData, state: value })}
                           required
-                          data-testid="input-state"
-                        />
+                        >
+                          <SelectTrigger id="state" data-testid="select-state">
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {US_STATE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="zipCode">ZIP Code</Label>
@@ -573,13 +604,22 @@ export default function Checkout() {
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="billingState">State</Label>
-                              <Input
-                                id="billingState"
+                              <Select
                                 value={billingData.state}
-                                onChange={(e) => setBillingData({ ...billingData, state: e.target.value })}
+                                onValueChange={(value) => setBillingData({ ...billingData, state: value })}
                                 required={!billingSameAsShipping}
-                                data-testid="input-billing-state"
-                              />
+                              >
+                                <SelectTrigger id="billingState" data-testid="select-billing-state">
+                                  <SelectValue placeholder="Select state" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {US_STATE_OPTIONS.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="billingZip">ZIP Code</Label>
