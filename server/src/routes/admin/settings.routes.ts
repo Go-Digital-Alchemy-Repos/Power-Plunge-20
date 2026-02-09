@@ -246,14 +246,20 @@ router.patch("/stripe", async (req: any, res) => {
     stripeService.clearCache();
     
     const adminId = (req as any).adminUser?.id;
-    await storage.createAdminAuditLog({
-      adminId: adminId || "system",
-      action: "update_stripe_settings",
-      targetType: "settings",
-      targetId: "stripe",
-      details: { mode, hasWebhookSecret: !!webhookSecret, hasConnectWebhookSecret: !!connectWebhookSecret },
-      ipAddress: req.ip || null,
-    });
+    if (adminId) {
+      try {
+        await storage.createAdminAuditLog({
+          adminId,
+          action: "update_stripe_settings",
+          targetType: "settings",
+          targetId: "stripe",
+          details: { mode, hasWebhookSecret: !!webhookSecret, hasConnectWebhookSecret: !!connectWebhookSecret },
+          ipAddress: req.ip || null,
+        });
+      } catch (auditErr) {
+        console.error("Failed to create audit log for Stripe settings update:", auditErr);
+      }
+    }
 
     const currentConfig = await stripeService.getConfig();
     res.json({
