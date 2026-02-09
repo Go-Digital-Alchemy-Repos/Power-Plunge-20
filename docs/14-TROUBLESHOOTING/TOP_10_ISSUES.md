@@ -15,27 +15,27 @@ Common issues encountered during development and deployment, with diagnostic ste
 
 **File:** `server/src/config/env.ts`
 
-## 2. CMS v2 Routes Return 404
+## 2. CMS Routes Return 404
 
-**Symptom:** All `/api/admin/cms-v2/*` endpoints return 404.
+**Symptom:** All `/api/admin/cms/*` endpoints return 404.
 
-**Cause:** CMS v2 is feature-flagged and disabled by default.
+**Cause:** CMS is feature-flagged and disabled by default.
 
 **Fix:**
-1. Set `CMS_V2_ENABLED=true` in environment variables
+1. Set `CMS_ENABLED=true` in environment variables
 2. Restart the server
-3. Verify with `GET /api/admin/cms-v2/health` — should return `{ "status": "ok", "version": "2.0" }`
+3. Verify with `GET /api/admin/cms/health` — should return `{ "status": "ok", "version": "2.0" }`
 
-**Note:** CMS v2 routes are always mounted on the Express app. The feature flag controls visibility at the application layer, not route registration. If you still get 404s after enabling, check that admin authentication middleware is not blocking the request.
+**Note:** CMS routes are always mounted on the Express app. The feature flag controls visibility at the application layer, not route registration. If you still get 404s after enabling, check that admin authentication middleware is not blocking the request.
 
-**File:** `server/src/config/env.ts` (function `isCmsV2Enabled()`)
+**File:** `server/src/config/env.ts` (function `isCmsEnabled()`)
 
 ## 3. Page Blocks Not Rendering — Empty Page
 
 **Symptom:** A CMS page loads but shows nothing, even though blocks were saved.
 
 **Diagnostic steps:**
-1. Check the page's `contentJson` via `GET /api/admin/cms-v2/pages/:id`
+1. Check the page's `contentJson` via `GET /api/admin/cms/pages/:id`
 2. Verify `contentJson.blocks` is a non-empty array
 3. Verify each block has `id`, `type`, and `data` fields
 4. Check if block types are registered — unknown types render the yellow `UnknownBlock` fallback
@@ -56,7 +56,7 @@ else                                    → render empty placeholder
 
 ## 4. contentJson Validation Rejects Page Save
 
-**Symptom:** `POST /api/admin/cms-v2/pages` or `PUT /pages/:id` returns 400 with a validation error.
+**Symptom:** `POST /api/admin/cms/pages` or `PUT /pages/:id` returns 400 with a validation error.
 
 **Diagnostic steps:**
 1. Check the error message — it describes exactly which field is invalid
@@ -79,7 +79,7 @@ else                                    → render empty placeholder
 **Symptom:** Admin activates a theme but public pages still show default colors.
 
 **Diagnostic steps:**
-1. Verify activation: `GET /api/admin/cms-v2/themes/active` should return the selected theme
+1. Verify activation: `GET /api/admin/cms/themes/active` should return the selected theme
 2. Check `site_settings` table: `active_theme_id` should match the preset ID
 3. Check that the public `ThemeProvider` component is mounted (wraps the app root)
 4. ThemeProvider refetches every 30 seconds — wait or hard-refresh the page
@@ -147,9 +147,9 @@ If no admin exists, use the seed script or create one via the API.
 **Symptom:** Sections were created but don't show up in the page builder's section picker.
 
 **Diagnostic steps:**
-1. Verify sections exist: `GET /api/admin/cms-v2/sections`
+1. Verify sections exist: `GET /api/admin/cms/sections`
 2. Check that each section has a `name` and non-empty `blocks` array
-3. Section kits can be re-seeded: `POST /api/admin/cms-v2/sections/seed-kits`
+3. Section kits can be re-seeded: `POST /api/admin/cms/sections/seed-kits`
 
 **Common causes:**
 - Sections were created with empty `blocks` arrays
@@ -187,14 +187,14 @@ npm run db:push
 |---------|---------|
 | `npx tsx scripts/doctor.ts` | Full environment health check |
 | `npx tsx scripts/db/verifySchema.ts` | Verify all 65 database tables exist |
-| `npx tsx scripts/cmsParityCheck.ts` | Check legacy vs CMS v2 data consistency |
+| `npx tsx scripts/cmsParityCheck.ts` | Check legacy vs CMS data consistency |
 | `npx tsx scripts/smoke/cmsContentSafety.ts` | Run content safety regression tests (21 assertions) |
-| `curl localhost:5000/api/admin/cms-v2/health` | Check CMS v2 is responding |
+| `curl localhost:5000/api/admin/cms/health` | Check CMS is responding |
 | `curl localhost:5000/api/admin/jobs/status` | Check background job status |
 
 ## Related Documentation
 
 - [System Overview](../01-GETTING-STARTED/SYSTEM_OVERVIEW.md) — Full system description
 - [Scripts Reference](../09-TESTING/SCRIPTS.md) — All diagnostic scripts
-- [Rendering Rules](../19-CMS-V2/23-RENDERING-RULES.md) — How CMS pages render
-- [CMS v2 API Reference](../19-CMS-V2/09-API-REFERENCE.md) — All CMS v2 endpoints
+- [Rendering Rules](../19-CMS/23-RENDERING-RULES.md) — How CMS pages render
+- [CMS API Reference](../19-CMS/09-API-REFERENCE.md) — All CMS endpoints

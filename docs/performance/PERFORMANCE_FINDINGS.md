@@ -12,7 +12,7 @@ Date: 2026-02-07
 
 ### 2. Zero Code Splitting — All 57 Pages in One Bundle (FIXED)
 **Severity:** Critical | **Impact:** Initial page load  
-**Problem:** Every page (including 40+ admin pages) was eagerly imported in `App.tsx`. Visiting the homepage loaded the CMS v2 builder (1,200 lines), affiliates page (1,860 lines), and every other admin page. The initial JS bundle contained code users would never need on first load.  
+**Problem:** Every page (including 40+ admin pages) was eagerly imported in `App.tsx`. Visiting the homepage loaded the CMS builder (1,200 lines), affiliates page (1,860 lines), and every other admin page. The initial JS bundle contained code users would never need on first load.  
 **Fix:** Converted all admin routes (30+ pages), Better Auth pages, affiliate portal, and order status page to `React.lazy()` imports with a shared `Suspense` fallback. Only the customer-facing critical path (home, shop, checkout, login, register, my-account, page-view) remains eagerly loaded.  
 **File:** `client/src/App.tsx`
 

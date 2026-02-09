@@ -1,7 +1,7 @@
 import { db } from "../server/db";
 import { pages } from "../shared/schema";
 import { eq } from "drizzle-orm";
-import { cmsV2Repository } from "../server/src/repositories/cms-v2.repository";
+import { cmsRepository } from "../server/src/repositories/cms.repository";
 
 const PAGE_FIELDS = [
   "id", "title", "slug", "content", "contentJson", "pageType",
@@ -41,7 +41,7 @@ function diffFields(legacy: Record<string, unknown>, v2: Record<string, unknown>
 
 async function checkListPages(): Promise<CheckResult> {
   const legacy = await db.select().from(pages).orderBy(pages.navOrder);
-  const v2 = await cmsV2Repository.findAll();
+  const v2 = await cmsRepository.findAll();
 
   if (legacy.length !== v2.length) {
     return { name: "GET /pages (list)", pass: false, detail: `Count mismatch: legacy=${legacy.length} v2=${v2.length}` };
@@ -63,7 +63,7 @@ async function checkListPages(): Promise<CheckResult> {
 
 async function checkHomePage(): Promise<CheckResult> {
   const [legacy] = await db.select().from(pages).where(eq(pages.isHome, true));
-  const v2 = await cmsV2Repository.findHome();
+  const v2 = await cmsRepository.findHome();
 
   if (!legacy && !v2) {
     return { name: "GET /pages/home", pass: true, detail: "Both return no home page" };
@@ -81,7 +81,7 @@ async function checkHomePage(): Promise<CheckResult> {
 
 async function checkShopPage(): Promise<CheckResult> {
   const [legacy] = await db.select().from(pages).where(eq(pages.isShop, true));
-  const v2 = await cmsV2Repository.findShop();
+  const v2 = await cmsRepository.findShop();
 
   if (!legacy && !v2) {
     return { name: "GET /pages/shop", pass: true, detail: "Both return no shop page" };
@@ -105,7 +105,7 @@ async function checkPageById(): Promise<CheckResult> {
 
   const mismatches: string[] = [];
   for (const legacyPage of allPages) {
-    const v2 = await cmsV2Repository.findById(legacyPage.id);
+    const v2 = await cmsRepository.findById(legacyPage.id);
     if (!v2) {
       mismatches.push(`Page ${legacyPage.id} (${legacyPage.slug}): missing in v2`);
       continue;
@@ -123,7 +123,7 @@ async function checkPageById(): Promise<CheckResult> {
 }
 
 async function main() {
-  console.log("=== CMS Parity Check: Legacy vs CMS v2 ===\n");
+  console.log("=== CMS Parity Check: Legacy vs CMS ===\n");
 
   const checks = [
     await checkListPages(),

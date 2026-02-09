@@ -44,7 +44,7 @@ server/src/routes/
 │   ├── cms-sections.routes.ts     5 endpoints  (reusable section blocks)
 │   ├── cms-templates.routes.ts    2 endpoints  (page template list/detail)
 │   ├── cms-theme.routes.ts        2 endpoints  (admin theme settings)
-│   ├── cms-v2.router.ts          25 endpoints  (CMS v2 builder)
+│   ├── cms.router.ts          25 endpoints  (CMS builder)
 │   ├── coupons.routes.ts         4+1 endpoints (CRUD + public validate) [NEW]
 │   ├── customer-management.routes.ts 13 endpoints (notes, tags, profile, password, actions) [NEW]
 │   ├── customers.routes.ts        4 endpoints  (customer CRUD)
@@ -80,8 +80,8 @@ server/src/routes/
 │   └── stripe.routes.ts          2 endpoints   (Stripe + Connect webhooks) [NEW]
 ├── affiliate.routes.ts           18 endpoints  (admin affiliate management v2)
 ├── alerts.routes.ts               9 endpoints  (revenue guardrails)
-├── cmsV2.sitePresets.routes.ts   14 endpoints  (site presets CRUD)
-├── cmsV2.siteSettings.routes.ts   2 endpoints  (canonical site settings)
+├── cms.sitePresets.routes.ts   14 endpoints  (site presets CRUD)
+├── cms.siteSettings.routes.ts   2 endpoints  (canonical site settings)
 ├── coupon.routes.ts               6 endpoints  (coupon analytics)
 ├── recovery.routes.ts            10 endpoints  (checkout recovery)
 ├── revenue.routes.ts             10 endpoints  (revenue analytics)
@@ -101,10 +101,10 @@ server/src/services/
 ├── affiliate-payout.service.ts
 ├── affiliate-tracking.service.ts
 ├── checkout-recovery.service.ts
-├── cms-v2.service.ts
-├── cmsV2.sitePresets.apply.service.ts
-├── cmsV2.sitePresets.service.ts
-├── cmsV2.siteSettings.service.ts
+├── cms.service.ts
+├── cms.sitePresets.apply.service.ts
+├── cms.sitePresets.service.ts
+├── cms.siteSettings.service.ts
 ├── coupon-analytics.service.ts
 ├── customer-email.service.ts
 ├── customers.service.ts
@@ -124,8 +124,8 @@ server/src/services/
 
 ```
 server/src/repositories/
-├── cms-v2.repository.ts
-├── cmsV2.sitePresets.repo.ts
+├── cms.repository.ts
+├── cms.sitePresets.repo.ts
 └── sections.repository.ts
 ```
 
@@ -211,7 +211,7 @@ The **187 legacy endpoints** in `server/routes.ts` break down into **39 feature 
 | 36 | **Public Coupons** | 1 | `/api/coupons/validate` | Coupon validation |
 | 37 | **Public Stripe** | 1 | `/api/stripe/config` | Publishable key |
 | 38 | **Public Orders** | 1 | `/api/orders/by-session` | Session-based order lookup |
-| 39 | **Health** | 1 | `/api/health/config` | CMS v2 feature flag |
+| 39 | **Health** | 1 | `/api/health/config` | CMS feature flag |
 | | **TOTAL** | **187** | | |
 
 ---
@@ -248,7 +248,7 @@ server/src/
 │   │   ├── audit.routes.ts             → /api/admin/audit-logs
 │   │   ├── payouts.routes.ts           → /api/admin/payouts/**
 │   │   ├── docs-legacy.routes.ts       → /api/admin/docs/** (DB-backed, legacy)
-│   │   ├── cms-v2.router.ts            → (already migrated)
+│   │   ├── cms.router.ts            → (already migrated)
 │   │   ├── customers.routes.ts         → (already migrated)
 │   │   ├── docs.router.ts              → (already migrated, file-system)
 │   │   ├── media.routes.ts             → (already migrated)
@@ -666,9 +666,9 @@ The following files were modified or created during the refactoring (2026-02-07)
 
 | Current Location | Target Location | Mount Path | Audience |
 |-----------------|-----------------|------------|----------|
-| `cmsV2.posts.routes.ts` | `admin/cms-v2-posts-admin.routes.ts` | `/api/admin/cms-v2` | admin |
-| `cmsV2.sitePresets.routes.ts` | `admin/cms-v2-site-presets.routes.ts` | `/api/admin/cms-v2/site-presets` | admin |
-| `cmsV2.siteSettings.routes.ts` | `admin/cms-v2-site-settings.routes.ts` | `/api/admin/cms-v2/site-settings` | admin |
+| `cms.posts.routes.ts` | `admin/cms-posts-admin.routes.ts` | `/api/admin/cms` | admin |
+| `cms.sitePresets.routes.ts` | `admin/cms-site-presets.routes.ts` | `/api/admin/cms/site-presets` | admin |
+| `cms.siteSettings.routes.ts` | `admin/cms-site-settings.routes.ts` | `/api/admin/cms/site-settings` | admin |
 | `affiliate.routes.ts` | `admin/affiliates-v2.routes.ts` | `/api/admin/affiliates-v2` | admin |
 | `alerts.routes.ts` | `admin/alerts.routes.ts` | `/api/alerts` | admin |
 | `recovery.routes.ts` | `admin/recovery.routes.ts` | `/api/recovery` | admin |

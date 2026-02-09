@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAdmin } from "@/hooks/use-admin";
-import CmsV2Layout from "@/components/admin/CmsV2Layout";
+import CmsLayout from "@/components/admin/CmsLayout";
+import { Settings, Home, Save, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Save, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface CmsPage {
@@ -26,7 +26,7 @@ export default function AdminCmsSettings() {
   const queryClient = useQueryClient();
 
   const { data: pages = [], isLoading: pagesLoading } = useQuery<CmsPage[]>({
-    queryKey: ["/api/admin/cms-v2/pages"],
+    queryKey: ["/api/admin/cms/pages"],
     enabled: hasFullAccess,
   });
 
@@ -37,11 +37,11 @@ export default function AdminCmsSettings() {
 
   const setHomeMutation = useMutation({
     mutationFn: async (pageId: string) => {
-      const res = await apiRequest("POST", `/api/admin/cms-v2/pages/${pageId}/set-home`);
+      const res = await apiRequest("POST", `/api/admin/cms/pages/${pageId}/set-home`);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cms-v2/pages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cms/pages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/pages/home"] });
       setSelectedHomePageId(null);
       toast({
@@ -66,23 +66,26 @@ export default function AdminCmsSettings() {
 
   if (adminLoading || !hasFullAccess) {
     return (
-      <CmsV2Layout activeNav="settings" breadcrumbs={[{ label: "Settings" }]}>
+      <CmsLayout activeNav="settings" breadcrumbs={[{ label: "Settings" }]}>
         <div className="p-8 text-center text-muted-foreground">
           {adminLoading ? "Loading..." : "Access Denied"}
         </div>
-      </CmsV2Layout>
+      </CmsLayout>
     );
   }
 
   const selectedPage = pages.find((p) => p.id === resolvedSelection);
 
   return (
-    <CmsV2Layout activeNav="settings" breadcrumbs={[{ label: "Settings" }]}>
+    <CmsLayout activeNav="settings" breadcrumbs={[{ label: "Settings" }]}>
       <div className="max-w-3xl mx-auto" data-testid="admin-cms-settings-page">
-        <h1 className="text-xl font-bold text-foreground mb-6">CMS Settings</h1>
+        <div className="flex items-center gap-3 mb-6">
+          <Settings className="w-6 h-6 text-primary" />
+          <h1 className="text-xl font-bold text-foreground">CMS Settings</h1>
+        </div>
 
-        <div className="space-y-6">
-          <Card>
+        <div className="space-y-4">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-start gap-3 mb-5">
                 <Home className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
@@ -198,8 +201,30 @@ export default function AdminCmsSettings() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="bg-card border-border">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-medium text-foreground mb-1">Theme Token System</h3>
+              <p className="text-xs text-muted-foreground mb-2">
+                The new theme token system provides granular control over colors, typography, spacing, and layout.
+                Theme tokens are applied as CSS custom properties and can be previewed before activating.
+              </p>
+              <p className="text-xs text-muted-foreground/60">
+                10 built-in presets available. Custom theme editing coming in a future release.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-medium text-foreground mb-1">Block Registry</h3>
+              <p className="text-xs text-muted-foreground">
+                12 content blocks registered. Blocks are available in the page builder and render on public pages via the PageRenderer.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </CmsV2Layout>
+    </CmsLayout>
   );
 }

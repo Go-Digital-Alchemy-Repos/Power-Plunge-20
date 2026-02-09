@@ -41,7 +41,7 @@ export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps)
 
   const isActive = (page: string) => currentPage === page;
   const isClientManagement = currentPage === "customers" || currentPage === "affiliates" || currentPage === "support" || currentPage === "affiliate-invite-sender";
-  const isCms = currentPage === "media" || currentPage === "cms-settings" || currentPage?.startsWith("cms-v2");
+  const isCms = currentPage === "media" || currentPage === "cms-settings" || currentPage === "cms" || currentPage?.startsWith("cms-");
   const isSettings = currentPage === "settings" || currentPage === "team" || currentPage === "email-templates" || currentPage === "integrations" || currentPage === "docs";
 
   const hasFullAccess = role === "admin" || role === "store_manager";
@@ -89,7 +89,7 @@ export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps)
             )}
 
             {hasFullAccess && (
-              <Link href="/admin/cms-v2">
+              <Link href="/admin/cms">
                 <Button
                   variant={isCms ? "secondary" : "ghost"}
                   size="sm"

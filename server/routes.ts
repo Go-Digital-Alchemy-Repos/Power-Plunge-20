@@ -23,11 +23,11 @@ import affiliatePortalRoutes from "./src/routes/customer/affiliate-portal.routes
 import upsellRoutes from "./src/routes/admin/upsells.routes";
 import supportRoutes, { adminSupportRouter } from "./src/routes/admin/support.routes";
 import docsRouter from "./src/routes/admin/docs.router";
-import cmsV2Router from "./src/routes/admin/cms-v2.router";
-import cmsV2MenusRoutes from "./src/routes/admin/cms-v2-menus.routes";
-import sitePresetsRouter from "./src/routes/admin/cms-v2-site-presets.routes";
-import siteSettingsRouter from "./src/routes/admin/cms-v2-site-settings.routes";
-import cmsV2PostsRouter from "./src/routes/admin/cms-v2-posts-v2.routes";
+import cmsRouter from "./src/routes/admin/cms.router";
+import cmsMenusRoutes from "./src/routes/admin/cms-menus.routes";
+import sitePresetsRouter from "./src/routes/admin/cms-site-presets.routes";
+import siteSettingsRouter from "./src/routes/admin/cms-site-settings.routes";
+import cmsPostsRouter from "./src/routes/admin/cms-posts-v2.routes";
 import vipRoutes from "./src/routes/admin/vip.routes";
 import couponRoutes from "./src/routes/admin/coupon-analytics.routes";
 import recoveryRoutes from "./src/routes/admin/recovery.routes";
@@ -98,11 +98,11 @@ export async function registerRoutes(
   app.use("/api/customer/support", isAuthenticated, supportRoutes);
   app.use("/api/admin/support", requireFullAccess, adminSupportRouter);
   app.use("/api/admin/docs", requireFullAccess, docsRouter);
-  app.use("/api/admin/cms-v2", requireFullAccess, cmsV2PostsRouter);
-  app.use("/api/admin/cms-v2", requireFullAccess, cmsV2Router);
-  app.use("/api/admin/cms-v2/menus", requireFullAccess, cmsV2MenusRoutes);
-  app.use("/api/admin/cms-v2/site-presets", requireFullAccess, sitePresetsRouter);
-  app.use("/api/admin/cms-v2/site-settings", requireFullAccess, siteSettingsRouter);
+  app.use("/api/admin/cms", requireFullAccess, cmsPostsRouter);
+  app.use("/api/admin/cms", requireFullAccess, cmsRouter);
+  app.use("/api/admin/cms/menus", requireFullAccess, cmsMenusRoutes);
+  app.use("/api/admin/cms/site-presets", requireFullAccess, sitePresetsRouter);
+  app.use("/api/admin/cms/site-settings", requireFullAccess, siteSettingsRouter);
   app.use("/api/customer/orders", orderTrackingRoutes);
   app.use("/api/customer/auth", customerAuthRoutes);
   app.use("/api/orders", publicOrderStatusRoutes);
@@ -118,7 +118,7 @@ export async function registerRoutes(
   app.use("/api/menus", publicMenuRoutes);
 
   app.get("/api/health/config", (req, res) => {
-    res.json({ cmsV2Enabled: true });
+    res.json({ cmsEnabled: true });
   });
 
   if (process.env.NODE_ENV !== "production") {

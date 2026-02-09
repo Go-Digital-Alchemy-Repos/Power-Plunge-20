@@ -28,11 +28,11 @@ This document describes the reorganized project structure for Power Plunge, desi
 │       │   ├── admin-products.tsx  # Admin products
 │       │   ├── admin-customers.tsx # Admin customers
 │       │   ├── admin-affiliates.tsx # Admin affiliates
-│       │   ├── admin-cms-v2*.tsx   # CMS v2 pages (builder, pages, sections, etc.)
+│       │   ├── admin-cms*.tsx       # CMS pages (builder, pages, sections, etc.)
 │       │   └── ...                 # ~40+ page components
 │       │
 │       ├── admin/                  # Admin-specific components
-│       │   └── cms-v2/             # CMS v2 admin components
+│       │   └── cms/                # CMS admin components
 │       │
 │       ├── cms/                    # CMS rendering components
 │       │   ├── blocks/             # Block renderers
@@ -87,7 +87,7 @@ This document describes the reorganized project structure for Power Plunge, desi
 │       │   │   ├── cms-sections.routes.ts
 │       │   │   ├── cms-templates.routes.ts
 │       │   │   ├── cms-theme.routes.ts
-│       │   │   ├── cms-v2.router.ts
+│       │   │   ├── cms.router.ts
 │       │   │   ├── coupons.routes.ts
 │       │   │   ├── customer-management.routes.ts
 │       │   │   ├── customers.routes.ts
@@ -126,8 +126,8 @@ This document describes the reorganized project structure for Power Plunge, desi
 │       │   │
 │       │   ├── affiliate.routes.ts          # Shared domain routers (10 files)
 │       │   ├── alerts.routes.ts
-│       │   ├── cmsV2.sitePresets.routes.ts
-│       │   ├── cmsV2.siteSettings.routes.ts
+│       │   ├── cms.sitePresets.routes.ts
+│       │   ├── cms.siteSettings.routes.ts
 │       │   ├── coupon.routes.ts
 │       │   ├── recovery.routes.ts
 │       │   ├── revenue.routes.ts
@@ -251,8 +251,8 @@ The frontend uses a flat page layout under `client/src/pages/`:
 ├── admin-products.tsx      # Admin products
 ├── admin-customers.tsx     # Admin customers
 ├── admin-affiliates.tsx    # Admin affiliates
-├── admin-cms-v2.tsx        # CMS v2 dashboard
-├── admin-cms-v2-builder.tsx # CMS v2 page builder
+├── admin-cms.tsx        # CMS dashboard
+├── admin-cms-builder.tsx # CMS page builder
 └── ...                     # ~40+ page components
 ```
 

@@ -9,7 +9,7 @@ Phase 2 focused on three pillars: admin UI consistency enforcement, route organi
 ## 1. Admin UI Consistency
 
 ### Problem
-The CMS v2 themes page applied theme preview CSS variables to `:root`, which leaked into the admin chrome (sidebar, topbar). Previewing a blue theme turned the entire admin interface blue.
+The CMS themes page applied theme preview CSS variables to `:root`, which leaked into the admin chrome (sidebar, topbar). Previewing a blue theme turned the entire admin interface blue.
 
 ### Fix
 - Removed `:root`-level CSS variable manipulation during theme preview
@@ -21,10 +21,10 @@ The CMS v2 themes page applied theme preview CSS variables to `:root`, which lea
 - Created `AdminPagePrimitives.tsx` with 5 reusable components: `AdminPage`, `AdminSection`, `AdminCard`, `AdminToolbar`, `AdminStat`
 - Documented design tokens, layout patterns, and Do/Don't rules in `docs/architecture/ADMIN_UI_RULES.md`
 
-### CMS v2 Layout Audit
+### CMS Layout Audit
 | Status | Count | Pages |
 |--------|-------|-------|
-| Uses CmsV2Layout | 13 | Dashboard, Pages, Posts, Menus, Sections, Templates, Themes, Presets, SEO, Settings, Post Editor, Generator Landing, Generator Campaigns |
+| Uses CmsLayout | 13 | Dashboard, Pages, Posts, Menus, Sections, Templates, Themes, Presets, SEO, Settings, Post Editor, Generator Landing, Generator Campaigns |
 | Uses AdminNav (intentional) | 2 | Builder (Puck editor), Post Builder (Puck editor) |
 
 The 2 builder pages intentionally use a different layout to provide a full-width canvas for the Puck visual editor.
@@ -47,9 +47,9 @@ Relocated all 12 files to their proper subdirectories:
 | `recovery.routes.ts` | `admin/recovery.routes.ts` |
 | `alerts.routes.ts` | `admin/alerts.routes.ts` |
 | `support.routes.ts` | `admin/support.routes.ts` |
-| `cmsV2.posts.routes.ts` | `admin/cms-v2-posts-v2.routes.ts` |
-| `cmsV2.sitePresets.routes.ts` | `admin/cms-v2-site-presets.routes.ts` |
-| `cmsV2.siteSettings.routes.ts` | `admin/cms-v2-site-settings.routes.ts` |
+| `cms.posts.routes.ts` | `admin/cms-posts-v2.routes.ts` |
+| `cms.sitePresets.routes.ts` | `admin/cms-site-presets.routes.ts` |
+| `cms.siteSettings.routes.ts` | `admin/cms-site-settings.routes.ts` |
 | `public.blog.routes.ts` | `public/blog-v2.routes.ts` |
 
 Backward-compatible re-export stubs left at original locations. `server/routes.ts` updated to import from new canonical paths.
@@ -67,9 +67,9 @@ Round 2 optimizations completed in prior session:
 
 | Severity | Issue | Location |
 |----------|-------|----------|
-| Low | `'over' is possibly 'null'` TS warning | `admin-cms-v2-menus.tsx:691` |
-| Low | `Set<string>` iteration needs `--downlevelIteration` | `admin-cms-v2-menus.tsx:730` |
-| Info | 2 builder pages use AdminNav instead of CmsV2Layout | Intentional for Puck editor |
+| Low | `'over' is possibly 'null'` TS warning | `admin-cms-menus.tsx:691` |
+| Low | `Set<string>` iteration needs `--downlevelIteration` | `admin-cms-menus.tsx:730` |
+| Info | 2 builder pages use AdminNav instead of CmsLayout | Intentional for Puck editor |
 
 ## 5. Files Changed
 
@@ -82,5 +82,5 @@ Round 2 optimizations completed in prior session:
 
 ### Modified Files
 - `client/src/components/ThemeProvider.tsx` — Added scoped theme variable functions
-- `client/src/pages/admin-cms-v2-themes.tsx` — Removed `:root` CSS variable preview side-effects
+- `client/src/pages/admin-cms-themes.tsx` — Removed `:root` CSS variable preview side-effects
 - `server/routes.ts` — Updated imports to new canonical route paths

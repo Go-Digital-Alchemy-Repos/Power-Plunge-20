@@ -1,20 +1,20 @@
 # Smoke Test Flows
 
-Manual verification checklist for critical CMS v2 and public-facing flows.
+Manual verification checklist for critical CMS and public-facing flows.
 Run these after any stabilization change to confirm nothing is broken.
 
 ---
 
-## ADMIN CMS v2
+## ADMIN CMS
 
-### A1. Load CMS v2 Dashboard
+### A1. Load CMS Dashboard
 1. Log in at `/admin` with admin credentials.
-2. Navigate to `/admin/cms-v2`.
+2. Navigate to `/admin/cms`.
 3. **Verify:** Dashboard cards render (Pages, Sections, Templates, Themes, SEO, Settings, Generator, Presets).
 4. **Verify:** No console errors.
 
 ### A2. Open Pages Library
-1. From the CMS v2 dashboard, click **Manage Pages** (or navigate to `/admin/cms-v2/pages`).
+1. From the CMS dashboard, click **Manage Pages** (or navigate to `/admin/cms/pages`).
 2. **Verify:** Page list loads. If pages exist, they appear with title, slug, status badge.
 3. **Verify:** "Create Page" button is visible.
 
@@ -28,7 +28,7 @@ Run these after any stabilization change to confirm nothing is broken.
 
 ### A4. Open Puck Builder
 1. From the Pages list, click the **Edit** / **Builder** button on the smoke test page.
-2. **Verify:** Puck editor loads at `/admin/cms-v2/pages/:id/builder`.
+2. **Verify:** Puck editor loads at `/admin/cms/pages/:id/builder`.
 3. **Verify:** Block palette is visible on the left side.
 4. **Verify:** Canvas area renders without errors.
 
@@ -48,7 +48,7 @@ Run these after any stabilization change to confirm nothing is broken.
 5. **Verify:** No 404 or blank page.
 
 ### A7. Create a Section and Insert into Page (sectionRef)
-1. Navigate to `/admin/cms-v2/sections`.
+1. Navigate to `/admin/cms/sections`.
 2. Click **Create Section**.
 3. Name it (e.g. "Smoke CTA Section"), choose a type, add content.
 4. Save the section.
@@ -66,14 +66,14 @@ Run these after any stabilization change to confirm nothing is broken.
 5. **Verify:** Save succeeds. The block content persists but is now independent.
 
 ### A9. Create Template from a Page
-1. Navigate to `/admin/cms-v2/templates`.
+1. Navigate to `/admin/cms/templates`.
 2. Click **Create Template** (or use the "Save as Template" action from a page).
 3. Select the smoke test page as source (if applicable) or configure manually.
 4. **Verify:** Template appears in the templates list.
 5. **Verify:** Template shows a preview or metadata of its blocks.
 
 ### A10. Switch Theme, Preview, Activate
-1. Navigate to `/admin/cms-v2/themes`.
+1. Navigate to `/admin/cms/themes`.
 2. **Verify:** Theme list loads with available themes/theme packs.
 3. Click on a different theme to preview.
 4. **Verify:** Preview shows the updated colors/fonts.
@@ -87,7 +87,7 @@ Run these after any stabilization change to confirm nothing is broken.
 ## BLOG POSTS
 
 ### B1. Create a Blog Post
-1. Navigate to `/admin/cms-v2/posts`.
+1. Navigate to `/admin/cms/posts`.
 2. Click **New Post**.
 3. Fill in Title: "Smoke Blog Post", Slug: "smoke-blog-post".
 4. Add Body text, set Tags: ["smoke"], Category: "testing".
@@ -123,7 +123,7 @@ Run these after any stabilization change to confirm nothing is broken.
 ## NAVIGATION MENUS
 
 ### M1. Create a Menu
-1. Navigate to `/admin/cms-v2/menus`.
+1. Navigate to `/admin/cms/menus`.
 2. Click **New Menu**.
 3. Set Name: "Smoke Main Nav", Location: "main", Active: true.
 4. Click **Add Item** → select "External", Label: "Blog", URL: "/blog".

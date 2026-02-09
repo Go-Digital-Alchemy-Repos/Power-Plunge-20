@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ThemeProvider from "@/components/ThemeProvider";
-import CmsV2ErrorBoundary from "@/components/CmsV2ErrorBoundary";
+import CmsErrorBoundary from "@/components/CmsErrorBoundary";
 
 import Home from "@/pages/home";
 import Checkout from "@/pages/checkout";
@@ -57,23 +57,22 @@ const AdminRecovery = lazy(() => import("@/pages/admin-recovery"));
 const AdminAlerts = lazy(() => import("@/pages/admin-alerts"));
 const AdminSections = lazy(() => import("@/pages/admin-sections"));
 const AdminMediaLibrary = lazy(() => import("@/pages/admin-media-library"));
-const AdminCmsSettings = lazy(() => import("@/pages/admin-cms-settings"));
 const AdminAffiliateInviteSender = lazy(() => import("@/pages/admin-affiliate-invite-sender"));
-const AdminCmsV2 = lazy(() => import("@/pages/admin-cms-v2"));
-const AdminCmsV2Pages = lazy(() => import("@/pages/admin-cms-v2-pages"));
-const AdminCmsV2Sections = lazy(() => import("@/pages/admin-cms-v2-sections"));
-const AdminCmsV2Templates = lazy(() => import("@/pages/admin-cms-v2-templates"));
-const AdminCmsV2Themes = lazy(() => import("@/pages/admin-cms-v2-themes"));
-const AdminCmsV2Seo = lazy(() => import("@/pages/admin-cms-v2-seo"));
-const AdminCmsV2Settings = lazy(() => import("@/pages/admin-cms-v2-settings"));
-const AdminCmsV2Builder = lazy(() => import("@/pages/admin-cms-v2-builder"));
-const AdminCmsV2GeneratorLanding = lazy(() => import("@/pages/admin-cms-v2-generator-landing"));
-const AdminCmsV2GeneratorCampaigns = lazy(() => import("@/pages/admin-cms-v2-generator-campaigns"));
-const AdminCmsV2Presets = lazy(() => import("@/pages/admin-cms-v2-presets"));
-const AdminCmsV2Posts = lazy(() => import("@/pages/admin-cms-v2-posts"));
-const AdminCmsV2PostEditor = lazy(() => import("@/pages/admin-cms-v2-post-editor"));
-const AdminCmsV2PostBuilder = lazy(() => import("@/pages/admin-cms-v2-post-builder"));
-const AdminCmsV2Menus = lazy(() => import("@/pages/admin-cms-v2-menus"));
+const AdminCms = lazy(() => import("@/pages/admin-cms"));
+const AdminCmsPages = lazy(() => import("@/pages/admin-cms-pages"));
+const AdminCmsSections = lazy(() => import("@/pages/admin-cms-sections"));
+const AdminCmsTemplates = lazy(() => import("@/pages/admin-cms-templates"));
+const AdminCmsThemes = lazy(() => import("@/pages/admin-cms-themes"));
+const AdminCmsSeo = lazy(() => import("@/pages/admin-cms-seo"));
+const AdminCmsSettings = lazy(() => import("@/pages/admin-cms-settings"));
+const AdminCmsBuilder = lazy(() => import("@/pages/admin-cms-builder"));
+const AdminCmsGeneratorLanding = lazy(() => import("@/pages/admin-cms-generator-landing"));
+const AdminCmsGeneratorCampaigns = lazy(() => import("@/pages/admin-cms-generator-campaigns"));
+const AdminCmsPresets = lazy(() => import("@/pages/admin-cms-presets"));
+const AdminCmsPosts = lazy(() => import("@/pages/admin-cms-posts"));
+const AdminCmsPostEditor = lazy(() => import("@/pages/admin-cms-post-editor"));
+const AdminCmsPostBuilder = lazy(() => import("@/pages/admin-cms-post-builder"));
+const AdminCmsMenus = lazy(() => import("@/pages/admin-cms-menus"));
 
 function AdminRedirect() {
   const [, setLocation] = useLocation();
@@ -165,25 +164,24 @@ function Router() {
         <Route path="/admin/alerts" component={AdminAlerts} />
         <Route path="/admin/sections" component={AdminSections} />
         <Route path="/admin/media" component={AdminMediaLibrary} />
-        <Route path="/admin/cms-settings" component={AdminCmsSettings} />
         <Route path="/admin/support" component={AdminSupport} />
         <Route path="/admin/affiliate-invite-sender" component={AdminAffiliateInviteSender} />
-        <Route path="/admin/cms-v2/posts/new">{() => <CmsV2ErrorBoundary><AdminCmsV2PostEditor /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/posts/:id/edit">{() => <CmsV2ErrorBoundary><AdminCmsV2PostEditor /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/posts/:id/builder">{() => <CmsV2ErrorBoundary><AdminCmsV2PostBuilder /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/posts">{() => <CmsV2ErrorBoundary><AdminCmsV2Posts /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/menus">{() => <CmsV2ErrorBoundary><AdminCmsV2Menus /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/presets">{() => <CmsV2ErrorBoundary><AdminCmsV2Presets /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/generator/campaigns">{() => <CmsV2ErrorBoundary><AdminCmsV2GeneratorCampaigns /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/generator/landing">{() => <CmsV2ErrorBoundary><AdminCmsV2GeneratorLanding /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/pages/:id/builder">{() => <CmsV2ErrorBoundary><AdminCmsV2Builder /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/pages">{() => <CmsV2ErrorBoundary><AdminCmsV2Pages /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/sections">{() => <CmsV2ErrorBoundary><AdminCmsV2Sections /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/templates">{() => <CmsV2ErrorBoundary><AdminCmsV2Templates /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/themes">{() => <CmsV2ErrorBoundary><AdminCmsV2Themes /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/seo">{() => <CmsV2ErrorBoundary><AdminCmsV2Seo /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2/settings">{() => <CmsV2ErrorBoundary><AdminCmsV2Settings /></CmsV2ErrorBoundary>}</Route>
-        <Route path="/admin/cms-v2">{() => <CmsV2ErrorBoundary><AdminCmsV2 /></CmsV2ErrorBoundary>}</Route>
+        <Route path="/admin/cms/posts/new">{() => <CmsErrorBoundary><AdminCmsPostEditor /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/posts/:id/edit">{() => <CmsErrorBoundary><AdminCmsPostEditor /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/posts/:id/builder">{() => <CmsErrorBoundary><AdminCmsPostBuilder /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/posts">{() => <CmsErrorBoundary><AdminCmsPosts /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/menus">{() => <CmsErrorBoundary><AdminCmsMenus /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/presets">{() => <CmsErrorBoundary><AdminCmsPresets /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/generator/campaigns">{() => <CmsErrorBoundary><AdminCmsGeneratorCampaigns /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/generator/landing">{() => <CmsErrorBoundary><AdminCmsGeneratorLanding /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/pages/:id/builder">{() => <CmsErrorBoundary><AdminCmsBuilder /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/pages">{() => <CmsErrorBoundary><AdminCmsPages /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/sections">{() => <CmsErrorBoundary><AdminCmsSections /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/templates">{() => <CmsErrorBoundary><AdminCmsTemplates /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/themes">{() => <CmsErrorBoundary><AdminCmsThemes /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/seo">{() => <CmsErrorBoundary><AdminCmsSeo /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/settings">{() => <CmsErrorBoundary><AdminCmsSettings /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms">{() => <CmsErrorBoundary><AdminCms /></CmsErrorBoundary>}</Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>

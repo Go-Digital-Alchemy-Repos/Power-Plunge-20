@@ -20,6 +20,3 @@ export const env = {
 export const isDevelopment = env.NODE_ENV === "development";
 export const isProduction = env.NODE_ENV === "production";
 
-export function isCmsV2Enabled(): boolean {
-  return process.env.CMS_V2_ENABLED === "true";
-}

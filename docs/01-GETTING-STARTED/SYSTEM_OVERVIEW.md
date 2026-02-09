@@ -13,7 +13,7 @@ Power Plunge is a full-stack e-commerce platform for selling cold plunge tanks. 
 | Email | Mailgun | Transactional emails, recovery flows |
 | Auth | Custom + Replit Auth | Email/password, magic link, Google/Apple via Replit |
 | Storage | Replit Object Storage / Cloudflare R2 | File uploads, media |
-| CMS | CMS v2 (block-based) | Feature-flagged via `CMS_V2_ENABLED` |
+| CMS | CMS (block-based) | Feature-flagged via `CMS_ENABLED` |
 
 ## Subsystem Status
 
@@ -32,9 +32,9 @@ Power Plunge is a full-stack e-commerce platform for selling cold plunge tanks. 
 - Manual order creation
 - Email template management
 
-### CMS v2
+### CMS
 
-Feature-flagged (`CMS_V2_ENABLED=true`). Block-based page builder with:
+Feature-flagged (`CMS_ENABLED=true`). Block-based page builder with:
 
 - 24 registered block types across 6 categories (12 core + 12 Power Plunge domain-specific)
 - Saved sections with section kits
@@ -45,19 +45,19 @@ Feature-flagged (`CMS_V2_ENABLED=true`). Block-based page builder with:
 - Site presets (full-site composition with preview/activate/rollback)
 - Content validation (server-side shape checking on save)
 - HTML sanitization (scripts, event handlers, javascript: URIs stripped on save and render)
-- Error boundary wrapping all CMS v2 admin routes
+- Error boundary wrapping all CMS admin routes
 
 **Key files:**
 
 ```
-server/src/routes/admin/cms-v2.router.ts     -- All CMS v2 API endpoints
-server/src/services/cms-v2.service.ts        -- Business logic
-server/src/repositories/cms-v2.repository.ts -- Database queries
+server/src/routes/admin/cms.router.ts     -- All CMS API endpoints
+server/src/services/cms.service.ts        -- Business logic
+server/src/repositories/cms.repository.ts -- Database queries
 server/src/utils/contentValidation.ts        -- validateContentJson + sanitizeHtml
 client/src/cms/blocks/                       -- Block registry, components, schemas
 client/src/cms/themes/                       -- Theme tokens, presets, apply logic
 client/src/components/PageRenderer.tsx       -- Public page block renderer
-client/src/components/CmsV2ErrorBoundary.tsx  -- Error boundary for admin routes
+client/src/components/CmsErrorBoundary.tsx  -- Error boundary for admin routes
 ```
 
 ### Affiliate Program
@@ -133,7 +133,7 @@ Seed logic is idempotent: `ensureCmsDefaults()`, `seedDatabase()`, section kits,
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `CMS_V2_ENABLED` | `false` | Enable CMS v2 block builder |
+| `CMS_ENABLED` | `false` | Enable CMS block builder |
 | `USE_BETTER_AUTH` | `false` | Enable Better Auth integration |
 | `BETTER_AUTH_SECRET` | — | Session encryption for Better Auth |
 | `SENDGRID_API_KEY` | — | Mailgun API key (legacy variable name) |
@@ -145,14 +145,14 @@ On startup, the server:
 
 1. Connects to PostgreSQL
 2. Runs `ensureCmsDefaults()` to seed home/shop pages if missing
-3. Mounts all route handlers (including CMS v2 if enabled)
+3. Mounts all route handlers (including CMS if enabled)
 4. Registers and starts background job runner (4 jobs)
 5. Serves the Vite-built frontend on port 5000
 
 ## Related Documentation
 
 - [Project Structure](../02-ARCHITECTURE/PROJECT_STRUCTURE.md)
-- [CMS v2 Overview](../19-CMS-V2/01-OVERVIEW.md)
-- [CMS v2 API Reference](../19-CMS-V2/09-API-REFERENCE.md)
+- [CMS Overview](../19-CMS/01-OVERVIEW.md)
+- [CMS API Reference](../19-CMS/09-API-REFERENCE.md)
 - [Scripts Reference](../09-TESTING/SCRIPTS.md)
 - [Troubleshooting](../14-TROUBLESHOOTING/TOP_10_ISSUES.md)

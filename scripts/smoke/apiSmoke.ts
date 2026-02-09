@@ -24,60 +24,60 @@ interface Check {
 }
 
 const checks: Check[] = [
-  // ── CMS v2 Health ──
+  // ── CMS Health ──
   {
-    name: "CMS v2 health",
-    url: "/api/admin/cms-v2/health",
+    name: "CMS health",
+    url: "/api/admin/cms/health",
     expectStatus: [200, 401],
     note: "200 with auth, 401 without",
   },
 
-  // ── Admin CMS v2 endpoints (expect 401 without auth) ──
+  // ── Admin CMS endpoints (expect 401 without auth) ──
   {
-    name: "Admin CMS v2 pages (no auth)",
-    url: "/api/admin/cms-v2/pages",
+    name: "Admin CMS pages (no auth)",
+    url: "/api/admin/cms/pages",
     expectStatus: 401,
     note: "Auth required",
   },
   {
-    name: "Admin CMS v2 sections (no auth)",
-    url: "/api/admin/cms-v2/sections",
+    name: "Admin CMS sections (no auth)",
+    url: "/api/admin/cms/sections",
     expectStatus: 401,
     note: "Auth required",
   },
   {
-    name: "Admin CMS v2 templates (no auth)",
-    url: "/api/admin/cms-v2/templates",
+    name: "Admin CMS templates (no auth)",
+    url: "/api/admin/cms/templates",
     expectStatus: 401,
     note: "Auth required",
   },
   {
-    name: "Admin CMS v2 themes (no auth)",
-    url: "/api/admin/cms-v2/themes",
+    name: "Admin CMS themes (no auth)",
+    url: "/api/admin/cms/themes",
     expectStatus: 401,
     note: "Auth required",
   },
   {
-    name: "Admin CMS v2 posts (no auth)",
-    url: "/api/admin/cms-v2/posts",
+    name: "Admin CMS posts (no auth)",
+    url: "/api/admin/cms/posts",
     expectStatus: 401,
     note: "Auth required",
   },
   {
-    name: "Admin CMS v2 menus (no auth)",
-    url: "/api/admin/cms-v2/menus",
+    name: "Admin CMS menus (no auth)",
+    url: "/api/admin/cms/menus",
     expectStatus: 401,
     note: "Auth required",
   },
   {
-    name: "Admin CMS v2 site-settings (no auth)",
-    url: "/api/admin/cms-v2/site-settings",
+    name: "Admin CMS site-settings (no auth)",
+    url: "/api/admin/cms/site-settings",
     expectStatus: 401,
     note: "Auth required",
   },
   {
-    name: "Admin CMS v2 site-presets (no auth)",
-    url: "/api/admin/cms-v2/site-presets",
+    name: "Admin CMS site-presets (no auth)",
+    url: "/api/admin/cms/site-presets",
     expectStatus: 401,
     note: "Auth required",
   },
@@ -215,8 +215,8 @@ async function main() {
   console.log(`=== API Smoke Tests ===`);
   console.log(`Base URL: ${BASE}\n`);
 
-  console.log("── CMS v2 & Health ──");
-  for (const c of checks.filter((c) => c.url.includes("cms-v2") || c.url.includes("health"))) {
+  console.log("── CMS & Health ──");
+  for (const c of checks.filter((c) => c.url.includes("cms") || c.url.includes("health"))) {
     await runCheck(c);
   }
 

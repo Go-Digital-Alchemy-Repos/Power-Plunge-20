@@ -8,7 +8,7 @@ All scripts are located in the `scripts/` directory and run with `npx tsx`. They
 |--------|------|---------|-------------|
 | Doctor | `scripts/doctor.ts` | Environment health check | No |
 | Verify Schema | `scripts/db/verifySchema.ts` | Database table verification | No |
-| CMS Parity Check | `scripts/cmsParityCheck.ts` | Legacy vs CMS v2 data consistency | No |
+| CMS Parity Check | `scripts/cmsParityCheck.ts` | Legacy vs CMS data consistency | No |
 | Content Safety | `scripts/smoke/cmsContentSafety.ts` | Content validation regression tests | No |
 | API Smoke | `scripts/smoke/apiSmoke.ts` | HTTP endpoint smoke tests | No |
 | Blog Smoke | `scripts/smoke/blogSmoke.ts` | Blog post lifecycle tests | Creates/deletes test data |
@@ -25,7 +25,7 @@ npx tsx scripts/doctor.ts
 
 **Checks performed:**
 1. Required environment variables (`DATABASE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`)
-2. Optional environment variables with warnings (`SENDGRID_API_KEY`, `CMS_V2_ENABLED`, etc.)
+2. Optional environment variables with warnings (`SENDGRID_API_KEY`, `CMS_ENABLED`, etc.)
 3. Database connection (attempts a simple query)
 4. Integration configuration status (Stripe, Mailgun, Replit Auth)
 
@@ -89,18 +89,18 @@ npx tsx scripts/smoke/apiSmoke.ts
 
 **Endpoint categories tested (22 checks):**
 
-### CMS v2 & Health (9 checks)
+### CMS & Health (9 checks)
 | Check | Endpoint | Expected |
 |-------|----------|----------|
-| CMS v2 health | `GET /api/admin/cms-v2/health` | 200 with auth, 401 without |
-| Admin pages | `GET /api/admin/cms-v2/pages` | 401 (no auth) |
-| Admin sections | `GET /api/admin/cms-v2/sections` | 401 (no auth) |
-| Admin templates | `GET /api/admin/cms-v2/templates` | 401 (no auth) |
-| Admin themes | `GET /api/admin/cms-v2/themes` | 401 (no auth) |
-| Admin posts | `GET /api/admin/cms-v2/posts` | 401 (no auth) |
-| Admin menus | `GET /api/admin/cms-v2/menus` | 401 (no auth) |
-| Admin site-settings | `GET /api/admin/cms-v2/site-settings` | 401 (no auth) |
-| Admin site-presets | `GET /api/admin/cms-v2/site-presets` | 401 (no auth) |
+| CMS health | `GET /api/admin/cms/health` | 200 with auth, 401 without |
+| Admin pages | `GET /api/admin/cms/pages` | 401 (no auth) |
+| Admin sections | `GET /api/admin/cms/sections` | 401 (no auth) |
+| Admin templates | `GET /api/admin/cms/templates` | 401 (no auth) |
+| Admin themes | `GET /api/admin/cms/themes` | 401 (no auth) |
+| Admin posts | `GET /api/admin/cms/posts` | 401 (no auth) |
+| Admin menus | `GET /api/admin/cms/menus` | 401 (no auth) |
+| Admin site-settings | `GET /api/admin/cms/site-settings` | 401 (no auth) |
+| Admin site-presets | `GET /api/admin/cms/site-presets` | 401 (no auth) |
 
 ### Public Endpoints (10 checks)
 | Check | Endpoint | Expected |
@@ -130,7 +130,7 @@ npx tsx scripts/smoke/apiSmoke.ts
 **Output format:**
 ```
 === API Smoke Tests ===
-  PASS  CMS v2 health  (200 with auth, 401 without)
+  PASS  CMS health  (200 with auth, 401 without)
   ...
 === Results: 22 passed, 0 failed, 0 warnings ===
 ```
@@ -184,7 +184,7 @@ Exit code: `0` if all 19 checks pass, `1` otherwise.
 
 ## scripts/cmsParityCheck.ts
 
-Compares data between the legacy CMS storage layer and the CMS v2 repository to verify consistency.
+Compares data between the legacy CMS storage layer and the CMS repository to verify consistency.
 
 **Run:**
 ```bash

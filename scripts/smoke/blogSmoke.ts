@@ -2,7 +2,7 @@
 /**
  * Blog / Posts Smoke Tests
  *
- * Exercises the CMS v2 Posts system via direct service calls:
+ * Exercises the CMS Posts system via direct service calls:
  *   - Admin: list, create, publish, unpublish, delete
  *   - Public: list published only, get by slug
  *
@@ -10,9 +10,9 @@
  */
 
 import { db } from "../../server/db";
-import { cmsV2Posts } from "../../shared/schema";
+import { cmsPosts } from "../../shared/schema";
 import { eq } from "drizzle-orm";
-import { cmsV2PostsService } from "../../server/src/services/cms-v2-posts.service";
+import { cmsPostsService } from "../../server/src/services/cms-posts.service";
 
 let pass = 0;
 let fail = 0;
@@ -31,7 +31,7 @@ function assert(label: string, ok: boolean, detail?: string) {
 async function cleanup() {
   for (const id of created) {
     try {
-      await db.delete(cmsV2Posts).where(eq(cmsV2Posts.id, id));
+      await db.delete(cmsPosts).where(eq(cmsPosts.id, id));
     } catch {}
   }
 }
@@ -41,7 +41,7 @@ async function main() {
 
   // ── Admin: list posts ──
   console.log("[Admin] List posts");
-  const initialList = await cmsV2PostsService.list();
+  const initialList = await cmsPostsService.list();
   assert("list() returns array", Array.isArray(initialList));
 
   // ── Admin: create a draft post ──
@@ -49,7 +49,7 @@ async function main() {
   const slug = `smoke-test-post-${Date.now()}`;
   let postId: string | null = null;
   try {
-    const post = await cmsV2PostsService.create({
+    const post = await cmsPostsService.create({
       title: "Smoke Test Post",
       slug,
       body: "<p>Hello from smoke test</p>",
@@ -70,14 +70,14 @@ async function main() {
 
   // ── Public: list published (should NOT include our draft) ──
   console.log("\n[Public] List published posts (draft should be hidden)");
-  const pubListBefore = await cmsV2PostsService.listPublished();
+  const pubListBefore = await cmsPostsService.listPublished();
   assert("listPublished() returns array", Array.isArray(pubListBefore));
   const draftInPublic = pubListBefore.find((p: any) => p.slug === slug);
   assert("draft post NOT in published list", !draftInPublic);
 
   // ── Public: get draft by slug (should fail) ──
   console.log("\n[Public] Get draft by slug (should return null)");
-  const pubDraft = await cmsV2PostsService.getPublishedBySlug(slug);
+  const pubDraft = await cmsPostsService.getPublishedBySlug(slug);
   assert("draft not accessible via getPublishedBySlug()", pubDraft === null || pubDraft === undefined);
 
   if (!postId) {
@@ -90,7 +90,7 @@ async function main() {
   // ── Admin: publish the post ──
   console.log("\n[Admin] Publish post");
   try {
-    const published = await cmsV2PostsService.publish(postId);
+    const published = await cmsPostsService.publish(postId);
     assert("publish() returns post", !!published);
     assert("publish() status is published", published?.status === "published");
     assert("publish() sets publishedAt", !!published?.publishedAt);
@@ -100,20 +100,20 @@ async function main() {
 
   // ── Public: now should appear in published list ──
   console.log("\n[Public] Published post now visible");
-  const pubListAfter = await cmsV2PostsService.listPublished();
+  const pubListAfter = await cmsPostsService.listPublished();
   const pubPost = pubListAfter.find((p: any) => p.slug === slug);
   assert("published post appears in listPublished()", !!pubPost);
 
   // ── Public: get by slug ──
   console.log("\n[Public] Get published post by slug");
-  const bySlug = await cmsV2PostsService.getPublishedBySlug(slug);
+  const bySlug = await cmsPostsService.getPublishedBySlug(slug);
   assert("getPublishedBySlug() returns post", !!bySlug);
   assert("getPublishedBySlug() title matches", bySlug?.title === "Smoke Test Post");
 
   // ── Admin: unpublish ──
   console.log("\n[Admin] Unpublish post");
   try {
-    const unpub = await cmsV2PostsService.unpublish(postId);
+    const unpub = await cmsPostsService.unpublish(postId);
     assert("unpublish() returns post", !!unpub);
     assert("unpublish() status is draft", unpub?.status === "draft");
   } catch (err: any) {
@@ -122,13 +122,13 @@ async function main() {
 
   // ── Public: unpublished no longer visible ──
   console.log("\n[Public] Unpublished post hidden again");
-  const pubAfterUnpub = await cmsV2PostsService.getPublishedBySlug(slug);
+  const pubAfterUnpub = await cmsPostsService.getPublishedBySlug(slug);
   assert("unpublished post not accessible", pubAfterUnpub === null || pubAfterUnpub === undefined);
 
   // ── Admin: delete ──
   console.log("\n[Admin] Delete post");
   try {
-    const deleted = await cmsV2PostsService.remove(postId);
+    const deleted = await cmsPostsService.remove(postId);
     assert("remove() returns deleted post", !!deleted);
     created.splice(created.indexOf(postId), 1);
   } catch (err: any) {
@@ -136,7 +136,7 @@ async function main() {
   }
 
   // ── Verify deletion ──
-  const afterDelete = await cmsV2PostsService.getById(postId);
+  const afterDelete = await cmsPostsService.getById(postId);
   assert("deleted post no longer exists", !afterDelete);
 
   // ── Cleanup ──

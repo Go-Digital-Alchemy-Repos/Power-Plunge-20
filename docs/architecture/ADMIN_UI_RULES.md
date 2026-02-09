@@ -6,7 +6,7 @@
 |-------|-------|-------|
 | Page background | `bg-gray-950` | All admin pages |
 | Card / Panel background | `bg-gray-900/50` | Cards, panels, modals |
-| Sidebar background | `bg-gray-900/80` | CmsV2Layout sidebar |
+| Sidebar background | `bg-gray-900/80` | CmsLayout sidebar |
 | Text – heading | `text-white` | Titles, headings |
 | Text – body | `text-gray-400` | Descriptions, secondary text |
 | Text – muted | `text-gray-500` | Placeholders, labels |
@@ -19,22 +19,22 @@
 
 ## Layout Patterns
 
-### CMS v2 Pages
-All CMS v2 pages **must** wrap content in `<CmsV2Layout>`:
+### CMS Pages
+All CMS pages **must** wrap content in `<CmsLayout>`:
 
 ```tsx
-import CmsV2Layout from "@/components/admin/CmsV2Layout";
+import CmsLayout from "@/components/admin/CmsLayout";
 
 export default function MyCmsPage() {
   return (
-    <CmsV2Layout breadcrumbs={[{ label: "My Page" }]} activeNav="mypage">
+    <CmsLayout breadcrumbs={[{ label: "My Page" }]} activeNav="mypage">
       {/* page content */}
-    </CmsV2Layout>
+    </CmsLayout>
   );
 }
 ```
 
-**Exception:** Builder pages (`admin-cms-v2-builder`, `admin-cms-v2-post-builder`) use `AdminNav` with a full-width canvas for the Puck editor. This is intentional.
+**Exception:** Builder pages (`admin-cms-builder`, `admin-cms-post-builder`) use `AdminNav` with a full-width canvas for the Puck editor. This is intentional.
 
 ### Non-CMS Admin Pages
 Non-CMS admin pages use `AdminNav` for the top navigation bar and manage their own content layout. Use `AdminPage`, `AdminCard`, `AdminSection`, `AdminToolbar`, and `AdminStat` primitives from `@/components/admin/AdminPagePrimitives` for consistent styling.
@@ -56,14 +56,14 @@ Non-CMS admin pages use `AdminNav` for the top navigation bar and manage their o
 - Use colors outside the token palette (no custom hex colors)
 - Create one-off card styles when `AdminCard` exists
 - Use `text-black` or dark-on-light patterns
-- Skip `CmsV2Layout` on CMS v2 pages (except builders)
-- Hardcode `ml-56` or `ml-16` — let CmsV2Layout handle sidebar offset
+- Skip `CmsLayout` on CMS pages (except builders)
+- Hardcode `ml-56` or `ml-16` — let CmsLayout handle sidebar offset
 
 ## Component Import Paths
 
 ```tsx
 // Layout
-import CmsV2Layout from "@/components/admin/CmsV2Layout";
+import CmsLayout from "@/components/admin/CmsLayout";
 import AdminNav from "@/components/admin/AdminNav";
 
 // Primitives

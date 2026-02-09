@@ -31,7 +31,7 @@ import {
   Sparkles,
   Loader2,
 } from "lucide-react";
-import CmsV2Layout from "@/components/admin/CmsV2Layout";
+import CmsLayout from "@/components/admin/CmsLayout";
 
 interface MediaItem {
   id: string;
@@ -296,7 +296,7 @@ export default function AdminMediaLibrary() {
 
   if (!isAdminLoading && !hasFullAccess) {
     return (
-      <CmsV2Layout activeNav="media" breadcrumbs={[{ label: "Media Library" }]}>
+      <CmsLayout activeNav="media" breadcrumbs={[{ label: "Media Library" }]}>
         <div className="max-w-2xl mx-auto p-8 text-center">
           <Card className="bg-gray-900 border-gray-800">
             <CardContent className="p-8">
@@ -305,12 +305,12 @@ export default function AdminMediaLibrary() {
             </CardContent>
           </Card>
         </div>
-      </CmsV2Layout>
+      </CmsLayout>
     );
   }
 
   return (
-    <CmsV2Layout activeNav="media" breadcrumbs={[{ label: "Media Library" }]}>
+    <CmsLayout activeNav="media" breadcrumbs={[{ label: "Media Library" }]}>
       <div>
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -751,6 +751,6 @@ export default function AdminMediaLibrary() {
         </DialogContent>
       </Dialog>
       </div>
-    </CmsV2Layout>
+    </CmsLayout>
   );
 }

@@ -33,9 +33,9 @@ This document defines the stabilization checklist and definition of done for the
 | 3.7 | Site settings | `GET /api/site-settings` | 200 with `featuredProductId` |
 | 3.8 | Stripe config | `GET /api/stripe/config` | 200 with `publishableKey` |
 | 3.9 | Admin CRUD | All admin `/api/admin/*` endpoints | Correct auth enforcement (401 without token) |
-| 3.10 | CMS v2 API | `GET/POST/PUT/DELETE /api/admin/cms-v2/*` | CRUD operations succeed with auth |
-| 3.11 | Site Presets API | `GET/POST /api/admin/cms-v2/site-presets/*` | CRUD, preview, activate, rollback |
-| 3.12 | Site Settings API | `GET/PUT /api/admin/cms-v2/site-settings` | Read/write with Zod validation |
+| 3.10 | CMS API | `GET/POST/PUT/DELETE /api/admin/cms/*` | CRUD operations succeed with auth |
+| 3.11 | Site Presets API | `GET/POST /api/admin/cms/site-presets/*` | CRUD, preview, activate, rollback |
+| 3.12 | Site Settings API | `GET/PUT /api/admin/cms/site-settings` | Read/write with Zod validation |
 
 ## 4. E2E Smoke Tests (Admin + Public)
 
@@ -61,7 +61,7 @@ This document defines the stabilization checklist and definition of done for the
 | 4.11 | Products management | CRUD a product | Create, edit, delete all succeed |
 | 4.12 | Customers list | Navigate to customers | Customer table renders |
 | 4.13 | Affiliate management | Navigate to affiliates | Affiliate list renders |
-| 4.14 | CMS v2 pages | Navigate to CMS v2 pages | Page list renders |
+| 4.14 | CMS pages | Navigate to CMS pages | Page list renders |
 | 4.15 | Role enforcement | Login as fulfillment role | Restricted pages show Access Denied |
 
 ## 5. Database Migrations Status
@@ -82,7 +82,7 @@ This document defines the stabilization checklist and definition of done for the
 | 6.3 | CMS defaults | `ensureCmsDefaults()` runs on boot | Home and shop pages exist |
 | 6.4 | Site settings row | Check `site_settings` where `id='main'` | Row exists with `activeThemeId` |
 | 6.5 | Starter kits available | Check saved sections | Section kits loadable from admin |
-| 6.6 | Site preset seeds | `POST /api/admin/cms-v2/site-presets/seed` | 6 starter presets available |
+| 6.6 | Site preset seeds | `POST /api/admin/cms/site-presets/seed` | 6 starter presets available |
 
 ## 7. Auth Checks (Admin Only)
 
@@ -95,17 +95,17 @@ This document defines the stabilization checklist and definition of done for the
 | 7.5 | Customer auth | Login via email/password or magic link | Session token issued, My Account accessible |
 | 7.6 | Better Auth (if enabled) | Set `USE_BETTER_AUTH=true` | `/auth/login` and `/auth/register` render |
 
-## 8. CMS v2 Health Checks
+## 8. CMS Health Checks
 
 | # | Check | Method | Pass Criteria |
 |---|-------|--------|---------------|
-| 8.1 | Feature flag off | Set `CMS_V2_ENABLED=false` | CMS v2 sidebar hidden, API still mounted |
-| 8.2 | Feature flag on | Set `CMS_V2_ENABLED=true` | Full CMS v2 admin accessible |
+| 8.1 | Feature flag off | Set `CMS_ENABLED=false` | CMS sidebar hidden, API still mounted |
+| 8.2 | Feature flag on | Set `CMS_ENABLED=true` | Full CMS admin accessible |
 | 8.3 | Block registry | Load page builder | All 12 block types available |
 | 8.4 | Theme system | Activate a theme | CSS variables apply to storefront |
 | 8.5 | Theme packs | Activate a theme pack | Tokens + component variants + block defaults apply |
 | 8.6 | Site presets | Activate → rollback | Settings apply and restore correctly |
-| 8.7 | Site settings | `GET /api/admin/cms-v2/site-settings` | Returns valid JSON with settings |
+| 8.7 | Site settings | `GET /api/admin/cms/site-settings` | Returns valid JSON with settings |
 | 8.8 | Landing page generator | Generate a page | Draft page created with correct blocks |
 | 8.9 | Campaign packs | Generate a campaign | Multiple draft pages created |
 | 8.10 | Preset-aware campaigns | Generate with preset selected | Pages inherit preset theme, SEO, CTA |
@@ -114,7 +114,7 @@ This document defines the stabilization checklist and definition of done for the
 | 8.13 | Blog post by slug | `GET /api/blog/posts/:slug` | Returns published post, 404 for draft |
 | 8.14 | Blog tags & categories | `GET /api/blog/tags`, `/categories` | Returns arrays of strings |
 | 8.15 | Navigation menus CRUD | Admin create/edit/delete menu | CRUD succeeds, items persisted |
-| 8.16 | Menu by-location | `GET/PUT /api/admin/cms-v2/menus/by-location/:loc` | Returns menu or creates new |
+| 8.16 | Menu by-location | `GET/PUT /api/admin/cms/menus/by-location/:loc` | Returns menu or creates new |
 | 8.17 | Public menu endpoint | `GET /api/menus/main` | Returns active menu or null |
 | 8.18 | DynamicNav rendering | Visit homepage with active menu | Nav links render, dropdowns work |
 | 8.19 | DynamicNav fallback | Visit homepage with no menu | No crash, existing nav preserved |
@@ -123,10 +123,10 @@ This document defines the stabilization checklist and definition of done for the
 
 | # | Check | Method | Pass Criteria |
 |---|-------|--------|---------------|
-| 9.1 | Builder loads | Open `/admin/cms-v2/pages/:id/builder` | Puck editor renders with existing blocks |
+| 9.1 | Builder loads | Open `/admin/cms/pages/:id/builder` | Puck editor renders with existing blocks |
 | 9.2 | Add block | Drag a block from sidebar | Block appears in editor |
 | 9.3 | Edit block | Click block → edit properties | Changes reflect in preview |
-| 9.4 | Save draft | Click Save | `PUT /api/admin/cms-v2/pages/:id` succeeds, toast confirms |
+| 9.4 | Save draft | Click Save | `PUT /api/admin/cms/pages/:id` succeeds, toast confirms |
 | 9.5 | Publish page | Set status to published → save | Page accessible at `/page/:slug` |
 | 9.6 | Section ref insertion | Insert a saved section | sectionRef block renders with section content |
 | 9.7 | Section detach | Detach a section ref | Blocks inline into the page |
@@ -135,18 +135,18 @@ This document defines the stabilization checklist and definition of done for the
 
 | # | Check | Method | Pass Criteria |
 |---|-------|--------|---------------|
-| 10.1 | Sections list | Navigate to `/admin/cms-v2/sections` | Sections table renders |
+| 10.1 | Sections list | Navigate to `/admin/cms/sections` | Sections table renders |
 | 10.2 | Create section | Create a new section | Section saved to database |
 | 10.3 | Load starter kits | Click "Load Starter Kits" | 5 kits created (Benefits, Safety, Delivery, Warranty, Financing) |
-| 10.4 | Templates list | Navigate to `/admin/cms-v2/templates` | Templates display (3 built-in) |
-| 10.5 | Theme activation | Switch theme in `/admin/cms-v2/themes` | Theme applies immediately |
+| 10.4 | Templates list | Navigate to `/admin/cms/templates` | Templates display (3 built-in) |
+| 10.5 | Theme activation | Switch theme in `/admin/cms/themes` | Theme applies immediately |
 | 10.6 | Theme pack activation | Switch pack in Theme Packs tab | All 3 layers apply (tokens, variants, block defaults) |
 
 ## 11. Public Rendering Checks (Blocks + Legacy HTML)
 
 | # | Check | Method | Pass Criteria |
 |---|-------|--------|---------------|
-| 11.1 | CMS v2 blocks render | Visit a published CMS v2 page | All block types render correctly |
+| 11.1 | CMS blocks render | Visit a published CMS page | All block types render correctly |
 | 11.2 | Legacy HTML render | Visit a page with `content` (HTML) | HTML renders in legacy renderer |
 | 11.3 | Home page resolution | `GET /api/pages/home` | Returns the page with `isHome=true` |
 | 11.4 | Shop page resolution | `GET /api/pages/shop` | Returns the page with `isShop=true` |
@@ -209,7 +209,7 @@ Track known issues that are accepted for now but should be addressed:
 
 | # | Issue | Severity | Area | Notes |
 |---|-------|----------|------|-------|
-| 16.1 | React hydration warning in campaign dialog | Low | CMS v2 Generator | Cosmetic only, does not affect functionality |
+| 16.1 | React hydration warning in campaign dialog | Low | CMS Generator | Cosmetic only, does not affect functionality |
 | 16.2 | | | | |
 | 16.3 | | | | |
 
@@ -235,8 +235,8 @@ Stabilization is complete when ALL of the following criteria are met:
 - [ ] Product listing and detail — no JS console errors
 - [ ] Cart and checkout flow — no JS console errors
 - [ ] Admin login and dashboard — no JS console errors
-- [ ] CMS v2 page builder — no JS console errors
-- [ ] CMS v2 presets manager — no JS console errors
+- [ ] CMS page builder — no JS console errors
+- [ ] CMS presets manager — no JS console errors
 
 ### No 500s on Key Endpoints
 - [ ] `GET /api/products` — no 500
@@ -244,13 +244,13 @@ Stabilization is complete when ALL of the following criteria are met:
 - [ ] `GET /api/pages/shop` — no 500
 - [ ] `POST /api/create-payment-intent` — no 500 (expected 400 on bad input)
 - [ ] `GET /api/site-settings` — no 500
-- [ ] `GET /api/admin/cms-v2/site-settings` — no 500 (with auth)
-- [ ] `GET /api/admin/cms-v2/site-presets` — no 500 (with auth)
+- [ ] `GET /api/admin/cms/site-settings` — no 500 (with auth)
+- [ ] `GET /api/admin/cms/site-presets` — no 500 (with auth)
 - [ ] All admin CRUD endpoints — no 500 on valid requests
 
-### Parity Script (Legacy vs CMS v2)
+### Parity Script (Legacy vs CMS)
 - [ ] Pages with legacy `content` (HTML) still render correctly
-- [ ] Pages with CMS v2 `contentJson` (blocks) render correctly
+- [ ] Pages with CMS `contentJson` (blocks) render correctly
 - [ ] Home page and shop page designations work for both content types
 - [ ] Theme application works for both rendering paths
 

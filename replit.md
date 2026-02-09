@@ -26,7 +26,7 @@ The Power Plunge e-commerce platform utilizes a modern full-stack architecture.
 
 **Admin UI Design System:**
 - Admin pages use a dark design system: bg-gray-950 (page), bg-gray-900/50 (cards), border-gray-800/60
-- CMS v2 pages use `CmsV2Layout` for consistent sidebar + topbar chrome
+- CMS pages use `CmsLayout` for consistent sidebar + topbar chrome
 - Reusable primitives in `client/src/components/admin/AdminPagePrimitives.tsx`: AdminPage, AdminSection, AdminCard, AdminToolbar, AdminStat
 - Theme preview is isolated — never modifies `:root` CSS variables from admin pages
 - Full rules documented in `docs/architecture/ADMIN_UI_RULES.md`
@@ -51,7 +51,7 @@ The Power Plunge e-commerce platform utilizes a modern full-stack architecture.
 - **Revenue Guardrails:** Monitors critical metrics, provides alerts with configurable thresholds, and includes an admin dashboard.
 - **Developer Observability:** Request logging with correlation IDs, centralized error handling, and environment validation.
 - **Background Job System:** Lightweight in-process job runner for scheduled tasks (e.g., payouts, commission auto-approval, metrics aggregation) with duplicate prevention and logging.
-- **CMS v2 Blog Posts & Navigation Menus:** Includes management for blog posts and navigation menus, with rich text editing, SEO fields, and drag-and-drop UI for menus.
+- **CMS Blog Posts & Navigation Menus:** Includes management for blog posts and navigation menus, with rich text editing, SEO fields, and drag-and-drop UI for menus.
 - **CMS Page Builder:** Supports block-based page builder architecture for custom landing pages, home page, and shop page, with uniqueness enforcement for home/shop pages and default page creation on server startup.
 - **App Docs System:** File-system-based read-only documentation browser in the admin area, with auto-generation of API reference docs from Express route files.
 

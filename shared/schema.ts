@@ -1602,11 +1602,6 @@ export const insertCmsPostSchema = createInsertSchema(cmsPosts).omit({ id: true,
 export type InsertCmsPost = z.infer<typeof insertCmsPostSchema>;
 export type CmsPost = typeof cmsPosts.$inferSelect;
 
-export const cmsV2Posts = cmsPosts;
-export const insertCmsV2PostSchema = insertCmsPostSchema;
-export type InsertCmsV2Post = InsertCmsPost;
-export type CmsV2Post = CmsPost;
-
 // ==================== CMS: Navigation Menus ====================
 export const menuItemSchema: z.ZodType<any> = z.object({
   id: z.string(),
@@ -1637,11 +1632,6 @@ export const cmsMenus = pgTable("cms_v2_menus", {
 export const insertCmsMenuSchema = createInsertSchema(cmsMenus).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCmsMenu = z.infer<typeof insertCmsMenuSchema>;
 export type CmsMenu = typeof cmsMenus.$inferSelect;
-
-export const cmsV2Menus = cmsMenus;
-export const insertCmsV2MenuSchema = insertCmsMenuSchema;
-export type InsertCmsV2Menu = InsertCmsMenu;
-export type CmsV2Menu = CmsMenu;
 
 // ==================== Blog Posts Data Model ====================
 

@@ -1,4 +1,4 @@
-import type { InsertSitePresetInput } from "../schemas/cmsV2.sitePresets.schema";
+import type { InsertSitePresetInput } from "../schemas/cms.sitePresets.schema";
 
 export const SITE_PRESET_SEEDS: InsertSitePresetInput[] = [
   {
