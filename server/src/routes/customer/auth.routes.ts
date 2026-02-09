@@ -329,6 +329,99 @@ router.post("/change-password", requireCustomerAuth, async (req: AuthenticatedRe
   }
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+
+    const customer = await storage.getCustomerByEmail(email);
+    if (customer) {
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+      await storage.createPasswordResetToken({
+        email: customer.email,
+        token,
+        expiresAt,
+        used: false,
+      });
+
+      await customerEmailService.sendPasswordResetEmail(customer.email, customer.name || "there", token);
+    }
+
+    res.json({
+      success: true,
+      message: "If an account exists with this email, you will receive a password reset link shortly.",
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid email address" });
+    }
+    console.error("Forgot password error:", error);
+    res.status(500).json({ message: "Failed to process password reset request" });
+  }
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = resetPasswordSchema.parse(req.body);
+
+    const tokenRecord = await storage.getPasswordResetToken(token);
+
+    if (!tokenRecord) {
+      return res.status(400).json({ message: "Invalid or expired reset link" });
+    }
+
+    if (tokenRecord.used) {
+      return res.status(400).json({ message: "This reset link has already been used" });
+    }
+
+    if (new Date() > tokenRecord.expiresAt) {
+      return res.status(400).json({ message: "This reset link has expired. Please request a new one." });
+    }
+
+    const customer = await storage.getCustomerByEmail(tokenRecord.email);
+    if (!customer) {
+      return res.status(400).json({ message: "Account not found" });
+    }
+
+    if (customer.isDisabled) {
+      return res.status(403).json({ message: "This account has been disabled" });
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await storage.updateCustomer(customer.id, { passwordHash: newPasswordHash });
+    await storage.markPasswordResetTokenUsed(token);
+
+    const sessionToken = createSessionToken(customer.id, customer.email);
+
+    res.json({
+      success: true,
+      message: "Password has been reset successfully",
+      sessionToken,
+      customer: {
+        id: customer.id,
+        email: customer.email,
+        name: customer.name,
+      },
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: error.errors[0].message });
+    }
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Failed to reset password" });
+  }
+});
+
 router.post("/verify-session", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;

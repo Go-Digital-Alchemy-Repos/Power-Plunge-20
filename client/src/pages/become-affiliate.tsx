@@ -109,6 +109,8 @@ export default function BecomeAffiliate() {
   const [customCode, setCustomCode] = useState("");
   const [editingCode, setEditingCode] = useState(false);
 
+  const [existingAccountError, setExistingAccountError] = useState(false);
+
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
@@ -199,10 +201,15 @@ export default function BecomeAffiliate() {
         }),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.message || "Signup failed");
+      if (!res.ok) {
+        const err: any = new Error(result.message || "Signup failed");
+        err.existingCustomer = result.existingCustomer || false;
+        throw err;
+      }
       return result;
     },
     onSuccess: async (data) => {
+      setExistingAccountError(false);
       if (data.sessionToken) {
         localStorage.setItem("customerSessionToken", data.sessionToken);
         setSessionToken(data.sessionToken);
@@ -222,6 +229,10 @@ export default function BecomeAffiliate() {
       trackEvent("step_viewed", { step: "payout" });
     },
     onError: (error: any) => {
+      if (error.existingCustomer) {
+        setExistingAccountError(true);
+        setCurrentStep("account");
+      }
       toast({
         title: "Signup failed",
         description: error.message,
@@ -921,6 +932,32 @@ export default function BecomeAffiliate() {
         )}
         {formData.password && formData.password.length > 0 && formData.password.length < 8 && (
           <p className="text-sm text-destructive">Password must be at least 8 characters</p>
+        )}
+
+        {existingAccountError && (
+          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-3" data-testid="existing-account-notice">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-amber-600">An account with this email already exists</p>
+                <p className="text-xs text-muted-foreground">
+                  Please enter your existing account password above. If you've forgotten your password, you can reset it.
+                </p>
+              </div>
+            </div>
+            <Link href={`/reset-password?returnTo=${encodeURIComponent(`/become-affiliate${inviteCode ? `?code=${inviteCode}` : ""}`)}`}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 gap-2"
+                data-testid="button-forgot-password"
+              >
+                <Lock className="w-4 h-4" />
+                Reset My Password
+              </Button>
+            </Link>
+          </div>
         )}
 
         <div className="flex gap-3 pt-4">

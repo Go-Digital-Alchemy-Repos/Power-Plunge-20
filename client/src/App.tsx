@@ -24,6 +24,7 @@ const BetterAuthLogin = lazy(() => import("@/pages/better-auth-login"));
 const BetterAuthRegister = lazy(() => import("@/pages/better-auth-register"));
 const BecomeAffiliate = lazy(() => import("@/pages/become-affiliate"));
 const AffiliatePortal = lazy(() => import("@/pages/affiliate-portal"));
+const ResetPassword = lazy(() => import("@/pages/reset-password"));
 const OrderStatusPage = lazy(() => import("@/pages/order-status"));
 
 const AdminLogin = lazy(() => import("@/pages/admin-login"));
@@ -128,6 +129,7 @@ function Router() {
         <Route path="/shop" component={Shop} />
         <Route path="/become-affiliate" component={BecomeAffiliate} />
         <Route path="/affiliate-portal" component={AffiliatePortal} />
+        <Route path="/reset-password" component={ResetPassword} />
         <Route path="/blog/:slug">{() => <BlogPostPage />}</Route>
         <Route path="/blog">{() => <BlogIndexPage />}</Route>
         <Route path="/page/:slug" component={PageView} />
