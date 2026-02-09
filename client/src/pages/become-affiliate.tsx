@@ -81,7 +81,7 @@ export default function BecomeAffiliate() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading, login } = useCustomerAuth();
+  const { isAuthenticated, isLoading: authLoading, login, customer: authCustomer } = useCustomerAuth();
 
   const params = new URLSearchParams(searchString);
   const inviteCode = params.get("code") || "";
@@ -151,6 +151,17 @@ export default function BecomeAffiliate() {
   }, [signupInfo]);
 
   useEffect(() => {
+    if (!authLoading && isAuthenticated && authCustomer && !accountCreated && !connectReturn) {
+      setFormData(prev => ({
+        ...prev,
+        name: prev.name || authCustomer.name || "",
+        email: prev.email || authCustomer.email || "",
+      }));
+      setCurrentStep("agreement");
+    }
+  }, [authLoading, isAuthenticated, authCustomer, accountCreated, connectReturn]);
+
+  useEffect(() => {
     if (!authLoading && isAuthenticated && connectReturn) {
       setAccountCreated(true);
       setCurrentStep("payout");
@@ -164,8 +175,6 @@ export default function BecomeAffiliate() {
         toast({ title: "Stripe onboarding paused", description: "You can continue or complete it later." });
         trackEvent("stripe_connect_returned", { status: "refresh" });
       }
-    } else if (!authLoading && isAuthenticated && !accountCreated && !connectReturn) {
-      setLocation("/affiliate-portal");
     }
   }, [authLoading, isAuthenticated, accountCreated, connectReturn, setLocation]);
 
@@ -208,6 +217,45 @@ export default function BecomeAffiliate() {
     onError: (error: any) => {
       toast({
         title: "Signup failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const joinMutation = useMutation({
+    mutationFn: async (data: { signatureName: string; inviteCode: string }) => {
+      const token = localStorage.getItem("customerSessionToken");
+      const res = await fetch("/api/affiliate-signup/join", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          signatureName: data.signatureName,
+          inviteCode: data.inviteCode,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || "Failed to join");
+      return result;
+    },
+    onSuccess: (data) => {
+      setAffiliateCode(data.affiliate.code);
+      setAffiliateId(data.affiliate.id);
+      setCustomCode(data.affiliate.code);
+      if (data.onboarding) {
+        setOnboardingMeta(data.onboarding);
+      }
+      setAccountCreated(true);
+      trackEvent("step_completed", { step: "agreement", affiliateId: data.affiliate.id });
+      setCurrentStep("payout");
+      trackEvent("step_viewed", { step: "payout" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to join",
         description: error.message,
         variant: "destructive",
       });
@@ -295,6 +343,7 @@ export default function BecomeAffiliate() {
       if (accountCreated && STEPS[idx - 1] === "agreement") return;
       if (accountCreated && STEPS[idx - 1] === "account") return;
       if (accountCreated && STEPS[idx - 1] === "welcome") return;
+      if (isAuthenticated && (STEPS[idx - 1] === "account" || STEPS[idx - 1] === "welcome")) return;
       goToStep(STEPS[idx - 1]);
     }
   };
@@ -302,14 +351,6 @@ export default function BecomeAffiliate() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
-      toast({ title: "Passwords don't match", description: "Please make sure your passwords match.", variant: "destructive" });
-      return;
-    }
-    if (formData.password.length < 8) {
-      toast({ title: "Password too short", description: "Password must be at least 8 characters.", variant: "destructive" });
-      return;
-    }
     if (!agreedToTerms) {
       toast({ title: "Agreement required", description: "Please agree to the affiliate program terms.", variant: "destructive" });
       return;
@@ -319,7 +360,22 @@ export default function BecomeAffiliate() {
       return;
     }
 
-    signupMutation.mutate(formData);
+    if (isAuthenticated) {
+      joinMutation.mutate({
+        signatureName: formData.signatureName,
+        inviteCode: formData.inviteCode,
+      });
+    } else {
+      if (formData.password !== formData.confirmPassword) {
+        toast({ title: "Passwords don't match", description: "Please make sure your passwords match.", variant: "destructive" });
+        return;
+      }
+      if (formData.password.length < 8) {
+        toast({ title: "Password too short", description: "Password must be at least 8 characters.", variant: "destructive" });
+        return;
+      }
+      signupMutation.mutate(formData);
+    }
   };
 
   const canGoNext = (): boolean => {
@@ -889,24 +945,26 @@ export default function BecomeAffiliate() {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={handleBack} className="flex-1 gap-2" data-testid="button-back-agreement">
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
+            {!isAuthenticated && (
+              <Button type="button" variant="outline" onClick={handleBack} className="flex-1 gap-2" data-testid="button-back-agreement">
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </Button>
+            )}
             <Button
               type="submit"
-              disabled={!canGoNext() || signupMutation.isPending}
+              disabled={!canGoNext() || signupMutation.isPending || joinMutation.isPending}
               className="flex-1 gap-2"
               data-testid="button-submit-agreement"
             >
-              {signupMutation.isPending ? (
+              {(signupMutation.isPending || joinMutation.isPending) ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating Account...
+                  {isAuthenticated ? "Joining..." : "Creating Account..."}
                 </>
               ) : (
                 <>
-                  Create Account
+                  {isAuthenticated ? "Join Program" : "Create Account"}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
