@@ -73,6 +73,11 @@ function CmsBlogPage({ pageId }: { pageId: string }) {
         metaTitle={cmsPage.metaTitle || cmsPage.title}
         metaDescription={cmsPage.metaDescription || undefined}
       />
+      <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-20">
+        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
+          <DynamicNav location="main" />
+        </div>
+      </header>
       <PageRenderer contentJson={cmsPage.contentJson} legacyContent={cmsPage.content} />
     </div>
   );
