@@ -23,6 +23,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -328,12 +329,11 @@ export default function AdminCmsV2PostEditor() {
                   />
                 </div>
                 <div>
-                  <Label className="text-foreground/80">Content (HTML / Markdown)</Label>
-                  <Textarea
+                  <Label className="text-foreground/80">Content</Label>
+                  <RichTextEditor
                     value={legacyHtml}
-                    onChange={(e) => { setLegacyHtml(e.target.value); setDirty(true); }}
-                    placeholder="Write content or use the Builder for a visual editor..."
-                    className="bg-muted border-border text-foreground mt-1 min-h-[200px] font-mono text-sm"
+                    onChange={(html) => { setLegacyHtml(html); setDirty(true); }}
+                    placeholder="Write your content..."
                     data-testid="input-post-content"
                   />
                   <p className="text-xs text-muted-foreground mt-1">For rich visual content, use the Puck Builder.</p>
