@@ -13,7 +13,7 @@ export function getLucideIcon(iconName: string): React.ComponentType<{ className
   const pascalName = iconName.includes('-') ? kebabToPascal(iconName) : iconName;
   const icon = (LucideIcons as any)[pascalName] || (LucideIcons as any)[iconName];
   
-  if (typeof icon === 'function') {
+  if (icon && (typeof icon === 'function' || (typeof icon === 'object' && icon.$$typeof))) {
     return icon;
   }
   

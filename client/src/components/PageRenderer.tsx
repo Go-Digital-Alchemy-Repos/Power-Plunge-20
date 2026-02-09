@@ -102,11 +102,7 @@ const HeroBlock = ({ data, settings, onAddToCart }: { data: Record<string, any>;
     }
   };
   
-  const getIcon = (iconName: string) => {
-    const icons: Record<string, any> = { zap: Zap, shield: Shield, award: Award, heart: Heart, check: Check };
-    return icons[iconName] || null;
-  };
-  const PrimaryIcon = primaryButtonIcon ? getIcon(primaryButtonIcon) : null;
+  const PrimaryIcon = primaryButtonIcon ? getIconWithFallback(primaryButtonIcon, Zap) : null;
   
   return (
     <section 
@@ -433,11 +429,7 @@ const CTABlock = ({ data, settings, onAddToCart }: { data: Record<string, any>; 
   const secondaryButton = data?.secondaryButton || '';
   const secondaryLink = data?.secondaryLink || '';
   
-  const getIcon = (iconName: string) => {
-    const icons: Record<string, any> = { zap: Zap, shield: Shield, award: Award, heart: Heart, check: Check };
-    return icons[iconName] || null;
-  };
-  const ButtonIcon = buttonIcon ? getIcon(buttonIcon) : null;
+  const ButtonIcon = buttonIcon ? getIconWithFallback(buttonIcon, Zap) : null;
 
   const handleButtonClick = () => {
     if (buttonAction === 'addToCart' && onAddToCart) {
