@@ -83,15 +83,15 @@ export function IconPicker({ value, onChange, className, placeholder = "Select i
   const [search, setSearch] = useState("");
 
   const allIcons = useMemo(() => {
-    const iconNames = Object.keys(LucideIcons).filter(
+    return Object.keys(LucideIcons).filter(
       (key) => 
         key !== 'default' && 
         key !== 'createLucideIcon' &&
         key !== 'icons' &&
         !key.startsWith('Lucide') &&
+        /^[A-Z]/.test(key) &&
         typeof (LucideIcons as any)[key] === 'function'
     );
-    return iconNames;
   }, []);
 
   const filteredIcons = useMemo(() => {
@@ -106,6 +106,7 @@ export function IconPicker({ value, onChange, className, placeholder = "Select i
   }, [search, allIcons]);
 
   const getIcon = (name: string) => {
+    if (!name) return null;
     const pascalName = name.includes('-') ? kebabToPascal(name) : name;
     return (LucideIcons as any)[pascalName] || (LucideIcons as any)[name];
   };
