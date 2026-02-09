@@ -3,7 +3,7 @@ import { affiliateCommissionService } from "../../services/affiliate-commission.
 import { affiliatePayoutService } from "../../services/affiliate-payout.service";
 import { db } from "../../../db";
 import { storage } from "../../../storage";
-import { affiliates, affiliatePayouts, affiliateReferrals, affiliateSettings, affiliateAgreements, affiliateClicks, affiliatePayoutAccounts, affiliateInvites, customers } from "@shared/schema";
+import { affiliates, affiliatePayouts, affiliateReferrals, affiliateSettings, affiliateAgreements, affiliateClicks, affiliatePayoutAccounts, affiliateInvites, affiliateInviteUsages, customers } from "@shared/schema";
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import {
   payoutRequestSchema,
@@ -707,6 +707,7 @@ router.delete(
         await tx.delete(affiliateClicks).where(eq(affiliateClicks.affiliateId, affiliateId));
         await tx.delete(affiliateAgreements).where(eq(affiliateAgreements.affiliateId, affiliateId));
         await tx.delete(affiliatePayoutAccounts).where(eq(affiliatePayoutAccounts.affiliateId, affiliateId));
+        await tx.delete(affiliateInviteUsages).where(eq(affiliateInviteUsages.affiliateId, affiliateId));
         await tx.update(affiliateInvites)
           .set({ usedByAffiliateId: null })
           .where(eq(affiliateInvites.usedByAffiliateId, affiliateId));
