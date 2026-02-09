@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAdmin } from "@/hooks/use-admin";
 import CmsV2Layout from "@/components/admin/CmsV2Layout";
-import { Settings, Info, Home, Save, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Settings, Home, Save, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -197,24 +197,6 @@ export default function AdminCmsV2Settings() {
                   {hasUnsavedChanges && (
                     <span className="text-xs text-amber-400">You have unsaved changes</span>
                   )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardContent className="p-5">
-              <div className="flex items-start gap-3">
-                <Info className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                <div>
-                  <h3 className="text-sm font-medium text-foreground mb-1">Feature Flag Status</h3>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    CMS v2 is controlled by the <code className="text-primary bg-muted px-1 py-0.5 rounded text-[11px]">CMS_V2_ENABLED</code> environment variable.
-                    When disabled, all CMS v2 features are hidden from the admin navigation.
-                  </p>
-                  <Badge className="bg-primary/10 text-primary border-primary/30 text-xs" data-testid="badge-cms-v2-status">
-                    CMS v2 is active in this session
-                  </Badge>
                 </div>
               </div>
             </CardContent>
