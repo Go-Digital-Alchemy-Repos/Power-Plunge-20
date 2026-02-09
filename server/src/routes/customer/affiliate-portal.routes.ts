@@ -530,11 +530,8 @@ router.post("/connect/start", requireCustomerAuth, async (req: AuthenticatedRequ
     let payoutAccount = await storage.getAffiliatePayoutAccountByAffiliateId(affiliate.id);
     
     // Build return URLs
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : process.env.REPLIT_DOMAINS?.split(',')[0] 
-        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-        : 'http://localhost:5000';
+    const { getBaseUrl } = await import("../../utils/base-url");
+    const baseUrl = getBaseUrl(req);
     
     const returnPath = req.body?.returnPath || "/affiliate-portal";
     const returnUrl = `${baseUrl}${returnPath}${returnPath.includes('?') ? '&' : '?'}connect=complete`;
@@ -594,11 +591,8 @@ router.post("/connect/refresh", requireCustomerAuth, async (req: AuthenticatedRe
     }
     
     // Build return URLs
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : process.env.REPLIT_DOMAINS?.split(',')[0] 
-        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-        : 'http://localhost:5000';
+    const { getBaseUrl } = await import("../../utils/base-url");
+    const baseUrl = getBaseUrl(req);
     
     const returnUrl = `${baseUrl}/affiliate-portal?connect=complete`;
     const refreshUrl = `${baseUrl}/affiliate-portal?connect=refresh`;

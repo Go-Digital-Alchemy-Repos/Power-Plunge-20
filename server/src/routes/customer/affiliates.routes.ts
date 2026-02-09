@@ -377,9 +377,8 @@ router.post("/affiliate/connect/start", async (req: any, res) => {
       });
     }
 
-    const baseUrl = process.env.REPLIT_DOMAINS 
-      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-      : `http://localhost:5000`;
+    const { getBaseUrl } = await import("../../utils/base-url");
+    const baseUrl = getBaseUrl(req);
     
     const accountLink = await stripeService.createAccountLink({
       accountId: payoutAccount.stripeAccountId,

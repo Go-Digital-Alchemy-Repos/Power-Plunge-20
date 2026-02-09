@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { storage } from "../../../storage";
 import { z } from "zod";
 import { emailService } from "../../integrations/mailgun/EmailService";
+import { getBaseUrl } from "../../utils/base-url";
 
 const router = Router();
 
@@ -328,9 +329,7 @@ router.post("/affiliate-invites/send", async (req: any, res) => {
       notes: notes || null,
     });
 
-    const baseUrl = process.env.REPLIT_DOMAINS
-      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-      : process.env.BASE_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+    const baseUrl = getBaseUrl(req);
     const inviteUrl = `${baseUrl}/become-affiliate?code=${inviteCode}`;
 
     let emailResult = { success: false, error: "No email address provided — share the link manually" } as any;
