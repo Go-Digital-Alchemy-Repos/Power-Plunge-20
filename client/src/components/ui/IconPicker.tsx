@@ -84,13 +84,18 @@ export function IconPicker({ value, onChange, className, placeholder = "Select i
 
   const allIcons = useMemo(() => {
     return Object.keys(LucideIcons).filter(
-      (key) => 
-        key !== 'default' && 
-        key !== 'createLucideIcon' &&
-        key !== 'icons' &&
-        !key.startsWith('Lucide') &&
-        /^[A-Z]/.test(key) &&
-        typeof (LucideIcons as any)[key] === 'function'
+      (key) => {
+        if (
+          key === 'default' ||
+          key === 'createLucideIcon' ||
+          key === 'icons' ||
+          key === 'createElement' ||
+          key.startsWith('Lucide') ||
+          !/^[A-Z]/.test(key)
+        ) return false;
+        const val = (LucideIcons as any)[key];
+        return val && (typeof val === 'function' || typeof val === 'object');
+      }
     );
   }, []);
 
@@ -102,13 +107,16 @@ export function IconPicker({ value, onChange, className, placeholder = "Select i
     return allIcons.filter(name => 
       name.toLowerCase().includes(searchLower) ||
       pascalToKebab(name).includes(searchLower)
-    ).slice(0, 100);
+    ).slice(0, 150);
   }, [search, allIcons]);
 
   const getIcon = (name: string) => {
     if (!name) return null;
     const pascalName = name.includes('-') ? kebabToPascal(name) : name;
-    return (LucideIcons as any)[pascalName] || (LucideIcons as any)[name];
+    const icon = (LucideIcons as any)[pascalName] || (LucideIcons as any)[name];
+    if (!icon) return null;
+    if (typeof icon === 'function' || (typeof icon === 'object' && icon.$$typeof)) return icon;
+    return null;
   };
 
   const SelectedIcon = value ? getIcon(value) : null;
