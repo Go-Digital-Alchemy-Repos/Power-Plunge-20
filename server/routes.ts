@@ -41,6 +41,7 @@ import publicCmsSettingsRoutes from "./src/routes/public/cms-settings.routes";
 import publicCmsSectionsRoutes from "./src/routes/public/cms-sections.routes";
 import { publicMenuRoutes } from "./src/routes/public/blog.routes";
 import publicBlogRoutes from "./src/routes/public/blog-v2.routes";
+import publicGoogleReviewsRoutes from "./src/routes/public/google-reviews.routes";
 
 // Newly-extracted route modules
 import paymentsRoutes from "./src/routes/public/payments.routes";
@@ -116,6 +117,7 @@ export async function registerRoutes(
   // Public blog + menu routes (additive, no auth)
   app.use("/api/blog", publicBlogRoutes);
   app.use("/api/menus", publicMenuRoutes);
+  app.use("/api/google-reviews", publicGoogleReviewsRoutes);
 
   app.get("/api/health/config", (req, res) => {
     res.json({ cmsEnabled: true });

@@ -4,13 +4,23 @@ import { useRoute, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminNav from "@/components/admin/AdminNav";
 import { ArrowLeft, Save, Globe, Layers, Unlink, Search, X, Monitor, Tablet, Smartphone, ChevronUp, ChevronDown, Copy, Zap, Star, Plus } from "lucide-react";
+
+function safeUUID(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Puck, usePuck, type Config, type Data } from "@puckeditor/core";
+import { Puck, usePuck, createUsePuck, type Config, type Data } from "@puckeditor/core";
 import "@puckeditor/core/dist/index.css";
 import { registerAllBlocks } from "@/lib/blockRegistryEntries";
 import { getAllBlocks } from "@/lib/blockRegistry";
@@ -173,7 +183,7 @@ function buildPuckConfig(): Config {
 
 function puckDataToContentJson(data: Data): { version: number; blocks: any[] } {
   const blocks = (data.content || []).map((item: any) => ({
-    id: item.props?.id || crypto.randomUUID(),
+    id: item.props?.id || safeUUID(),
     type: item.type,
     data: Object.fromEntries(
       Object.entries(item.props || {}).filter(([k]) => k !== "id")
@@ -188,7 +198,7 @@ function contentJsonToPuckData(contentJson: any, pageTitle: string): Data {
   const content = blocks.map((block: any) => ({
     type: block.type,
     props: {
-      id: block.id || crypto.randomUUID(),
+      id: block.id || safeUUID(),
       ...block.data,
     },
   }));
@@ -510,7 +520,7 @@ function DetachSectionButton({ pageId, pageTitle, onDone }: { pageId: string; pa
               newContent.push({
                 type: block.type,
                 props: {
-                  id: crypto.randomUUID(),
+                  id: safeUUID(),
                   ...block.data,
                 },
               });
@@ -526,7 +536,7 @@ function DetachSectionButton({ pageId, pageTitle, onDone }: { pageId: string; pa
       const contentJson = {
         version: 1,
         blocks: newContent.map((item: any) => ({
-          id: item.props?.id || crypto.randomUUID(),
+          id: item.props?.id || safeUUID(),
           type: item.type,
           data: Object.fromEntries(
             Object.entries(item.props || {}).filter(([k]) => k !== "id")
@@ -690,14 +700,30 @@ function PublishButton({ pageId, pageTitle, seoData, onDone }: { pageId: string;
 function QuickInsertBar() {
   const { dispatch, appState } = usePuck();
 
-  const handleQuickInsert = (blockType: string) => {
-    dispatch({
-      type: "insert",
-      componentType: blockType,
-      destinationIndex: appState.data.content.length,
-      destinationZone: "root:default-zone",
-    });
-  };
+  const handleQuickInsert = useCallback((blockType: string) => {
+    try {
+      dispatch({
+        type: "insert",
+        componentType: blockType,
+        destinationIndex: appState?.data?.content?.length ?? 0,
+        destinationZone: "root:default-zone",
+        id: safeUUID(),
+        recordHistory: true,
+      } as any);
+    } catch (e) {
+      console.error("[QuickInsert] insert dispatch failed, using setData fallback:", e);
+      dispatch({
+        type: "setData",
+        data: (prev: Data) => ({
+          ...prev,
+          content: [
+            ...prev.content,
+            { type: blockType, props: { id: safeUUID() } },
+          ],
+        }),
+      } as any);
+    }
+  }, [dispatch, appState]);
 
   return (
     <div className="flex items-center gap-1" data-testid="quick-insert-bar">
@@ -792,14 +818,30 @@ function EnhancedBlockPicker() {
     return entries;
   }, [allEntries, activeTab, search]);
 
-  const handleInsert = (blockType: string) => {
-    dispatch({
-      type: "insert",
-      componentType: blockType,
-      destinationIndex: appState.data.content.length,
-      destinationZone: "root:default-zone",
-    });
-  };
+  const handleInsert = useCallback((blockType: string) => {
+    try {
+      dispatch({
+        type: "insert",
+        componentType: blockType,
+        destinationIndex: appState?.data?.content?.length ?? 0,
+        destinationZone: "root:default-zone",
+        id: safeUUID(),
+        recordHistory: true,
+      } as any);
+    } catch (e) {
+      console.error("[BlockPicker] insert dispatch failed, using setData fallback:", e);
+      dispatch({
+        type: "setData",
+        data: (prev: Data) => ({
+          ...prev,
+          content: [
+            ...prev.content,
+            { type: blockType, props: { id: safeUUID() } },
+          ],
+        }),
+      } as any);
+    }
+  }, [dispatch, appState]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1042,7 +1084,7 @@ export default function AdminCmsBuilder() {
     const currentBlocks = currentPage?.contentJson?.blocks || [];
 
     const newBlock = {
-      id: crypto.randomUUID(),
+      id: safeUUID(),
       type: "sectionRef",
       data: { sectionId: section.id, sectionName: section.name },
       settings: {},
@@ -1145,7 +1187,7 @@ export default function AdminCmsBuilder() {
                 <PublishButton pageId={pageId!} pageTitle={page?.title || ""} seoData={seoData} onDone={invalidateQueries} />
               </>
             ),
-            components: () => <EnhancedBlockPicker />,
+            drawer: () => <EnhancedBlockPicker />,
           }}
         />
       </div>

@@ -207,10 +207,13 @@ export function registerCmsV1Blocks() {
     label: "Testimonials",
     category: "trust",
     version: 1,
-    description: "Customer testimonials in cards or slider layout",
+    description: "Customer testimonials — manual or auto-fetched from Google Reviews",
     renderComponent: TestimonialsBlock,
     defaultProps: {
       title: "What Our Customers Say",
+      source: "manual",
+      minRating: 4,
+      showGoogleBadge: true,
       items: [
         { quote: "The Power Plunge has been a game-changer for my recovery routine. I feel more energized and recover faster after every session.", name: "Alex Johnson", title: "Professional Athlete", avatar: "" },
         { quote: "Best investment I've made for my wellness studio. My clients absolutely love it and it's incredibly low maintenance.", name: "Sarah Chen", title: "Wellness Studio Owner", avatar: "" },
@@ -220,11 +223,17 @@ export function registerCmsV1Blocks() {
     },
     puckFields: {
       title: textField("Section Title"),
+      source: selectField("Review Source", [
+        { label: "Manual (enter below)", value: "manual" },
+        { label: "Google Reviews (auto-fetch)", value: "google" },
+      ]),
       layout: selectField("Layout", [
         { label: "Cards Grid", value: "cards" },
         { label: "Slider", value: "slider" },
       ]),
-      items: arrayField("Testimonials", {
+      minRating: numberField("Minimum Star Rating (Google)", 1, 5),
+      showGoogleBadge: checkboxField("Show Google Rating Badge"),
+      items: arrayField("Testimonials (manual mode)", {
         quote: textareaField("Quote"),
         name: textField("Name"),
         title: textField("Title / Role"),

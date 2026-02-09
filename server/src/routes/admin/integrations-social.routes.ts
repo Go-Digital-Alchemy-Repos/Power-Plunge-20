@@ -698,4 +698,61 @@ router.delete("/settings/mailchimp", async (req: Request, res: Response) => {
   }
 });
 
+// ==================== GOOGLE PLACES SETTINGS ====================
+
+router.get("/settings/google-places", async (req: Request, res: Response) => {
+  try {
+    const { maskKey } = await import("../../utils/encryption");
+    const settings = await storage.getIntegrationSettings();
+
+    res.json({
+      configured: settings?.googlePlacesConfigured || false,
+      apiKeyMasked: settings?.googlePlacesApiKeyEncrypted ? maskKey("AIza...configured") : null,
+      placeId: settings?.googlePlacesId || "",
+      updatedAt: settings?.updatedAt || null,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch Google Places settings" });
+  }
+});
+
+router.patch("/settings/google-places", async (req: Request, res: Response) => {
+  try {
+    const { encrypt } = await import("../../utils/encryption");
+    const { apiKey, placeId } = req.body;
+
+    if (!apiKey && !placeId) {
+      return res.status(400).json({ message: "API key or Place ID is required" });
+    }
+
+    const updateData: any = {
+      googlePlacesConfigured: true,
+    };
+
+    if (apiKey) updateData.googlePlacesApiKeyEncrypted = encrypt(apiKey);
+    if (placeId) updateData.googlePlacesId = placeId;
+
+    await storage.updateIntegrationSettings(updateData);
+    console.log(`[Audit] Google Places settings updated by admin`);
+
+    res.json({ success: true, message: "Google Places configuration saved" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || "Failed to save Google Places settings" });
+  }
+});
+
+router.delete("/settings/google-places", async (req: Request, res: Response) => {
+  try {
+    await storage.updateIntegrationSettings({
+      googlePlacesConfigured: false,
+      googlePlacesApiKeyEncrypted: null,
+      googlePlacesId: null,
+    });
+    console.log(`[Audit] Google Places settings removed by admin`);
+    res.json({ success: true, message: "Google Places configuration removed" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || "Failed to remove Google Places settings" });
+  }
+});
+
 export default router;

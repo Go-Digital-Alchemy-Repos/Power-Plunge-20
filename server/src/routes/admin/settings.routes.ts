@@ -34,6 +34,7 @@ integrationsStatusRoutes.get("/", async (req: any, res) => {
     snapchatShopping: integrationSettings?.snapchatShoppingConfigured || false,
     xShopping: integrationSettings?.xShoppingConfigured || false,
     mailchimp: integrationSettings?.mailchimpConfigured || false,
+    googlePlaces: integrationSettings?.googlePlacesConfigured || false,
   });
 });
 

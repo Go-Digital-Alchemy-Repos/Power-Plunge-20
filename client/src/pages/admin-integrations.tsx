@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/use-admin";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, XCircle, ExternalLink, Key, CreditCard, Loader2, TestTube, AlertCircle, Save, HardDrive, Mail, Brain, Link2, Copy, ShoppingBag, Instagram, RefreshCw, Users } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, Key, CreditCard, Loader2, TestTube, AlertCircle, Save, HardDrive, Mail, Brain, Link2, Copy, ShoppingBag, Instagram, RefreshCw, Users, Star, MapPin } from "lucide-react";
 import AdminNav from "@/components/admin/AdminNav";
 
 interface IntegrationStatus {
@@ -26,6 +26,7 @@ interface IntegrationStatus {
   snapchatShopping?: boolean;
   xShopping?: boolean;
   mailchimp?: boolean;
+  googlePlaces?: boolean;
 }
 
 interface MailchimpSettings {
@@ -153,6 +154,7 @@ export default function AdminIntegrations() {
   const [showSnapchatDialog, setShowSnapchatDialog] = useState(false);
   const [showXDialog, setShowXDialog] = useState(false);
   const [showMailchimpDialog, setShowMailchimpDialog] = useState(false);
+  const [showGooglePlacesDialog, setShowGooglePlacesDialog] = useState(false);
 
   const { data: integrations, refetch: refetchIntegrations } = useQuery<IntegrationStatus>({
     queryKey: ["/api/admin/integrations"],
@@ -496,6 +498,35 @@ export default function AdminIntegrations() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-primary" />
+                Google Reviews
+              </CardTitle>
+              <CardDescription>
+                Auto-fetch 5-star Google reviews for your testimonials blocks
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <StatusBadge configured={integrations?.googlePlaces} />
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowGooglePlacesDialog(true)}
+                  data-testid="button-configure-google-places"
+                >
+                  Configure
+                </Button>
+              </div>
+              <div className="mt-4 text-xs text-muted-foreground">
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                  Get your API key from Google Cloud Console <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-primary" />
                 X Shopping
               </CardTitle>
@@ -583,6 +614,11 @@ export default function AdminIntegrations() {
       <MailchimpConfigDialog
         open={showMailchimpDialog}
         onOpenChange={setShowMailchimpDialog}
+        onSuccess={() => refetchIntegrations()}
+      />
+      <GooglePlacesConfigDialog
+        open={showGooglePlacesDialog}
+        onOpenChange={setShowGooglePlacesDialog}
         onSuccess={() => refetchIntegrations()}
       />
     </div>
@@ -3295,6 +3331,161 @@ function MailchimpConfigDialog({ open, onOpenChange, onSuccess }: {
             </Button>
           )}
           <Button onClick={handleSave} disabled={saving} data-testid="button-save-mailchimp">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            Save Configuration
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function GooglePlacesConfigDialog({ open, onOpenChange, onSuccess }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const [apiKey, setApiKey] = useState("");
+  const [placeId, setPlaceId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const { data: settings, isLoading } = useQuery<{ configured: boolean; apiKeyMasked: string | null; placeId: string }>({
+    queryKey: ["/api/admin/integrations/settings/google-places"],
+    enabled: open,
+    queryFn: async () => {
+      const res = await fetch("/api/admin/integrations/settings/google-places");
+      if (!res.ok) throw new Error("Failed to fetch Google Places settings");
+      return res.json();
+    },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      setPlaceId(settings.placeId || "");
+      setApiKey("");
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    if (!apiKey && !settings?.configured) {
+      toast({ title: "API key is required", variant: "destructive" });
+      return;
+    }
+    if (!placeId) {
+      toast({ title: "Place ID is required", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const body: any = { placeId };
+      if (apiKey) body.apiKey = apiKey;
+      const res = await fetch("/api/admin/integrations/settings/google-places", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to save");
+      }
+      toast({ title: "Google Places configuration saved" });
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({ title: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      const res = await fetch("/api/admin/integrations/settings/google-places", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove");
+      toast({ title: "Google Places configuration removed" });
+      setApiKey("");
+      setPlaceId("");
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({ title: error.message, variant: "destructive" });
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Star className="w-5 h-5 text-primary" />
+            Google Reviews Configuration
+          </DialogTitle>
+          <DialogDescription>
+            Connect your Google Business Profile to auto-fetch 5-star reviews for testimonials blocks.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {settings?.configured && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span className="text-sm text-green-500">Google Places is configured</span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="google-api-key">Google API Key</Label>
+              <Input
+                id="google-api-key"
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={settings?.configured ? "••••••• (leave blank to keep current)" : "AIzaSy..."}
+                data-testid="input-google-api-key"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enable the Places API in your Google Cloud project.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="google-place-id">Google Place ID</Label>
+              <Input
+                id="google-place-id"
+                value={placeId}
+                onChange={(e) => setPlaceId(e.target.value)}
+                placeholder="ChIJ..."
+                data-testid="input-google-place-id"
+              />
+              <p className="text-xs text-muted-foreground">
+                Find your Place ID at{" "}
+                <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  Google Place ID Finder
+                </a>
+              </p>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="flex gap-2">
+          {settings?.configured && (
+            <Button variant="destructive" onClick={handleRemove} disabled={removing} data-testid="button-remove-google-places">
+              {removing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Remove
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={saving} data-testid="button-save-google-places">
             {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
             Save Configuration
           </Button>

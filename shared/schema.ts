@@ -299,6 +299,10 @@ export const integrationSettings = pgTable("integration_settings", {
   mailchimpAudienceId: text("mailchimp_audience_id"),
   mailchimpLastSyncAt: timestamp("mailchimp_last_sync_at"),
   mailchimpLastSyncStatus: text("mailchimp_last_sync_status").default("never"),
+  // Google Places integration (for auto-fetching reviews)
+  googlePlacesConfigured: boolean("google_places_configured").default(false),
+  googlePlacesApiKeyEncrypted: text("google_places_api_key_encrypted"),
+  googlePlacesId: text("google_places_id"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   updatedByUserId: varchar("updated_by_user_id"),
 });
