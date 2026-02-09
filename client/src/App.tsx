@@ -57,6 +57,7 @@ const AdminRecovery = lazy(() => import("@/pages/admin-recovery"));
 const AdminAlerts = lazy(() => import("@/pages/admin-alerts"));
 const AdminSections = lazy(() => import("@/pages/admin-sections"));
 const AdminMediaLibrary = lazy(() => import("@/pages/admin-media-library"));
+const AdminCmsSettings = lazy(() => import("@/pages/admin-cms-settings"));
 const AdminAffiliateInviteSender = lazy(() => import("@/pages/admin-affiliate-invite-sender"));
 const AdminCmsV2 = lazy(() => import("@/pages/admin-cms-v2"));
 const AdminCmsV2Pages = lazy(() => import("@/pages/admin-cms-v2-pages"));
@@ -164,6 +165,7 @@ function Router() {
         <Route path="/admin/alerts" component={AdminAlerts} />
         <Route path="/admin/sections" component={AdminSections} />
         <Route path="/admin/media" component={AdminMediaLibrary} />
+        <Route path="/admin/cms-settings" component={AdminCmsSettings} />
         <Route path="/admin/support" component={AdminSupport} />
         <Route path="/admin/affiliate-invite-sender" component={AdminAffiliateInviteSender} />
         <Route path="/admin/cms-v2/posts/new">{() => <CmsV2ErrorBoundary><AdminCmsV2PostEditor /></CmsV2ErrorBoundary>}</Route>
