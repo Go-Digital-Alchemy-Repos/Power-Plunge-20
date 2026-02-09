@@ -170,7 +170,8 @@ export default function AdminAffiliateInviteSender() {
 
         <Card className="mb-6" data-testid="card-quick-share">
           <CardContent className="pt-5 pb-5">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3" data-testid="text-quick-share-heading">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2" data-testid="text-quick-share-heading">
+              <Share2 className="w-4 h-4" />
               Quick Share
             </h2>
             {quickShareUrl ? (
