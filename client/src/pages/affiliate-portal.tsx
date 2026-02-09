@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, LogOut, User, Link2, DollarSign, Users, Copy, CheckCircle, ExternalLink, Loader2, CreditCard, AlertCircle, Crown, Calendar, AlertTriangle, Clock, Download, Edit3, X, Save } from "lucide-react";
+import DynamicNav from "@/components/DynamicNav";
 import logoImage from "@assets/powerplungelogo_1767907611722.png";
 
 interface AffiliateData {
@@ -372,6 +373,7 @@ export default function AffiliatePortal() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <img src={logoImage} alt="Power Plunge" className="h-8" />
+            <DynamicNav location="main" />
             <div className="hidden sm:flex items-center gap-2 ml-4">
               <Link2 className="w-5 h-5 text-primary" />
               <span className="font-semibold">Affiliate Portal</span>

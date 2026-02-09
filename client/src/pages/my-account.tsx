@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Package, Truck, CheckCircle, Clock, ArrowLeft, LogOut, User, Link2, DollarSign, Users, Copy, QrCode, ExternalLink, FileText, Loader2, Settings, Save, MapPin, Mail, Phone, Lock, AlertCircle, Crown, Gift, Zap, Sparkles, CreditCard, AlertTriangle, Calendar, MapPinned, PackageCheck, Headset, Send, MessageSquare } from "lucide-react";
+import DynamicNav from "@/components/DynamicNav";
 import logoImage from "@assets/powerplungelogo_1767907611722.png";
 
 interface OrderItem {
@@ -526,6 +527,7 @@ export default function MyAccount() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <img src={logoImage} alt="Power Plunge" className="h-8" />
+            <DynamicNav location="main" />
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm">

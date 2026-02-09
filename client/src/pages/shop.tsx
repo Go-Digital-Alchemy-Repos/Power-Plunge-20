@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ShoppingCart, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PageRenderer from "@/components/PageRenderer";
+import DynamicNav from "@/components/DynamicNav";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
 interface Product {
@@ -117,6 +118,7 @@ export default function Shop() {
               Home
             </Button>
             <h1 className="text-2xl font-bold text-white">Shop</h1>
+            <DynamicNav location="main" />
           </div>
           <Button
             onClick={() => navigate("/checkout")}

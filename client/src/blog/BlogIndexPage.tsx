@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SeoHead from "@/components/SeoHead";
 import PageRenderer from "@/components/PageRenderer";
+import DynamicNav from "@/components/DynamicNav";
 import PostCard from "./components/PostCard";
 
 interface TaxonomyItem {
@@ -169,9 +170,12 @@ function DefaultBlogIndex() {
 
       <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-20">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/")} className="text-slate-300 hover:text-white" data-testid="button-back-home">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Home
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate("/")} className="text-slate-300 hover:text-white" data-testid="button-back-home">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Home
+            </Button>
+            <DynamicNav location="main" />
+          </div>
           <h1 className="text-xl font-bold text-cyan-400" data-testid="text-blog-title">Blog</h1>
           <a href="/api/blog/rss.xml" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition-colors" data-testid="link-rss">
             <Rss className="w-5 h-5" />

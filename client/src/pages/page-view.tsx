@@ -3,6 +3,7 @@ import { useLocation, useParams } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PageRenderer from "@/components/PageRenderer";
+import DynamicNav from "@/components/DynamicNav";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface PageBlock {
@@ -63,9 +64,12 @@ export default function PageView() {
     <div className="min-h-screen bg-slate-900 text-white">
       <header className="bg-slate-800 border-b border-slate-700">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/")} data-testid="button-home">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate("/")} data-testid="button-home">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
+            </Button>
+            <DynamicNav location="main" />
+          </div>
           <h1 className="text-xl font-bold text-cyan-400">{page.title}</h1>
           <div></div>
         </div>

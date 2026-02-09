@@ -3,6 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PageRenderer from "@/components/PageRenderer";
+import DynamicNav from "@/components/DynamicNav";
 import SeoHead from "@/components/SeoHead";
 import PostMeta from "./components/PostMeta";
 import PostTaxonomy from "./components/PostTaxonomy";
@@ -142,9 +143,12 @@ export default function BlogPostPage() {
 
       <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-20">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/blog")} className="text-slate-300 hover:text-white" data-testid="button-back-to-blog">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Blog
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate("/blog")} className="text-slate-300 hover:text-white" data-testid="button-back-to-blog">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Blog
+            </Button>
+            <DynamicNav location="main" />
+          </div>
           <span className="text-sm text-slate-500 hidden md:block truncate max-w-md">{post.title}</span>
           <div className="w-20" />
         </div>
