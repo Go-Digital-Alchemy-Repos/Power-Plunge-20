@@ -9,6 +9,23 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   Plus,
   Trash2,
   GripVertical,
@@ -228,6 +245,94 @@ function WidgetSettingsEditor({
   );
 }
 
+function SortableWidget({
+  widget,
+  template,
+  onToggleActive,
+  onEdit,
+  onDelete,
+}: {
+  widget: SidebarWidget;
+  template?: WidgetTemplate;
+  onToggleActive: (checked: boolean) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: widget.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const Icon = getWidgetIcon(template?.icon || "Package");
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 p-3 border border-border rounded-lg bg-card group hover:border-border transition-colors select-none ${
+        isDragging ? "shadow-lg ring-1 ring-primary/30 z-10" : ""
+      }`}
+      data-testid={`widget-item-${widget.id}`}
+    >
+      <button
+        className="text-muted-foreground/60 hover:text-muted-foreground cursor-grab active:cursor-grabbing p-0.5 touch-none"
+        {...attributes}
+        {...listeners}
+        data-testid={`drag-handle-${widget.id}`}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+
+      <div className="p-2 rounded-lg bg-muted">
+        <Icon className="w-4 h-4 text-primary" />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground truncate" data-testid={`text-widget-title-${widget.id}`}>
+          {widget.title}
+        </p>
+        <p className="text-xs text-muted-foreground">{template?.label || widget.widgetType}</p>
+      </div>
+
+      <Switch
+        checked={widget.isActive}
+        onCheckedChange={onToggleActive}
+        data-testid={`switch-widget-active-${widget.id}`}
+      />
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={onEdit}
+        data-testid={`button-edit-widget-${widget.id}`}
+      >
+        <Pencil className="w-3.5 h-3.5" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+        onClick={onDelete}
+        data-testid={`button-delete-widget-${widget.id}`}
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 function SidebarDetail({
   sidebar,
   templates,
@@ -315,12 +420,19 @@ function SidebarDetail({
     },
   });
 
-  const moveWidget = (index: number, direction: "up" | "down") => {
-    const newWidgets = [...widgets];
-    const swapIndex = direction === "up" ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= newWidgets.length) return;
-    [newWidgets[index], newWidgets[swapIndex]] = [newWidgets[swapIndex], newWidgets[index]];
-    reorderMutation.mutate(newWidgets.map((w) => w.id));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = widgets.findIndex((w) => w.id === active.id);
+    const newIndex = widgets.findIndex((w) => w.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(widgets, oldIndex, newIndex);
+    reorderMutation.mutate(reordered.map((w) => w.id));
   };
 
   return (
@@ -423,92 +535,42 @@ function SidebarDetail({
         </div>
       )}
 
-      <div className="space-y-2" data-testid="widget-list">
-        {widgets.map((widget, index) => {
-          const tmpl = templates.find((t) => t.type === widget.widgetType);
-          const Icon = getWidgetIcon(tmpl?.icon || "Package");
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={widgets.map((w) => w.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2" data-testid="widget-list">
+            {widgets.map((widget) => {
+              const tmpl = templates.find((t) => t.type === widget.widgetType);
 
-          if (editingWidgetId === widget.id) {
-            return (
-              <WidgetSettingsEditor
-                key={widget.id}
-                widget={widget}
-                template={tmpl}
-                onSave={(settings, title) =>
-                  updateWidgetMutation.mutate({ widgetId: widget.id, data: { settings, title } })
-                }
-                onCancel={() => setEditingWidgetId(null)}
-              />
-            );
-          }
+              if (editingWidgetId === widget.id) {
+                return (
+                  <WidgetSettingsEditor
+                    key={widget.id}
+                    widget={widget}
+                    template={tmpl}
+                    onSave={(settings, title) =>
+                      updateWidgetMutation.mutate({ widgetId: widget.id, data: { settings, title } })
+                    }
+                    onCancel={() => setEditingWidgetId(null)}
+                  />
+                );
+              }
 
-          return (
-            <div
-              key={widget.id}
-              className="flex items-center gap-3 p-3 border border-border rounded-lg bg-card group hover:border-border transition-colors"
-              data-testid={`widget-item-${widget.id}`}
-            >
-              <div className="flex flex-col gap-0.5">
-                <button
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
-                  onClick={() => moveWidget(index, "up")}
-                  disabled={index === 0}
-                  data-testid={`button-move-up-${widget.id}`}
-                >
-                  <GripVertical className="w-4 h-4 rotate-90 scale-x-[-1]" />
-                </button>
-                <button
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
-                  onClick={() => moveWidget(index, "down")}
-                  disabled={index === widgets.length - 1}
-                  data-testid={`button-move-down-${widget.id}`}
-                >
-                  <GripVertical className="w-4 h-4 rotate-90" />
-                </button>
-              </div>
-
-              <div className="p-2 rounded-lg bg-muted">
-                <Icon className="w-4 h-4 text-primary" />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate" data-testid={`text-widget-title-${widget.id}`}>
-                  {widget.title}
-                </p>
-                <p className="text-xs text-muted-foreground">{tmpl?.label || widget.widgetType}</p>
-              </div>
-
-              <Switch
-                checked={widget.isActive}
-                onCheckedChange={(checked) =>
-                  updateWidgetMutation.mutate({ widgetId: widget.id, data: { isActive: checked } })
-                }
-                data-testid={`switch-widget-active-${widget.id}`}
-              />
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => setEditingWidgetId(widget.id)}
-                data-testid={`button-edit-widget-${widget.id}`}
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                onClick={() => deleteWidgetMutation.mutate(widget.id)}
-                data-testid={`button-delete-widget-${widget.id}`}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          );
-        })}
-      </div>
+              return (
+                <SortableWidget
+                  key={widget.id}
+                  widget={widget}
+                  template={tmpl}
+                  onToggleActive={(checked) =>
+                    updateWidgetMutation.mutate({ widgetId: widget.id, data: { isActive: checked } })
+                  }
+                  onEdit={() => setEditingWidgetId(widget.id)}
+                  onDelete={() => deleteWidgetMutation.mutate(widget.id)}
+                />
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }
