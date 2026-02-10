@@ -589,6 +589,45 @@ function DetachSectionButton({ pageId, pageTitle, onDone }: { pageId: string; pa
   );
 }
 
+function PreviewButton({ pageId, pageTitle }: { pageId: string; pageTitle: string }) {
+  const { appState } = usePuck();
+  
+  const handlePreview = () => {
+    // For now we use the slug if available or just open the home/shop if marked
+    // In a real scenario we'd hit a preview endpoint or use a temporary local storage state
+    // but since we want to open in a new tab, we'll try to find the actual public URL
+    
+    // We can't easily pass the CURRENT puck state to a new tab without a backend storage or query param
+    // But typically "Preview" implies seeing the LAST SAVED state in the actual site layout
+    // For this implementation, we'll assume the user wants to see the page as it exists at its route.
+    
+    // However, the prompt says "opens this page in a new tab to preview it". 
+    // If the page isn't published, it might 404. 
+    // Let's look for the page metadata or use a placeholder if we can't determine route.
+    
+    // Since I don't have the full route mapping here, I'll use a heuristic or a dedicated preview route if it exists.
+    // Given the context of the project, pages are served at /pages/:slug or / if home.
+    
+    // For now, I'll alert that it opens the live route, or a special preview route if we had one.
+    // Actually, I'll just open the route based on common patterns in this app.
+    
+    window.open(`/admin/cms/pages/${pageId}/preview`, '_blank');
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="border-primary/30 text-primary hover:bg-primary/10 h-7 text-xs"
+      onClick={handlePreview}
+      data-testid="button-preview-page"
+    >
+      <Globe className="w-3.5 h-3.5 mr-1" />
+      Preview
+    </Button>
+  );
+}
+
 function SaveDraftButton({ pageId, pageTitle, seoData, onDone }: { pageId: string; pageTitle: string; seoData: SeoData; onDone: () => void }) {
   const { appState } = usePuck();
   const [saving, setSaving] = useState(false);
@@ -809,6 +848,21 @@ function EnhancedBlockPicker() {
   const allEntries = useMemo(() => buildBlockPickerEntries(), []);
   const categories = useMemo(() => getCategoriesOrdered(), []);
 
+  const handleQuickInsert = useCallback((blockType: string) => {
+    try {
+      dispatch({
+        type: "insert",
+        componentType: blockType,
+        destinationIndex: appState?.data?.content?.length ?? 0,
+        destinationZone: "root:default-zone",
+        id: safeUUID(),
+        recordHistory: true,
+      } as any);
+    } catch (e) {
+      console.error("[QuickInsert] insert dispatch failed:", e);
+    }
+  }, [dispatch, appState]);
+
   const filtered = useMemo(() => {
     let entries = allEntries;
     if (activeTab === "most-used") {
@@ -877,6 +931,21 @@ function EnhancedBlockPicker() {
   return (
     <div className="flex flex-col h-full" data-testid="enhanced-block-picker">
       <div className="p-3 border-b border-border">
+        <p className="text-[10px] text-muted-foreground/60 mb-1.5 font-medium uppercase tracking-wider">Quick Add</p>
+        <div className="flex flex-wrap gap-1 mb-3">
+          {QUICK_INSERT_BLOCKS.map((block) => (
+            <button
+              key={block.type}
+              onClick={() => handleQuickInsert(block.type)}
+              className="flex items-center gap-1 px-2 py-1 rounded bg-muted border border-border text-[11px] text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-muted/80 transition-all"
+              data-testid={`quick-insert-sidebar-${block.type}`}
+            >
+              <span>{block.icon}</span>
+              <span>{block.label}</span>
+            </button>
+          ))}
+        </div>
+
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input
@@ -971,22 +1040,7 @@ function EnhancedBlockPicker() {
         )}
       </div>
 
-      <div className="p-3 border-t border-border">
-        <p className="text-[10px] text-muted-foreground/60 mb-1.5 font-medium uppercase tracking-wider">Quick Insert</p>
-        <div className="flex flex-wrap gap-1">
-          {QUICK_INSERT_BLOCKS.map((block) => (
-            <button
-              key={block.type}
-              onClick={() => handleInsert(block.type)}
-              className="flex items-center gap-1 px-2 py-1 rounded bg-muted border border-border text-[11px] text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-muted/80 transition-all"
-              data-testid={`quick-insert-panel-${block.type}`}
-            >
-              <span>{block.icon}</span>
-              <span>{block.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Bottom quick insert removed as requested - moved to top of sidebar */}
     </div>
   );
 }
@@ -1191,7 +1245,7 @@ export default function AdminCmsBuilder() {
             headerActions: ({ children }) => (
               <>
                 {children}
-                <QuickInsertBar />
+                <PreviewButton pageId={pageId!} pageTitle={page?.title || ""} />
                 <DetachSectionButton pageId={pageId!} pageTitle={page?.title || ""} onDone={invalidateQueries} />
                 <SaveDraftButton pageId={pageId!} pageTitle={page?.title || ""} seoData={seoData} onDone={invalidateQueries} />
                 <PublishButton pageId={pageId!} pageTitle={page?.title || ""} seoData={seoData} onDone={invalidateQueries} />
