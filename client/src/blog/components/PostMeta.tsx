@@ -16,7 +16,7 @@ export default function PostMeta({ publishedAt, readingTimeMinutes, compact }: P
     : null;
 
   return (
-    <div className="flex items-center gap-3 text-slate-400 text-sm" data-testid="post-meta">
+    <div className="flex items-center gap-3 text-muted-foreground text-sm" data-testid="post-meta">
       {formattedDate && (
         <span className="flex items-center gap-1" data-testid="post-meta-date">
           <Calendar className="w-3.5 h-3.5" />

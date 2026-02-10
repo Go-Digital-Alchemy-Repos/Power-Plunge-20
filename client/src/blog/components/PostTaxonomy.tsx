@@ -25,7 +25,7 @@ export default function PostTaxonomy({ categories, tags, linkable = true }: Post
         categories.map((cat) => (
           <span
             key={`cat-${cat.id}`}
-            className={`text-xs font-medium px-2.5 py-1 rounded-full bg-cyan-500/15 text-cyan-400 ${linkable ? "cursor-pointer hover:bg-cyan-500/25 transition-colors" : ""}`}
+            className={`text-xs font-medium px-2.5 py-1 rounded-full bg-primary/15 text-primary ${linkable ? "cursor-pointer hover:bg-primary/25 transition-colors" : ""}`}
             onClick={linkable ? () => navigate(`/blog?category=${cat.slug}`) : undefined}
             data-testid={`taxonomy-category-${cat.slug}`}
           >
@@ -36,7 +36,7 @@ export default function PostTaxonomy({ categories, tags, linkable = true }: Post
         tags.map((tag) => (
           <span
             key={`tag-${tag.id}`}
-            className={`text-xs font-medium px-2.5 py-1 rounded-full bg-slate-700 text-slate-300 ${linkable ? "cursor-pointer hover:bg-slate-600 transition-colors" : ""}`}
+            className={`text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground ${linkable ? "cursor-pointer hover:bg-muted/80 transition-colors" : ""}`}
             onClick={linkable ? () => navigate(`/blog?tag=${tag.slug}`) : undefined}
             data-testid={`taxonomy-tag-${tag.slug}`}
           >

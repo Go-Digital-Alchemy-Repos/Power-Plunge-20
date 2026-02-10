@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
-import { Search, ChevronLeft, ChevronRight, X, ArrowLeft, Rss } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, X, Rss } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SeoHead from "@/components/SeoHead";
 import PageRenderer from "@/components/PageRenderer";
-import DynamicNav from "@/components/DynamicNav";
+import SiteLayout from "@/components/SiteLayout";
 import PostCard from "./components/PostCard";
 
 interface TaxonomyItem {
@@ -22,6 +22,7 @@ interface PostListItem {
   excerpt: string | null;
   publishedAt: string | null;
   coverImageId: string | null;
+  coverImageUrl: string | null;
   readingTimeMinutes: number | null;
   featured: boolean;
   categories: TaxonomyItem[];
@@ -56,9 +57,11 @@ function CmsBlogPage({ pageId }: { pageId: string }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full" />
-      </div>
+      <SiteLayout>
+        <div className="flex items-center justify-center py-24">
+          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+        </div>
+      </SiteLayout>
     );
   }
 
@@ -67,19 +70,16 @@ function CmsBlogPage({ pageId }: { pageId: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white" data-testid="blog-cms-page">
+    <SiteLayout>
       <SeoHead
         pageTitle={`${cmsPage.metaTitle || cmsPage.title || "Blog"} | Power Plunge`}
         metaTitle={cmsPage.metaTitle || cmsPage.title}
         metaDescription={cmsPage.metaDescription || undefined}
       />
-      <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-20">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <DynamicNav location="main" />
-        </div>
-      </header>
-      <PageRenderer contentJson={cmsPage.contentJson} legacyContent={cmsPage.content} />
-    </div>
+      <div data-testid="blog-cms-page">
+        <PageRenderer contentJson={cmsPage.contentJson} legacyContent={cmsPage.content} />
+      </div>
+    </SiteLayout>
   );
 }
 
@@ -164,7 +164,7 @@ function DefaultBlogIndex() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <SiteLayout>
       <SeoHead
         pageTitle="Blog | Power Plunge"
         metaTitle="Blog | Power Plunge"
@@ -173,31 +173,26 @@ function DefaultBlogIndex() {
         ogDescription="Cold plunge tips, guides, and the latest from Power Plunge."
       />
 
-      <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-20">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/")} className="text-slate-300 hover:text-white" data-testid="button-back-home">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Home
-            </Button>
-            <DynamicNav location="main" />
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground" data-testid="text-blog-title">Blog</h1>
+            <p className="text-muted-foreground mt-1">Cold plunge tips, guides, and the latest from Power Plunge.</p>
           </div>
-          <h1 className="text-xl font-bold text-cyan-400" data-testid="text-blog-title">Blog</h1>
-          <a href="/api/blog/rss.xml" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition-colors" data-testid="link-rss">
+          <a href="/api/blog/rss.xml" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-rss">
             <Rss className="w-5 h-5" />
           </a>
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="flex flex-col md:flex-row gap-4 mb-8" data-testid="blog-filters">
           <form onSubmit={handleSearch} className="flex-1 flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search posts..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9 bg-slate-800 border-slate-700 text-white"
+                className="pl-9 bg-card border-border text-foreground"
                 data-testid="input-search-blog"
               />
             </div>
@@ -210,7 +205,7 @@ function DefaultBlogIndex() {
             <select
               value={category}
               onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-              className="bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 text-sm"
+              className="bg-card border border-border text-foreground rounded-md px-3 py-2 text-sm"
               data-testid="select-category-filter"
             >
               <option value="">All Categories</option>
@@ -224,7 +219,7 @@ function DefaultBlogIndex() {
             <select
               value={tag}
               onChange={(e) => { setTag(e.target.value); setPage(1); }}
-              className="bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 text-sm"
+              className="bg-card border border-border text-foreground rounded-md px-3 py-2 text-sm"
               data-testid="select-tag-filter"
             >
               <option value="">All Tags</option>
@@ -237,23 +232,23 @@ function DefaultBlogIndex() {
 
         {hasFilters && (
           <div className="flex items-center gap-2 mb-6">
-            <span className="text-sm text-slate-400">Filters:</span>
+            <span className="text-sm text-muted-foreground">Filters:</span>
             {q && (
-              <span className="text-xs bg-cyan-500/15 text-cyan-400 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <span className="text-xs bg-primary/15 text-primary px-2.5 py-1 rounded-full flex items-center gap-1">
                 "{q}" <X className="w-3 h-3 cursor-pointer" onClick={() => { setQ(""); setSearchInput(""); }} />
               </span>
             )}
             {category && (
-              <span className="text-xs bg-cyan-500/15 text-cyan-400 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <span className="text-xs bg-primary/15 text-primary px-2.5 py-1 rounded-full flex items-center gap-1">
                 {categories?.find(c => c.slug === category)?.name || category} <X className="w-3 h-3 cursor-pointer" onClick={() => setCategory("")} />
               </span>
             )}
             {tag && (
-              <span className="text-xs bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <span className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-full flex items-center gap-1">
                 #{tags?.find(t => t.slug === tag)?.name || tag} <X className="w-3 h-3 cursor-pointer" onClick={() => setTag("")} />
               </span>
             )}
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-slate-500" data-testid="button-clear-filters">
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-muted-foreground" data-testid="button-clear-filters">
               Clear all
             </Button>
           </div>
@@ -261,15 +256,15 @@ function DefaultBlogIndex() {
 
         {isLoading && (
           <div className="flex items-center justify-center py-24" data-testid="blog-loading">
-            <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full" />
+            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
           </div>
         )}
 
         {!isLoading && posts.length === 0 && (
           <div className="text-center py-24" data-testid="blog-empty">
-            <p className="text-slate-400 text-lg mb-2">No posts found</p>
+            <p className="text-muted-foreground text-lg mb-2">No posts found</p>
             {hasFilters && (
-              <Button variant="ghost" onClick={clearFilters} className="text-cyan-400">
+              <Button variant="ghost" onClick={clearFilters} className="text-primary">
                 Clear filters
               </Button>
             )}
@@ -287,7 +282,7 @@ function DefaultBlogIndex() {
                   excerpt={post.excerpt}
                   publishedAt={post.publishedAt}
                   readingTimeMinutes={post.readingTimeMinutes}
-                  coverImageId={post.coverImageId}
+                  coverImageUrl={post.coverImageUrl}
                   categories={post.categories}
                   tags={post.tags}
                   featured={post.featured}
@@ -302,12 +297,12 @@ function DefaultBlogIndex() {
                   size="sm"
                   disabled={page <= 1}
                   onClick={() => setPage(page - 1)}
-                  className="border-slate-700"
+                  className="border-border"
                   data-testid="button-prev-page"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" /> Previous
                 </Button>
-                <span className="text-sm text-slate-400" data-testid="text-page-info">
+                <span className="text-sm text-muted-foreground" data-testid="text-page-info">
                   Page {page} of {totalPages}
                 </span>
                 <Button
@@ -315,7 +310,7 @@ function DefaultBlogIndex() {
                   size="sm"
                   disabled={page >= totalPages}
                   onClick={() => setPage(page + 1)}
-                  className="border-slate-700"
+                  className="border-border"
                   data-testid="button-next-page"
                 >
                   Next <ChevronRight className="w-4 h-4 ml-1" />
@@ -324,14 +319,8 @@ function DefaultBlogIndex() {
             )}
           </>
         )}
-      </main>
-
-      <footer className="bg-slate-800 border-t border-slate-700 py-8 mt-12">
-        <div className="container mx-auto px-4 text-center text-slate-400">
-          <p>&copy; 2026 Power Plunge. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </SiteLayout>
   );
 }
 
@@ -346,9 +335,11 @@ export default function BlogIndexPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full" />
-      </div>
+      <SiteLayout>
+        <div className="flex items-center justify-center py-24">
+          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+        </div>
+      </SiteLayout>
     );
   }
 
