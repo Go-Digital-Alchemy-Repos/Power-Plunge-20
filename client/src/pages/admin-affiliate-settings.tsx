@@ -221,10 +221,10 @@ export default function AdminAffiliateSettings() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Program Configuration</CardTitle>
-              <CardDescription>Configure commission rates and payout settings</CardDescription>
+              <CardTitle>Program Active</CardTitle>
+              <CardDescription>Enable or disable the affiliate program</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Program Active</Label>
@@ -236,7 +236,15 @@ export default function AdminAffiliateSettings() {
                   data-testid="switch-program-active"
                 />
               </div>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle>Program Configuration</CardTitle>
+              <CardDescription>Configure commission rates and payout settings</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="commissionRate">Commission Rate (%)</Label>
