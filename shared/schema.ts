@@ -233,8 +233,15 @@ export const integrationSettings = pgTable("integration_settings", {
   stripeSecretKeyEncrypted: text("stripe_secret_key_encrypted"),
   stripeWebhookSecretEncrypted: text("stripe_webhook_secret_encrypted"),
   stripeConnectWebhookSecretEncrypted: text("stripe_connect_webhook_secret_encrypted"),
-  stripeMode: text("stripe_mode").default("test"), // test, live
+  stripeMode: text("stripe_mode").default("test"), // test, live (legacy)
   stripeConfigured: boolean("stripe_configured").default(false),
+  stripeActiveMode: text("stripe_active_mode").default("test"), // "test" or "live" - which mode is used for checkout
+  stripePublishableKeyTest: text("stripe_publishable_key_test"),
+  stripeSecretKeyTestEncrypted: text("stripe_secret_key_test_encrypted"),
+  stripeWebhookSecretTestEncrypted: text("stripe_webhook_secret_test_encrypted"),
+  stripePublishableKeyLive: text("stripe_publishable_key_live"),
+  stripeSecretKeyLiveEncrypted: text("stripe_secret_key_live_encrypted"),
+  stripeWebhookSecretLiveEncrypted: text("stripe_webhook_secret_live_encrypted"),
   // OpenAI integration for AI-powered features (SEO recommendations, etc.)
   openaiApiKeyEncrypted: text("openai_api_key_encrypted"),
   openaiConfigured: boolean("openai_configured").default(false),

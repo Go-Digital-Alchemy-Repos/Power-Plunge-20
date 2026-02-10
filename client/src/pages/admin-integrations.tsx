@@ -9,12 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/use-admin";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, XCircle, ExternalLink, Key, CreditCard, Loader2, TestTube, AlertCircle, Save, HardDrive, Mail, Brain, Link2, Copy, ShoppingBag, Instagram, RefreshCw, Users, Star, MapPin } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { CheckCircle2, XCircle, ExternalLink, Key, CreditCard, Loader2, TestTube, AlertCircle, Save, HardDrive, Mail, Brain, Link2, Copy, ShoppingBag, Instagram, RefreshCw, Users, Star, MapPin, Shield, Zap } from "lucide-react";
 import AdminNav from "@/components/admin/AdminNav";
 
 interface IntegrationStatus {
   stripe: boolean;
   stripeMode?: string;
+  stripeActiveMode?: string;
+  stripeTestConfigured?: boolean;
+  stripeLiveConfigured?: boolean;
   stripeWebhook: boolean;
   mailgun: boolean;
   cloudflareR2?: boolean;
@@ -120,14 +125,24 @@ interface EmailSettings {
   updatedAt?: string;
 }
 
+interface StripeEnvStatus {
+  configured: boolean;
+  publishableKeyMasked?: string | null;
+  hasWebhookSecret: boolean;
+}
+
 interface StripeSettings {
   configured: boolean;
-  mode?: string;
-  hasWebhookSecret?: boolean;
+  activeMode: string;
+  test: StripeEnvStatus;
+  live: StripeEnvStatus;
   hasConnectWebhookSecret?: boolean;
   connectWebhookSecretSource?: string;
-  publishableKeyMasked?: string;
-  accountName?: string;
+  legacy?: {
+    mode: string;
+    publishableKeyMasked?: string | null;
+    hasWebhookSecret: boolean;
+  } | null;
   updatedAt?: string;
   source?: string;
 }
@@ -213,8 +228,8 @@ export default function AdminIntegrations() {
                 <div className="flex items-center gap-3">
                   <StatusBadge configured={integrations?.stripe} />
                   {integrations?.stripe && (
-                    <span className="text-sm text-muted-foreground">
-                      {integrations.stripeMode === "live" ? "Live mode" : "Test mode"}
+                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${integrations.stripeActiveMode === "live" ? "bg-red-500/20 text-red-400" : "bg-blue-500/20 text-blue-400"}`} data-testid="badge-stripe-active-mode">
+                      Active: {integrations.stripeActiveMode === "live" ? "Live" : "Test"}
                     </span>
                   )}
                 </div>
@@ -226,7 +241,19 @@ export default function AdminIntegrations() {
                   Configure
                 </Button>
               </div>
-              <div className="mt-4 text-xs text-muted-foreground">
+              {integrations?.stripe && (
+                <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1" data-testid="status-stripe-test">
+                    {integrations.stripeTestConfigured ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <XCircle className="w-3 h-3 text-muted-foreground" />}
+                    Test {integrations.stripeTestConfigured ? "configured" : "not set"}
+                  </span>
+                  <span className="flex items-center gap-1" data-testid="status-stripe-live">
+                    {integrations.stripeLiveConfigured ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <XCircle className="w-3 h-3 text-muted-foreground" />}
+                    Live {integrations.stripeLiveConfigured ? "configured" : "not set"}
+                  </span>
+                </div>
+              )}
+              <div className="mt-3 text-xs text-muted-foreground">
                 <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
                   Get your API keys from Stripe Dashboard <ExternalLink className="w-3 h-3" />
                 </a>
@@ -886,49 +913,43 @@ function MailgunConfigDialog({ open, onOpenChange, onSuccess }: {
   );
 }
 
-function StripeConfigDialog({ open, onOpenChange, onSuccess }: { 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+function StripeEnvPanel({ env, stripeSettings, onSaved }: {
+  env: "test" | "live";
+  stripeSettings: StripeSettings | undefined;
+  onSaved: () => void;
 }) {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    publishableKey: "",
-    secretKey: "",
-    webhookSecret: "",
-    connectWebhookSecret: "",
-  });
+  const queryClient = useQueryClient();
+  const [publishableKey, setPublishableKey] = useState("");
+  const [secretKey, setSecretKey] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validation, setValidation] = useState<{ valid?: boolean; error?: string; accountName?: string } | null>(null);
 
-  const { data: stripeSettings, isLoading } = useQuery<StripeSettings>({
-    queryKey: ["/api/admin/settings/stripe"],
-    enabled: open,
-    queryFn: async () => {
-      const res = await fetch("/api/admin/settings/stripe");
-      if (!res.ok) throw new Error("Failed to fetch Stripe settings");
-      return res.json();
-    },
-  });
+  const envStatus = env === "test" ? stripeSettings?.test : stripeSettings?.live;
+  const prefix = env === "test" ? "pk_test_" : "pk_live_";
+  const skPrefix = env === "test" ? "sk_test_" : "sk_live_";
+  const isLive = env === "live";
+
+  const pkError = publishableKey && !publishableKey.startsWith(prefix) ? `Must start with ${prefix}` : null;
+  const skError = secretKey && !secretKey.startsWith(skPrefix) ? `Must start with ${skPrefix}` : null;
+  const hasErrors = !!pkError || !!skError;
 
   const handleValidate = async () => {
-    if (!formData.publishableKey || !formData.secretKey) {
-      toast({ title: "Both keys are required", variant: "destructive" });
+    if (!publishableKey || !secretKey) {
+      toast({ title: "Both keys are required to validate", variant: "destructive" });
       return;
     }
-
     setValidating(true);
     try {
       const res = await fetch("/api/admin/settings/stripe/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ publishableKey: formData.publishableKey, secretKey: formData.secretKey }),
+        body: JSON.stringify({ publishableKey, secretKey }),
       });
-
       const result = await res.json();
       setValidation(result);
-      
       if (result.valid) {
         toast({ title: `Keys valid! Account: ${result.accountName}` });
       } else {
@@ -942,33 +963,41 @@ function StripeConfigDialog({ open, onOpenChange, onSuccess }: {
   };
 
   const handleSave = async () => {
-    const hasNewKeys = formData.publishableKey || formData.secretKey;
-    const hasNewConnectSecret = !!formData.connectWebhookSecret;
-    if (hasNewKeys && (!formData.publishableKey || !formData.secretKey)) {
-      toast({ title: "Both Publishable Key and Secret Key are required when updating Stripe keys", variant: "destructive" });
-      return;
-    }
-    if (!hasNewKeys && !hasNewConnectSecret && !formData.webhookSecret) {
+    if (!publishableKey && !secretKey && !webhookSecret) {
       toast({ title: "No changes to save", variant: "destructive" });
       return;
     }
-
+    if ((publishableKey || secretKey) && (!publishableKey || !secretKey)) {
+      toast({ title: "Both Publishable Key and Secret Key are required", variant: "destructive" });
+      return;
+    }
+    if (hasErrors) {
+      toast({ title: "Fix key prefix errors before saving", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
+      const body: any = { environment: env };
+      if (publishableKey) body.publishableKey = publishableKey;
+      if (secretKey) body.secretKey = secretKey;
+      if (webhookSecret) body.webhookSecret = webhookSecret;
+
       const res = await fetch("/api/admin/settings/stripe", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(body),
       });
-
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to save settings");
       }
-
-      toast({ title: "Stripe settings saved" });
-      onSuccess();
-      onOpenChange(false);
+      toast({ title: `${env === "live" ? "Live" : "Test"} Stripe settings saved` });
+      setPublishableKey("");
+      setSecretKey("");
+      setWebhookSecret("");
+      setValidation(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings/stripe"] });
+      onSaved();
     } catch (error: any) {
       toast({ title: error.message, variant: "destructive" });
     } finally {
@@ -976,18 +1005,228 @@ function StripeConfigDialog({ open, onOpenChange, onSuccess }: {
     }
   };
 
-  const mode = formData.secretKey?.startsWith("sk_live_") ? "live" : "test";
+  return (
+    <div className="space-y-4">
+      {isLive && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg" data-testid="warning-live-mode">
+          <div className="flex items-center gap-2 text-red-400 text-sm font-medium">
+            <AlertCircle className="w-4 h-4" />
+            Live mode processes real charges. Double-check your keys before saving.
+          </div>
+        </div>
+      )}
+
+      {envStatus?.configured && (
+        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <div className="flex items-center gap-2 text-green-500 text-sm font-medium">
+            <CheckCircle2 className="w-4 h-4" />
+            {env === "live" ? "Live" : "Test"} keys configured
+          </div>
+          {envStatus.publishableKeyMasked && (
+            <p className="text-xs text-muted-foreground mt-1 font-mono">{envStatus.publishableKeyMasked}</p>
+          )}
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+            <span>Webhook: {envStatus.hasWebhookSecret ? "configured" : "not set"}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label>Publishable Key</Label>
+        <Input
+          value={publishableKey}
+          onChange={(e) => { setPublishableKey(e.target.value); setValidation(null); }}
+          placeholder={`${prefix}...`}
+          data-testid={`input-stripe-pk-${env}`}
+        />
+        {pkError && <p className="text-xs text-red-500">{pkError}</p>}
+        <p className="text-xs text-muted-foreground">Expected prefix: <code>{prefix}</code></p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Secret Key</Label>
+        <Input
+          type="password"
+          value={secretKey}
+          onChange={(e) => { setSecretKey(e.target.value); setValidation(null); }}
+          placeholder={`${skPrefix}...`}
+          data-testid={`input-stripe-sk-${env}`}
+        />
+        {skError && <p className="text-xs text-red-500">{skError}</p>}
+        <p className="text-xs text-muted-foreground">Expected prefix: <code>{skPrefix}</code></p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{env === "live" ? "Live" : "Test"} Payment Webhook Secret</Label>
+        <Input
+          type="password"
+          value={webhookSecret}
+          onChange={(e) => setWebhookSecret(e.target.value)}
+          placeholder="whsec_..."
+          data-testid={`input-stripe-webhook-${env}`}
+        />
+        <p className="text-xs text-muted-foreground">
+          Verifies webhook signatures for {env} mode payment events.
+        </p>
+      </div>
+
+      <div className="p-3 bg-muted/50 border rounded-lg space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Link2 className="w-4 h-4" />
+          Payment Webhook URL
+        </div>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 text-xs bg-background px-2 py-1.5 rounded border font-mono break-all" data-testid={`text-webhook-url-${env}`}>
+            {window.location.origin}/api/webhook/stripe
+          </code>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/api/webhook/stripe`);
+              toast({ title: "Payment webhook URL copied" });
+            }}
+            data-testid={`button-copy-webhook-url-${env}`}
+          >
+            <Copy className="w-3 h-3" />
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Add this URL in your Stripe Dashboard under Developers &rarr; Webhooks for {env} mode.
+        </p>
+      </div>
+
+      {validation && (
+        <div className={`p-3 rounded-lg border ${validation.valid ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"}`}>
+          <div className="flex items-center gap-2 text-sm">
+            {validation.valid ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span className="text-green-500">Keys valid! Account: {validation.accountName}</span>
+              </>
+            ) : (
+              <>
+                <XCircle className="w-4 h-4 text-red-500" />
+                <span className="text-red-500">{validation.error}</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1"
+          onClick={handleValidate}
+          disabled={validating || !publishableKey || !secretKey || hasErrors}
+          data-testid={`button-validate-stripe-${env}`}
+        >
+          {validating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+          Validate
+        </Button>
+        <Button
+          className="flex-1"
+          onClick={handleSave}
+          disabled={saving || hasErrors || (!publishableKey && !secretKey && !webhookSecret)}
+          data-testid={`button-save-stripe-${env}`}
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+          Save {env === "live" ? "Live" : "Test"} Config
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function StripeConfigDialog({ open, onOpenChange, onSuccess }: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [connectWebhookSecret, setConnectWebhookSecret] = useState("");
+  const [savingConnect, setSavingConnect] = useState(false);
+  const [togglingMode, setTogglingMode] = useState(false);
+
+  const { data: stripeSettings, isLoading, refetch } = useQuery<StripeSettings>({
+    queryKey: ["/api/admin/settings/stripe"],
+    enabled: open,
+    queryFn: async () => {
+      const res = await fetch("/api/admin/settings/stripe");
+      if (!res.ok) throw new Error("Failed to fetch Stripe settings");
+      return res.json();
+    },
+  });
+
+  const activeMode = stripeSettings?.activeMode || "test";
+  const isLiveActive = activeMode === "live";
+
+  const handleToggleMode = async (newMode: "test" | "live") => {
+    if (newMode === activeMode) return;
+    setTogglingMode(true);
+    try {
+      const res = await fetch("/api/admin/settings/stripe", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activeMode: newMode }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update mode");
+      }
+      toast({ title: `Switched to ${newMode === "live" ? "Live" : "Test"} mode` });
+      refetch();
+      onSuccess();
+    } catch (error: any) {
+      toast({ title: error.message, variant: "destructive" });
+    } finally {
+      setTogglingMode(false);
+    }
+  };
+
+  const handleSaveConnect = async () => {
+    if (!connectWebhookSecret) return;
+    setSavingConnect(true);
+    try {
+      const res = await fetch("/api/admin/settings/stripe", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectWebhookSecret }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to save settings");
+      }
+      toast({ title: "Connect webhook secret saved" });
+      setConnectWebhookSecret("");
+      refetch();
+    } catch (error: any) {
+      toast({ title: error.message, variant: "destructive" });
+    } finally {
+      setSavingConnect(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5" />
-            Stripe Configuration
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Stripe Configuration
+            </DialogTitle>
+            <span className={`text-xs px-3 py-1 rounded-full font-semibold ${isLiveActive ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-blue-500/20 text-blue-400 border border-blue-500/30"}`} data-testid="badge-dialog-active-mode">
+              {isLiveActive ? "Live Mode Active" : "Test Mode Active"}
+            </span>
+          </div>
           <DialogDescription>
-            Configure Stripe for payments and affiliate payouts. All keys are encrypted and stored securely.
+            Configure test and live Stripe credentials independently. All keys are encrypted and stored securely.
           </DialogDescription>
         </DialogHeader>
 
@@ -997,231 +1236,145 @@ function StripeConfigDialog({ open, onOpenChange, onSuccess }: {
           </div>
         ) : (
           <div className="space-y-6">
-            {stripeSettings?.configured && (
-              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                <div className="flex items-center gap-2 text-green-500 text-sm font-medium">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Stripe is configured ({stripeSettings.mode} mode)
-                </div>
-                {stripeSettings.publishableKeyMasked && (
-                  <p className="text-xs text-muted-foreground mt-1 font-mono">
-                    {stripeSettings.publishableKeyMasked}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  Source: {stripeSettings.source === "database" ? "Admin Configuration" : "Environment Variables"}
-                </p>
-              </div>
-            )}
-
-            {formData.secretKey && (
-              <div className={`p-3 rounded-lg border ${mode === "live" ? "bg-red-500/10 border-red-500/20" : "bg-blue-500/10 border-blue-500/20"}`}>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <AlertCircle className={`w-4 h-4 ${mode === "live" ? "text-red-500" : "text-blue-500"}`} />
-                  <span className={mode === "live" ? "text-red-500" : "text-blue-500"}>
-                    {mode === "live" ? "LIVE MODE - Real charges will be made" : "Test mode - No real charges"}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-primary" />
-                Stripe Payments
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                For processing customer orders and payments on your store.
-              </p>
-            </div>
-
-            <div className="space-y-4 pl-1 border-l-2 border-primary/20 ml-1">
-              <div className="space-y-2 pl-3">
-                <Label htmlFor="stripePublishableKey">Publishable Key</Label>
-                <Input
-                  id="stripePublishableKey"
-                  value={formData.publishableKey}
-                  onChange={(e) => {
-                    setFormData({ ...formData, publishableKey: e.target.value });
-                    setValidation(null);
-                  }}
-                  placeholder="pk_test_..."
-                  data-testid="input-stripe-publishable-key"
-                />
-              </div>
-
-              <div className="space-y-2 pl-3">
-                <Label htmlFor="stripeSecretKey">Secret Key</Label>
-                <Input
-                  id="stripeSecretKey"
-                  type="password"
-                  value={formData.secretKey}
-                  onChange={(e) => {
-                    setFormData({ ...formData, secretKey: e.target.value });
-                    setValidation(null);
-                  }}
-                  placeholder="sk_test_..."
-                  data-testid="input-stripe-secret-key"
-                />
-              </div>
-
-              <div className="space-y-2 pl-3">
-                <Label htmlFor="stripeWebhookSecret">Payment Webhook Secret (Optional)</Label>
-                <Input
-                  id="stripeWebhookSecret"
-                  type="password"
-                  value={formData.webhookSecret}
-                  onChange={(e) => setFormData({ ...formData, webhookSecret: e.target.value })}
-                  placeholder="whsec_..."
-                  data-testid="input-stripe-webhook-secret"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Verifies payment webhook signatures. Get this from your Stripe webhook endpoint settings.
-                </p>
-              </div>
-
-              <div className="p-3 ml-3 bg-muted/50 border rounded-lg space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Link2 className="w-4 h-4" />
-                  Payment Webhook URL
-                </div>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-xs bg-background px-2 py-1.5 rounded border font-mono break-all" data-testid="text-webhook-url">
-                    {window.location.origin}/api/webhook/stripe
-                  </code>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/api/webhook/stripe`);
-                      toast({ title: "Payment webhook URL copied" });
-                    }}
-                    data-testid="button-copy-webhook-url"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Copy this URL into Stripe Dashboard → Developers → Webhooks for order/payment events.
-                </p>
-              </div>
-            </div>
-
-            <div className="border-t pt-4 space-y-1">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Users className="w-4 h-4 text-orange-500" />
-                Stripe Connect — Affiliates
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                For connecting affiliate bank accounts and processing affiliate payouts. This requires a separate webhook endpoint in Stripe.
-              </p>
-            </div>
-
-            <div className="space-y-4 pl-1 border-l-2 border-orange-500/20 ml-1">
-              {stripeSettings?.hasConnectWebhookSecret && !formData.connectWebhookSecret && (
-                <div className="p-2 ml-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-500 text-xs font-medium">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Connect webhook secret is configured
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 ml-5">
-                    Source: {stripeSettings.connectWebhookSecretSource === "database" ? "Admin Configuration" : "Environment Variable"}
+            <div className={`p-4 rounded-lg border ${isLiveActive ? "bg-red-500/5 border-red-500/20" : "bg-blue-500/5 border-blue-500/20"}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    Active Processing Mode
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {isLiveActive ? "Real charges are being processed." : "Using test keys. No real charges."}
                   </p>
                 </div>
-              )}
-              {!stripeSettings?.hasConnectWebhookSecret && !formData.connectWebhookSecret && (
-                <div className="p-2 ml-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                  <div className="flex items-center gap-2 text-amber-500 text-xs font-medium">
+                <div className="flex items-center gap-3" data-testid="stripe-mode-toggle">
+                  <span className={`text-xs font-medium ${!isLiveActive ? "text-blue-400" : "text-muted-foreground"}`}>Test</span>
+                  <Switch
+                    checked={isLiveActive}
+                    onCheckedChange={(checked) => handleToggleMode(checked ? "live" : "test")}
+                    disabled={togglingMode}
+                    data-testid="switch-stripe-mode"
+                  />
+                  <span className={`text-xs font-medium ${isLiveActive ? "text-red-400" : "text-muted-foreground"}`}>Live</span>
+                </div>
+              </div>
+              {isLiveActive && (
+                <div className="mt-2 p-2 bg-red-500/10 rounded border border-red-500/20">
+                  <p className="text-xs text-red-400 font-medium flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
-                    Connect webhook secret not configured — affiliate bank account updates won't be received
-                  </div>
+                    Live mode processes real charges. Make sure your live keys are correct.
+                  </p>
                 </div>
               )}
-
-              <div className="space-y-2 pl-3">
-                <Label htmlFor="stripeConnectWebhookSecret">Connect Webhook Secret (Optional)</Label>
-                <Input
-                  id="stripeConnectWebhookSecret"
-                  type="password"
-                  value={formData.connectWebhookSecret}
-                  onChange={(e) => setFormData({ ...formData, connectWebhookSecret: e.target.value })}
-                  placeholder="whsec_..."
-                  data-testid="input-stripe-connect-webhook-secret"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Verifies Connect webhook signatures for affiliate account updates. Get this when you create the Connect webhook endpoint in Stripe.
-                </p>
-              </div>
-
-              <div className="p-3 ml-3 bg-orange-500/5 border border-orange-500/20 rounded-lg space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Link2 className="w-4 h-4 text-orange-500" />
-                  Connect Webhook URL
-                </div>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-xs bg-background px-2 py-1.5 rounded border font-mono break-all" data-testid="text-connect-webhook-url">
-                    {window.location.origin}/api/webhook/stripe-connect
-                  </code>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/api/webhook/stripe-connect`);
-                      toast({ title: "Connect webhook URL copied" });
-                    }}
-                    data-testid="button-copy-connect-webhook-url"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Copy this as a <strong>separate</strong> webhook endpoint in Stripe Dashboard → Developers → Webhooks. Listen for Connect events: <code className="text-xs">account.updated</code> and <code className="text-xs">capability.updated</code>.
-                </p>
-              </div>
             </div>
 
-            {validation && (
-              <div className={`p-3 rounded-lg border ${validation.valid ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"}`}>
-                <div className="flex items-center gap-2 text-sm">
-                  {validation.valid ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-green-500">Keys valid! Account: {validation.accountName}</span>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="w-4 h-4 text-red-500" />
-                      <span className="text-red-500">{validation.error}</span>
-                    </>
-                  )}
+            <Tabs defaultValue="test" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="test" className="flex items-center gap-2" data-testid="tab-stripe-test">
+                  <TestTube className="w-3.5 h-3.5" />
+                  Test Configuration
+                  {stripeSettings?.test?.configured && <CheckCircle2 className="w-3 h-3 text-green-500" />}
+                </TabsTrigger>
+                <TabsTrigger value="live" className="flex items-center gap-2" data-testid="tab-stripe-live">
+                  <Shield className="w-3.5 h-3.5" />
+                  Live Configuration
+                  {stripeSettings?.live?.configured && <CheckCircle2 className="w-3 h-3 text-green-500" />}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="test" className="mt-4" data-testid="panel-stripe-test">
+                <StripeEnvPanel env="test" stripeSettings={stripeSettings} onSaved={() => { refetch(); onSuccess(); }} />
+              </TabsContent>
+              <TabsContent value="live" className="mt-4" data-testid="panel-stripe-live">
+                <StripeEnvPanel env="live" stripeSettings={stripeSettings} onSaved={() => { refetch(); onSuccess(); }} />
+              </TabsContent>
+            </Tabs>
+
+            <div className="border-t pt-4 space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Users className="w-4 h-4 text-orange-500" />
+                  Stripe Connect Webhook (shared across modes)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  For affiliate bank account updates. This webhook is shared across test and live modes.
+                </p>
+              </div>
+
+              <div className="space-y-4 pl-1 border-l-2 border-orange-500/20 ml-1">
+                {stripeSettings?.hasConnectWebhookSecret && !connectWebhookSecret && (
+                  <div className="p-2 ml-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 text-green-500 text-xs font-medium">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Connect webhook secret is configured
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 ml-5">
+                      Source: {stripeSettings.connectWebhookSecretSource === "database" ? "Admin Configuration" : "Environment Variable"}
+                    </p>
+                  </div>
+                )}
+                {!stripeSettings?.hasConnectWebhookSecret && !connectWebhookSecret && (
+                  <div className="p-2 ml-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 text-amber-500 text-xs font-medium">
+                      <AlertCircle className="w-3 h-3" />
+                      Connect webhook secret not configured
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2 pl-3">
+                  <Label>Connect Webhook Secret</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      value={connectWebhookSecret}
+                      onChange={(e) => setConnectWebhookSecret(e.target.value)}
+                      placeholder="whsec_..."
+                      data-testid="input-stripe-connect-webhook-secret"
+                    />
+                    <Button
+                      onClick={handleSaveConnect}
+                      disabled={savingConnect || !connectWebhookSecret}
+                      data-testid="button-save-connect-webhook"
+                    >
+                      {savingConnect ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-3 ml-3 bg-orange-500/5 border border-orange-500/20 rounded-lg space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Link2 className="w-4 h-4 text-orange-500" />
+                    Connect Webhook URL
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-background px-2 py-1.5 rounded border font-mono break-all" data-testid="text-connect-webhook-url">
+                      {window.location.origin}/api/webhook/stripe-connect
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/api/webhook/stripe-connect`);
+                        toast({ title: "Connect webhook URL copied" });
+                      }}
+                      data-testid="button-copy-connect-webhook-url"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Add as a <strong>separate</strong> webhook in Stripe Dashboard. Listen for: <code className="text-xs">account.updated</code>, <code className="text-xs">capability.updated</code>.
+                  </p>
                 </div>
               </div>
-            )}
-
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full"
-              onClick={handleValidate}
-              disabled={validating || !formData.publishableKey || !formData.secretKey}
-              data-testid="button-validate-stripe"
-            >
-              {validating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-              Validate Keys
-            </Button>
+            </div>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || (!formData.publishableKey && !formData.secretKey && !formData.connectWebhookSecret && !formData.webhookSecret)} data-testid="button-save-stripe">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-            Save Configuration
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} data-testid="button-close-stripe-dialog">Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

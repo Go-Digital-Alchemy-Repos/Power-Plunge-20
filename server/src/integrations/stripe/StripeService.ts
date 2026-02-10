@@ -19,48 +19,84 @@ class StripeService {
   async getConfig(): Promise<StripeConfig> {
     const now = Date.now();
     
-    // Use cache if still valid
     if (this.configCache && now - this.lastConfigFetch < this.CACHE_TTL) {
       return this.configCache;
     }
 
-    // First check database for stored keys
     const settings = await storage.getIntegrationSettings();
     
-    if (settings && settings.stripeConfigured && settings.stripeSecretKeyEncrypted) {
-      let secretKey = "";
-      let webhookSecret = "";
-      
-      try {
-        secretKey = decrypt(settings.stripeSecretKeyEncrypted);
-      } catch (error) {
-        console.error("Failed to decrypt Stripe secret key");
-      }
-      
-      if (settings.stripeWebhookSecretEncrypted) {
+    if (settings) {
+      const activeMode = (settings.stripeActiveMode as "test" | "live") || "test";
+
+      const pkField = activeMode === "live" ? settings.stripePublishableKeyLive : settings.stripePublishableKeyTest;
+      const skField = activeMode === "live" ? settings.stripeSecretKeyLiveEncrypted : settings.stripeSecretKeyTestEncrypted;
+      const whField = activeMode === "live" ? settings.stripeWebhookSecretLiveEncrypted : settings.stripeWebhookSecretTestEncrypted;
+
+      if (pkField && skField) {
+        let secretKey = "";
+        let webhookSecret = "";
+
         try {
-          webhookSecret = decrypt(settings.stripeWebhookSecretEncrypted);
+          secretKey = decrypt(skField);
         } catch (error) {
-          console.error("Failed to decrypt Stripe webhook secret");
+          console.error(`[STRIPE] Failed to decrypt ${activeMode} secret key`);
+        }
+
+        if (whField) {
+          try {
+            webhookSecret = decrypt(whField);
+          } catch (error) {
+            console.error(`[STRIPE] Failed to decrypt ${activeMode} webhook secret`);
+          }
+        }
+
+        if (secretKey) {
+          this.configCache = {
+            publishableKey: pkField,
+            secretKey,
+            webhookSecret,
+            mode: activeMode,
+            configured: true,
+          };
+          this.lastConfigFetch = now;
+          this.stripeClient = null;
+          return this.configCache;
         }
       }
 
-      if (secretKey) {
-        this.configCache = {
-          publishableKey: settings.stripePublishableKey || "",
-          secretKey,
-          webhookSecret,
-          mode: (settings.stripeMode as "test" | "live") || "test",
-          configured: true,
-        };
-        this.lastConfigFetch = now;
-        this.stripeClient = null; // Reset client to use new keys
-        return this.configCache;
+      if (settings.stripeConfigured && settings.stripeSecretKeyEncrypted) {
+        let secretKey = "";
+        let webhookSecret = "";
+
+        try {
+          secretKey = decrypt(settings.stripeSecretKeyEncrypted);
+        } catch (error) {
+          console.error("[STRIPE] Failed to decrypt legacy secret key");
+        }
+
+        if (settings.stripeWebhookSecretEncrypted) {
+          try {
+            webhookSecret = decrypt(settings.stripeWebhookSecretEncrypted);
+          } catch (error) {
+            console.error("[STRIPE] Failed to decrypt legacy webhook secret");
+          }
+        }
+
+        if (secretKey) {
+          this.configCache = {
+            publishableKey: settings.stripePublishableKey || "",
+            secretKey,
+            webhookSecret,
+            mode: (settings.stripeMode as "test" | "live") || "test",
+            configured: true,
+          };
+          this.lastConfigFetch = now;
+          this.stripeClient = null;
+          return this.configCache;
+        }
       }
     }
 
-    // Fallback to environment variables with explicit mode-driven selection
-    // Determine mode: if STRIPE_MODE is set, use it; otherwise detect from available keys
     const configuredMode = process.env.STRIPE_MODE as "test" | "live" | undefined;
     
     let envSecretKey = "";
@@ -94,7 +130,6 @@ class StripeService {
       }
     }
 
-    // Validate key/mode consistency
     if (envSecretKey) {
       const keyMode = envSecretKey.startsWith("sk_live_") ? "live" : "test";
       if (keyMode !== resolvedMode) {

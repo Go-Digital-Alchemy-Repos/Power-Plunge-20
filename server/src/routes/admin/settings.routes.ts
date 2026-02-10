@@ -9,9 +9,9 @@ integrationsStatusRoutes.get("/", async (req: any, res) => {
   const { stripeService } = await import("../../integrations/stripe");
   const { openaiService } = await import("../../integrations/openai/OpenAIService");
   const stripeConfig = await stripeService.getConfig();
+  const intSettings = await storage.getIntegrationSettings();
   
   const emailSettings = await storage.getEmailSettings();
-  const integrationSettings = await storage.getIntegrationSettings();
   
   const cloudflareR2Configured = !!(
     process.env.CLOUDFLARE_ACCOUNT_ID &&
@@ -19,22 +19,29 @@ integrationsStatusRoutes.get("/", async (req: any, res) => {
     process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY &&
     process.env.CLOUDFLARE_R2_BUCKET_NAME
   );
+
+  const activeMode = (intSettings?.stripeActiveMode as "test" | "live") || "test";
+  const testConfigured = !!(intSettings?.stripePublishableKeyTest && intSettings?.stripeSecretKeyTestEncrypted);
+  const liveConfigured = !!(intSettings?.stripePublishableKeyLive && intSettings?.stripeSecretKeyLiveEncrypted);
   
   res.json({
     stripe: stripeConfig.configured,
     stripeMode: stripeConfig.mode,
+    stripeActiveMode: activeMode,
+    stripeTestConfigured: testConfigured,
+    stripeLiveConfigured: liveConfigured,
     stripeWebhook: !!stripeConfig.webhookSecret,
     mailgun: emailSettings?.provider === "mailgun" && !!emailSettings.mailgunApiKeyEncrypted,
     cloudflareR2: cloudflareR2Configured,
-    openai: integrationSettings?.openaiConfigured || false,
-    tiktokShop: integrationSettings?.tiktokShopConfigured || false,
-    instagramShop: integrationSettings?.instagramShopConfigured || false,
-    pinterestShopping: integrationSettings?.pinterestShoppingConfigured || false,
-    youtubeShopping: integrationSettings?.youtubeShoppingConfigured || false,
-    snapchatShopping: integrationSettings?.snapchatShoppingConfigured || false,
-    xShopping: integrationSettings?.xShoppingConfigured || false,
-    mailchimp: integrationSettings?.mailchimpConfigured || false,
-    googlePlaces: integrationSettings?.googlePlacesConfigured || false,
+    openai: intSettings?.openaiConfigured || false,
+    tiktokShop: intSettings?.tiktokShopConfigured || false,
+    instagramShop: intSettings?.instagramShopConfigured || false,
+    pinterestShopping: intSettings?.pinterestShoppingConfigured || false,
+    youtubeShopping: intSettings?.youtubeShoppingConfigured || false,
+    snapchatShopping: intSettings?.snapchatShoppingConfigured || false,
+    xShopping: intSettings?.xShoppingConfigured || false,
+    mailchimp: intSettings?.mailchimpConfigured || false,
+    googlePlaces: intSettings?.googlePlacesConfigured || false,
   });
 });
 
@@ -162,15 +169,36 @@ router.get("/stripe", async (req: any, res) => {
   try {
     const { stripeService } = await import("../../integrations/stripe");
     const { maskKey } = await import("../../utils/encryption");
-    const config = await stripeService.getConfig();
-    const integrationSettings = await storage.getIntegrationSettings();
-    
-    let hasConnectWebhookSecret = false;
-    let connectWebhookSecretSource: string | null = null;
-    if (integrationSettings?.stripeConnectWebhookSecretEncrypted) {
+    const settings = await storage.getIntegrationSettings();
+
+    const activeMode = (settings?.stripeActiveMode as "test" | "live") || "test";
+
+    const testConfigured = !!(settings?.stripePublishableKeyTest && settings?.stripeSecretKeyTestEncrypted);
+    const liveConfigured = !!(settings?.stripePublishableKeyLive && settings?.stripeSecretKeyLiveEncrypted);
+
+    let hasTestWebhookSecret = false;
+    let hasLiveWebhookSecret = false;
+    if (settings?.stripeWebhookSecretTestEncrypted) {
       try {
         const { decrypt } = await import("../../utils/encryption");
-        const val = decrypt(integrationSettings.stripeConnectWebhookSecretEncrypted);
+        decrypt(settings.stripeWebhookSecretTestEncrypted);
+        hasTestWebhookSecret = true;
+      } catch {}
+    }
+    if (settings?.stripeWebhookSecretLiveEncrypted) {
+      try {
+        const { decrypt } = await import("../../utils/encryption");
+        decrypt(settings.stripeWebhookSecretLiveEncrypted);
+        hasLiveWebhookSecret = true;
+      } catch {}
+    }
+
+    let hasConnectWebhookSecret = false;
+    let connectWebhookSecretSource: string | null = null;
+    if (settings?.stripeConnectWebhookSecretEncrypted) {
+      try {
+        const { decrypt } = await import("../../utils/encryption");
+        const val = decrypt(settings.stripeConnectWebhookSecretEncrypted);
         if (val) {
           hasConnectWebhookSecret = true;
           connectWebhookSecretSource = "database";
@@ -182,15 +210,33 @@ router.get("/stripe", async (req: any, res) => {
       connectWebhookSecretSource = "environment";
     }
 
+    const legacyConfigured = !!(settings?.stripeConfigured && settings?.stripePublishableKey && settings?.stripeSecretKeyEncrypted);
+    const hasLegacyWebhookSecret = !!settings?.stripeWebhookSecretEncrypted;
+    const overallConfigured = testConfigured || liveConfigured || legacyConfigured;
+    const source = overallConfigured && (testConfigured || liveConfigured) ? "database" : (legacyConfigured ? "database_legacy" : "environment");
+
     res.json({
-      configured: config.configured,
-      mode: config.mode,
-      hasWebhookSecret: !!config.webhookSecret,
+      configured: overallConfigured,
+      activeMode,
+      test: {
+        configured: testConfigured,
+        publishableKeyMasked: settings?.stripePublishableKeyTest ? maskKey(settings.stripePublishableKeyTest) : null,
+        hasWebhookSecret: hasTestWebhookSecret,
+      },
+      live: {
+        configured: liveConfigured,
+        publishableKeyMasked: settings?.stripePublishableKeyLive ? maskKey(settings.stripePublishableKeyLive) : null,
+        hasWebhookSecret: hasLiveWebhookSecret,
+      },
       hasConnectWebhookSecret,
       connectWebhookSecretSource,
-      publishableKeyMasked: config.publishableKey ? maskKey(config.publishableKey) : null,
-      updatedAt: integrationSettings?.updatedAt || null,
-      source: integrationSettings?.stripeConfigured ? "database" : "environment",
+      legacy: legacyConfigured ? {
+        mode: settings?.stripeMode || "test",
+        publishableKeyMasked: settings?.stripePublishableKey ? maskKey(settings.stripePublishableKey) : null,
+        hasWebhookSecret: hasLegacyWebhookSecret,
+      } : null,
+      updatedAt: settings?.updatedAt || null,
+      source,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch Stripe settings" });
@@ -201,51 +247,84 @@ router.patch("/stripe", async (req: any, res) => {
   try {
     const { encrypt, maskKey } = await import("../../utils/encryption");
     const { stripeService } = await import("../../integrations/stripe");
-    const { publishableKey, secretKey, webhookSecret, connectWebhookSecret } = req.body;
-
-    const hasNewKeys = publishableKey || secretKey;
-    const hasConnectOnly = !hasNewKeys && (connectWebhookSecret || webhookSecret);
-
-    if (hasNewKeys && (!publishableKey || !secretKey)) {
-      return res.status(400).json({ message: "Both Publishable Key and Secret Key are required when updating Stripe keys" });
-    }
+    const { environment, publishableKey, secretKey, webhookSecret, connectWebhookSecret, activeMode } = req.body;
 
     const updateData: any = {};
-    let mode: string | undefined;
-    let validation: any = {};
+    let auditDetails: any = {};
 
-    if (hasNewKeys) {
-      validation = await stripeService.validateKeys(publishableKey, secretKey);
+    if (activeMode !== undefined) {
+      if (activeMode !== "test" && activeMode !== "live") {
+        return res.status(400).json({ message: "activeMode must be 'test' or 'live'" });
+      }
+      updateData.stripeActiveMode = activeMode;
+      auditDetails.activeModeChanged = activeMode;
+    }
+
+    if (environment && (publishableKey || secretKey)) {
+      if (environment !== "test" && environment !== "live") {
+        return res.status(400).json({ message: "environment must be 'test' or 'live'" });
+      }
+      if (!publishableKey || !secretKey) {
+        return res.status(400).json({ message: "Both Publishable Key and Secret Key are required when updating keys" });
+      }
+
+      const expectedPkPrefix = environment === "live" ? "pk_live_" : "pk_test_";
+      const expectedSkPrefix = environment === "live" ? "sk_live_" : "sk_test_";
+
+      if (!publishableKey.startsWith(expectedPkPrefix)) {
+        return res.status(400).json({ message: `Publishable key must start with ${expectedPkPrefix} for ${environment} environment` });
+      }
+      if (!secretKey.startsWith(expectedSkPrefix)) {
+        return res.status(400).json({ message: `Secret key must start with ${expectedSkPrefix} for ${environment} environment` });
+      }
+
+      const pkMode = publishableKey.startsWith("pk_live_") ? "live" : "test";
+      const skMode = secretKey.startsWith("sk_live_") ? "live" : "test";
+      if (pkMode !== skMode) {
+        return res.status(400).json({ message: "Publishable key and secret key must be from the same mode (both test or both live)" });
+      }
+
+      const validation = await stripeService.validateKeys(publishableKey, secretKey);
       if (!validation.valid) {
         return res.status(400).json({ message: validation.error });
       }
-      mode = secretKey.startsWith("sk_live_") ? "live" : "test";
-      updateData.stripePublishableKey = publishableKey;
-      updateData.stripeSecretKeyEncrypted = encrypt(secretKey);
-      updateData.stripeMode = mode;
-      updateData.stripeConfigured = true;
-    } else if (hasConnectOnly) {
-      const existingConfig = await stripeService.getConfig();
-      if (!existingConfig.configured) {
-        return res.status(400).json({ message: "Stripe keys must be configured before adding webhook secrets" });
+
+      if (environment === "test") {
+        updateData.stripePublishableKeyTest = publishableKey;
+        updateData.stripeSecretKeyTestEncrypted = encrypt(secretKey);
+      } else {
+        updateData.stripePublishableKeyLive = publishableKey;
+        updateData.stripeSecretKeyLiveEncrypted = encrypt(secretKey);
       }
-      mode = existingConfig.mode;
-    } else {
-      return res.status(400).json({ message: "No changes provided" });
+
+      updateData.stripeConfigured = true;
+      auditDetails.environment = environment;
+      auditDetails.accountName = validation.accountName;
     }
 
-    if (webhookSecret) {
-      updateData.stripeWebhookSecretEncrypted = encrypt(webhookSecret);
+    if (webhookSecret && environment) {
+      if (environment === "test") {
+        updateData.stripeWebhookSecretTestEncrypted = encrypt(webhookSecret);
+      } else {
+        updateData.stripeWebhookSecretLiveEncrypted = encrypt(webhookSecret);
+      }
+      auditDetails.hasWebhookSecret = true;
+      auditDetails.webhookEnvironment = environment;
     }
 
     if (connectWebhookSecret) {
       updateData.stripeConnectWebhookSecretEncrypted = encrypt(connectWebhookSecret);
+      auditDetails.hasConnectWebhookSecret = true;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: "No changes provided" });
     }
 
     const settings = await storage.updateIntegrationSettings(updateData);
-    
+
     stripeService.clearCache();
-    
+
     const adminId = (req as any).adminUser?.id;
     if (adminId) {
       try {
@@ -254,7 +333,7 @@ router.patch("/stripe", async (req: any, res) => {
           action: "update_stripe_settings",
           targetType: "settings",
           targetId: "stripe",
-          details: { mode, hasWebhookSecret: !!webhookSecret, hasConnectWebhookSecret: !!connectWebhookSecret },
+          details: auditDetails,
           ipAddress: req.ip || null,
         });
       } catch (auditErr) {
@@ -262,14 +341,9 @@ router.patch("/stripe", async (req: any, res) => {
       }
     }
 
-    const currentConfig = await stripeService.getConfig();
     res.json({
-      configured: currentConfig.configured,
-      mode: mode || currentConfig.mode,
-      hasWebhookSecret: !!webhookSecret || !!currentConfig.webhookSecret,
-      hasConnectWebhookSecret: !!connectWebhookSecret || !!settings.stripeConnectWebhookSecretEncrypted,
-      publishableKeyMasked: publishableKey ? maskKey(publishableKey) : (currentConfig.publishableKey ? maskKey(currentConfig.publishableKey) : null),
-      accountName: validation?.accountName,
+      success: true,
+      activeMode: settings.stripeActiveMode || "test",
       updatedAt: settings.updatedAt,
     });
   } catch (error: any) {
