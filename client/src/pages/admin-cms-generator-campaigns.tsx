@@ -224,7 +224,7 @@ export default function AdminCmsGeneratorCampaigns() {
 
   if (adminLoading || !hasFullAccess) {
     return (
-      <CmsLayout activeNav="generator" breadcrumbs={[{ label: "Generator" }, { label: "Campaigns" }]}>
+      <CmsLayout activeNav="templates" breadcrumbs={[{ label: "Templates", href: "/admin/cms/templates?tab=generators" }, { label: "Campaign Pack Generator" }]}>
         <div className="p-8 text-center text-muted-foreground" data-testid="loading-state">
           {adminLoading ? "Loading..." : "Access Denied"}
         </div>
@@ -233,7 +233,7 @@ export default function AdminCmsGeneratorCampaigns() {
   }
 
   return (
-    <CmsLayout activeNav="generator" breadcrumbs={[{ label: "Generator" }, { label: "Campaigns" }]}>
+    <CmsLayout activeNav="templates" breadcrumbs={[{ label: "Templates", href: "/admin/cms/templates?tab=generators" }, { label: "Campaign Pack Generator" }]}>
       <div className="max-w-5xl mx-auto" data-testid="generator-campaigns-page">
         <div className="mb-6">
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">

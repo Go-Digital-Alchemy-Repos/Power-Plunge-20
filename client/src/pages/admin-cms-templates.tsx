@@ -3,7 +3,7 @@ import { useAdmin } from "@/hooks/use-admin";
 import { useLocation, useSearch } from "wouter";
 import CmsLayout from "@/components/admin/CmsLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Sparkles, Layers, Plus, BookTemplate, PanelRight } from "lucide-react";
+import { FileText, Sparkles, Layers, Plus, BookTemplate, PanelRight, Wand2, Package2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CMS_TEMPLATES, type CmsTemplate } from "@/cms/templates/templateLibrary";
@@ -152,13 +152,87 @@ function PageTemplatesContent({ onUseTemplate }: { onUseTemplate: (id: string) =
   );
 }
 
+function GeneratorsContent({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const generators = [
+    {
+      id: "landing",
+      title: "Landing Page Generator",
+      description: "Build complete landing pages with a step-by-step wizard. Choose a template, select products, add sections, and configure details to generate a ready-to-publish page.",
+      icon: Wand2,
+      href: "/admin/cms/generator/landing",
+      features: ["Template selection", "Product integration", "Section customization", "Live preview"],
+    },
+    {
+      id: "campaigns",
+      title: "Campaign Pack Generator",
+      description: "Generate complete campaign packs with coordinated pages, sections, and content. Perfect for product launches, seasonal promotions, and marketing campaigns.",
+      icon: Package2,
+      href: "/admin/cms/generator/campaigns",
+      features: ["Multi-page generation", "Preset themes", "Section kits", "Bulk creation"],
+    },
+  ];
+
+  return (
+    <div className="max-w-6xl mx-auto" data-testid="generators-content">
+      <div className="mb-6">
+        <p className="text-sm text-muted-foreground">
+          Automated wizards that generate complete landing pages and campaign packs from templates.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {generators.map((gen) => (
+          <div
+            key={gen.id}
+            className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/10 cursor-pointer"
+            onClick={() => onNavigate(gen.href)}
+            data-testid={`card-generator-${gen.id}`}
+          >
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <gen.icon className="w-5 h-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm">{gen.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{gen.description}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 pl-14">
+                {gen.features.map((feature) => (
+                  <Badge
+                    key={feature}
+                    variant="outline"
+                    className="border-border/60 text-muted-foreground text-[10px] py-0 px-1.5"
+                  >
+                    {feature}
+                  </Badge>
+                ))}
+              </div>
+              <div className="pl-14">
+                <Button
+                  size="sm"
+                  className="bg-primary/90 hover:bg-primary text-foreground text-xs h-8"
+                  data-testid={`button-open-generator-${gen.id}`}
+                >
+                  <Wand2 className="w-3.5 h-3.5 mr-1" />
+                  Open Generator
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminCmsTemplates() {
   const { hasFullAccess, isLoading: adminLoading } = useAdmin();
   const [, navigate] = useLocation();
   const searchString = useSearch();
   const params = new URLSearchParams(searchString);
   const tabParam = params.get("tab");
-  const validTabs = ["pages", "sections", "widgets"];
+  const validTabs = ["pages", "sections", "widgets", "generators"];
   const initialTab = tabParam && validTabs.includes(tabParam) ? tabParam : "pages";
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -219,6 +293,10 @@ export default function AdminCmsTemplates() {
               <PanelRight className="w-3.5 h-3.5" />
               Widget Templates
             </TabsTrigger>
+            <TabsTrigger value="generators" className="flex items-center gap-2" data-testid="tab-generators">
+              <Wand2 className="w-3.5 h-3.5" />
+              Landing Page Generators
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="pages" data-testid="panel-page-templates">
             <PageTemplatesContent onUseTemplate={handleUseTemplate} />
@@ -228,6 +306,9 @@ export default function AdminCmsTemplates() {
           </TabsContent>
           <TabsContent value="widgets" data-testid="panel-widget-templates">
             <SidebarsContent embedded />
+          </TabsContent>
+          <TabsContent value="generators" data-testid="panel-generators">
+            <GeneratorsContent onNavigate={navigate} />
           </TabsContent>
         </Tabs>
       </div>

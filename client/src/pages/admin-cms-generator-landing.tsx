@@ -317,14 +317,14 @@ export default function AdminCmsGeneratorLanding() {
 
   if (adminLoading || !hasFullAccess) {
     return (
-      <CmsLayout activeNav="generator" breadcrumbs={[{ label: "Generator" }, { label: "Landing Page" }]}>
+      <CmsLayout activeNav="templates" breadcrumbs={[{ label: "Templates", href: "/admin/cms/templates?tab=generators" }, { label: "Landing Page Generator" }]}>
         <div className="p-8 text-center text-muted-foreground">{adminLoading ? "Loading..." : "Access Denied"}</div>
       </CmsLayout>
     );
   }
 
   return (
-    <CmsLayout activeNav="generator" breadcrumbs={[{ label: "Generator" }, { label: "Landing Page" }]}>
+    <CmsLayout activeNav="templates" breadcrumbs={[{ label: "Templates", href: "/admin/cms/templates?tab=generators" }, { label: "Landing Page Generator" }]}>
       <div className="max-w-6xl mx-auto" data-testid="generator-landing-page">
         <div className="mb-6 flex items-start justify-between">
           <div>
