@@ -10,6 +10,7 @@ import {
 } from "./helpers";
 
 import BlogPostFeedBlock from "./BlogPostFeedBlock";
+import BlogFeaturedPostBlock from "./BlogFeaturedPostBlock";
 import HeroBlock from "./HeroBlock";
 import RichTextBlock from "./RichTextBlock";
 import ImageBlock from "./ImageBlock";
@@ -810,6 +811,7 @@ export function registerCmsV1Blocks() {
       showCategoryFilter: "true",
       showTagFilter: "true",
       featuredOnly: "false",
+      excludeFeatured: "false",
       categorySlug: "",
       tagSlug: "",
     },
@@ -830,8 +832,24 @@ export function registerCmsV1Blocks() {
       showCategoryFilter: checkboxField("Show Category Filter"),
       showTagFilter: checkboxField("Show Tag Filter"),
       featuredOnly: checkboxField("Featured Posts Only"),
+      excludeFeatured: checkboxField("Exclude Featured Post (use with Featured Post block)"),
       categorySlug: textField("Filter by Category Slug (optional)"),
       tagSlug: textField("Filter by Tag Slug (optional)"),
+    },
+  });
+
+  registerBlock({
+    type: "blogFeaturedPost",
+    label: "Blog Featured Post",
+    category: "utility",
+    version: 1,
+    description: "Displays the latest featured blog post in a large, prominent card layout",
+    renderComponent: BlogFeaturedPostBlock,
+    defaultProps: {
+      title: "",
+    },
+    puckFields: {
+      title: textField("Section Title (optional)"),
     },
   });
 

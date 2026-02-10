@@ -303,6 +303,66 @@ export const CMS_TEMPLATES: CmsTemplate[] = [
       },
     ],
   },
+  {
+    id: "blog-page-v1",
+    name: "Blog Page v1",
+    description: "Standard blog page with a featured post hero card at the top and a searchable post grid below",
+    tags: ["blog", "content"],
+    blocks: [
+      {
+        type: "hero",
+        data: {
+          headline: "The Power Plunge Blog",
+          subheadline: "Cold therapy insights, recovery tips, and the latest from Power Plunge.",
+          ctaText: "",
+          ctaHref: "",
+          secondaryCtaText: "",
+          secondaryCtaHref: "",
+          backgroundImage: "",
+          heroImage: "",
+          align: "center",
+          layout: "stacked",
+          fullWidth: true,
+          overlayOpacity: 60,
+          minHeight: "default",
+          themeVariant: "ice",
+        },
+      },
+      {
+        type: "blogFeaturedPost",
+        data: {
+          title: "",
+        },
+      },
+      {
+        type: "blogPostFeed",
+        data: {
+          title: "All Posts",
+          description: "",
+          layout: "grid",
+          postsPerPage: "9",
+          showSearch: "true",
+          showCategoryFilter: "true",
+          showTagFilter: "true",
+          featuredOnly: "false",
+          excludeFeatured: "true",
+          categorySlug: "",
+          tagSlug: "",
+        },
+      },
+      {
+        type: "callToAction",
+        data: {
+          headline: "Stay in the Loop",
+          subheadline: "Follow us for the latest articles on cold therapy, recovery science, and product updates.",
+          primaryCtaText: "Shop Products",
+          primaryCtaHref: "/shop",
+          secondaryCtaText: "Contact Us",
+          secondaryCtaHref: "/contact",
+        },
+      },
+    ],
+  },
 ];
 
 export function getTemplate(id: string): CmsTemplate | undefined {

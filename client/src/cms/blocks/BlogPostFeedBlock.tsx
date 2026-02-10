@@ -136,6 +136,7 @@ const BlogPostFeedBlock: React.FC<BlockRenderProps> = ({ data }) => {
   const showCategoryFilter = data?.showCategoryFilter === "true" || data?.showCategoryFilter === true;
   const showTagFilter = data?.showTagFilter === "true" || data?.showTagFilter === true;
   const featuredOnly = data?.featuredOnly === "true" || data?.featuredOnly === true;
+  const excludeFeatured = data?.excludeFeatured === "true" || data?.excludeFeatured === true;
   const categorySlug = data?.categorySlug || "";
   const tagSlug = data?.tagSlug || "";
 
@@ -170,18 +171,28 @@ const BlogPostFeedBlock: React.FC<BlockRenderProps> = ({ data }) => {
     fetch(`/api/blog/posts?${qs.toString()}`)
       .then((r) => r.ok ? r.json() : { data: [], total: 0, page: 1, pageSize: postsPerPage })
       .then((res: PostListResult) => {
+        let filtered = res.data;
         if (featuredOnly) {
-          setResult({ ...res, data: res.data.filter((p) => p.featured) });
-        } else {
-          setResult(res);
+          filtered = filtered.filter((p) => p.featured);
         }
+        if (excludeFeatured) {
+          let skipped = false;
+          filtered = filtered.filter((p) => {
+            if (!skipped && p.featured) {
+              skipped = true;
+              return false;
+            }
+            return true;
+          });
+        }
+        setResult({ ...res, data: filtered });
         setLoading(false);
       })
       .catch(() => {
         setResult({ data: [], total: 0, page: 1, pageSize: postsPerPage });
         setLoading(false);
       });
-  }, [page, q, selectedCategory, selectedTag, postsPerPage, featuredOnly]);
+  }, [page, q, selectedCategory, selectedTag, postsPerPage, featuredOnly, excludeFeatured]);
 
   const posts = result?.data || [];
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
