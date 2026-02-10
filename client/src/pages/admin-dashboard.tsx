@@ -67,62 +67,59 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
               <Card data-testid="card-revenue">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-                  <DollarSign className="w-4 h-4 text-green-500" />
+                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">Revenue</CardTitle>
+                  <DollarSign className="w-3.5 h-3.5 text-green-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">From paid orders</p>
+                <CardContent className="px-4 pb-4 pt-0">
+                  <div className="text-xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">From paid orders</p>
                 </CardContent>
               </Card>
 
               <Card data-testid="card-orders">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
-                  <ShoppingCart className="w-4 h-4 text-cyan-500" />
+                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">Orders</CardTitle>
+                  <ShoppingCart className="w-3.5 h-3.5 text-cyan-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats?.totalOrders || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Completed orders</p>
+                <CardContent className="px-4 pb-4 pt-0">
+                  <div className="text-xl font-bold">{stats?.totalOrders || 0}</div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Completed</p>
                 </CardContent>
               </Card>
 
               <Card data-testid="card-customers">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Customers</CardTitle>
-                  <Users className="w-4 h-4 text-purple-500" />
+                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">Customers</CardTitle>
+                  <Users className="w-3.5 h-3.5 text-purple-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats?.totalCustomers || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Registered customers</p>
+                <CardContent className="px-4 pb-4 pt-0">
+                  <div className="text-xl font-bold">{stats?.totalCustomers || 0}</div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Registered</p>
                 </CardContent>
               </Card>
 
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Card data-testid="card-affiliates">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Active Affiliates</CardTitle>
-                  <UserCheck className="w-4 h-4 text-emerald-500" />
+                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">Affiliates</CardTitle>
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats?.activeAffiliates || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">of {stats?.totalAffiliates || 0} total</p>
+                <CardContent className="px-4 pb-4 pt-0">
+                  <div className="text-xl font-bold">{stats?.activeAffiliates || 0}</div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">of {stats?.totalAffiliates || 0} total</p>
                 </CardContent>
               </Card>
 
               <Card data-testid="card-pending-payouts">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pending Payouts</CardTitle>
-                  <Clock className="w-4 h-4 text-orange-500" />
+                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">Payouts</CardTitle>
+                  <Clock className="w-3.5 h-3.5 text-orange-500" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats?.pendingPayouts || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{formatCurrency(stats?.pendingPayoutAmount || 0)} total</p>
+                <CardContent className="px-4 pb-4 pt-0">
+                  <div className="text-xl font-bold">{stats?.pendingPayouts || 0}</div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{formatCurrency(stats?.pendingPayoutAmount || 0)}</p>
                 </CardContent>
               </Card>
             </div>
