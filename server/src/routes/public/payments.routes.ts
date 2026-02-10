@@ -199,7 +199,7 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
             line1: customerData.address || "",
             city: customerData.city || "",
             state: normalizedShipping.state,
-            postal_code: customerData.zipCode,
+            postal_code: customerData.zipCode.split("-")[0],
             country: "US",
           },
           address_source: "shipping",
@@ -208,7 +208,7 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
 
       taxAmount = taxCalculation.tax_amount_exclusive;
       taxCalculationId = taxCalculation.id;
-      console.log(`[TAX] Calculated: $${(taxAmount / 100).toFixed(2)} | state=${normalizedShipping.state} zip=${customerData.zipCode} calcId=${taxCalculationId}`);
+      console.log(`[TAX] Calculated: $${(taxAmount / 100).toFixed(2)} | state=${normalizedShipping.state} zip=${customerData.zipCode.split("-")[0]} calcId=${taxCalculationId}`);
 
       if (taxAmount === 0 && TAXABLE_STATES_WARN_ON_ZERO.includes(normalizedShipping.state)) {
         console.warn(`[TAX][WARN] Zero tax returned for taxable state ${normalizedShipping.state} (zip=${customerData.zipCode}, calcId=${taxCalculationId}). Verify Stripe Tax registration.`);
@@ -455,7 +455,7 @@ router.post("/reprice-payment-intent", paymentLimiter, async (req: any, res) => 
             line1: customerData.address || "",
             city: customerData.city || "",
             state: normalizedShipping.state,
-            postal_code: customerData.zipCode,
+            postal_code: customerData.zipCode.split("-")[0],
             country: "US",
           },
           address_source: "shipping",
@@ -464,7 +464,7 @@ router.post("/reprice-payment-intent", paymentLimiter, async (req: any, res) => 
 
       taxAmount = taxCalculation.tax_amount_exclusive;
       taxCalculationId = taxCalculation.id;
-      console.log(`[TAX] Repriced: $${(taxAmount / 100).toFixed(2)} | state=${normalizedShipping.state} zip=${customerData.zipCode} calcId=${taxCalculationId}`);
+      console.log(`[TAX] Repriced: $${(taxAmount / 100).toFixed(2)} | state=${normalizedShipping.state} zip=${customerData.zipCode.split("-")[0]} calcId=${taxCalculationId}`);
 
       if (taxAmount === 0 && TAXABLE_STATES_WARN_ON_ZERO.includes(normalizedShipping.state)) {
         console.warn(`[TAX][WARN] Zero tax returned for taxable state ${normalizedShipping.state} (zip=${customerData.zipCode}, calcId=${taxCalculationId}). Verify Stripe Tax registration.`);
