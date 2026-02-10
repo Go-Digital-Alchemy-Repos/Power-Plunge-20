@@ -5,17 +5,22 @@ declare global {
   }
 }
 
-export const initGA = () => {
-  const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID;
+let currentMeasurementId: string | null = null;
 
-  if (!measurementId) {
-    console.warn("Missing VITE_GA_MEASUREMENT_ID — Google Analytics disabled");
-    return;
-  }
+export const initGA = (measurementId?: string) => {
+  const id = measurementId || import.meta.env.VITE_GA_MEASUREMENT_ID;
+
+  if (!id) return;
+
+  if (currentMeasurementId === id) return;
+  currentMeasurementId = id;
+
+  const existing = document.querySelector(`script[src*="googletagmanager.com/gtag"]`);
+  if (existing) existing.remove();
 
   const script = document.createElement("script");
   script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
   document.head.appendChild(script);
 
   window.dataLayer = window.dataLayer || [];
@@ -23,14 +28,29 @@ export const initGA = () => {
     window.dataLayer.push(arguments);
   };
   window.gtag("js", new Date());
-  window.gtag("config", measurementId);
+  window.gtag("config", id);
+};
+
+export const initGAFromSettings = async () => {
+  try {
+    const res = await fetch("/api/site-settings");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.gaMeasurementId) {
+      initGA(data.gaMeasurementId);
+    } else if (import.meta.env.VITE_GA_MEASUREMENT_ID) {
+      initGA(import.meta.env.VITE_GA_MEASUREMENT_ID);
+    }
+  } catch {
+    if (import.meta.env.VITE_GA_MEASUREMENT_ID) {
+      initGA(import.meta.env.VITE_GA_MEASUREMENT_ID);
+    }
+  }
 };
 
 export const trackPageView = (url: string) => {
-  if (typeof window === "undefined" || !window.gtag) return;
-  const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID;
-  if (!measurementId) return;
-  window.gtag("config", measurementId, { page_path: url });
+  if (typeof window === "undefined" || !window.gtag || !currentMeasurementId) return;
+  window.gtag("config", currentMeasurementId, { page_path: url });
 };
 
 export const trackEvent = (

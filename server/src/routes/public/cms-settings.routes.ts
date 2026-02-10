@@ -15,6 +15,7 @@ router.get("/", async (_req: Request, res: Response) => {
       heroImage: themeSettings?.heroImage || null,
       ctaText: null,
       ctaLink: null,
+      gaMeasurementId: settings?.gaMeasurementId || null,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch site settings" });

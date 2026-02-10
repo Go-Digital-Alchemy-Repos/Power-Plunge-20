@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/use-admin";
-import { Building2, Save, Mail } from "lucide-react";
+import { Building2, Save, Mail, BarChart3 } from "lucide-react";
 import AdminNav from "@/components/admin/AdminNav";
 
 interface SiteSettings {
@@ -18,6 +18,7 @@ interface SiteSettings {
   companyAddress?: string;
   companyPhone?: string;
   supportEmail?: string;
+  gaMeasurementId?: string;
 }
 
 export default function AdminSettings() {
@@ -191,6 +192,33 @@ export default function AdminSettings() {
                   />
                   <p className="text-sm text-muted-foreground">
                     Displayed to customers as your support contact.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Google Analytics
+                </CardTitle>
+                <CardDescription>
+                  Connect your Google Analytics 4 property to track visitor behavior and e-commerce performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gaMeasurementId">GA4 Measurement ID</Label>
+                  <Input
+                    id="gaMeasurementId"
+                    value={formData.gaMeasurementId || ""}
+                    onChange={(e) => setFormData({ ...formData, gaMeasurementId: e.target.value })}
+                    placeholder="G-XXXXXXXXXX"
+                    data-testid="input-ga-measurement-id"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Enter your GA4 Measurement ID (starts with "G-"). Find it in your Google Analytics property settings under Data Streams.
                   </p>
                 </div>
               </CardContent>
