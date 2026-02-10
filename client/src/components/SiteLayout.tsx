@@ -43,15 +43,15 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background relative">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border" data-testid="site-nav">
+      <nav className="sticky top-0 z-50 bg-card border-b border-border" data-testid="site-nav">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center">
             <button onClick={() => setLocation("/")} className="flex-shrink-0" data-testid="nav-logo-link">
               <img src={logoImage} alt="Power Plunge" className="h-10" data-testid="img-logo" />
             </button>
-            <DynamicNav location="main" />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <DynamicNav location="main" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2" data-testid="button-my-account">
@@ -140,7 +140,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
-      <div className="pt-[73px]">
+      <div>
         {children}
       </div>
 

@@ -233,14 +233,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center">
             <img src={logoImage} alt="Power Plunge" className="h-10" data-testid="img-logo" />
-            <DynamicNav location="main" />
           </div>
-          <div className="flex items-center gap-3">
-            
+          <div className="flex items-center gap-2">
+            <DynamicNav location="main" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2" data-testid="button-my-account">

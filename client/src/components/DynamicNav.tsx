@@ -36,6 +36,8 @@ const SLUG_TO_ROUTE: Record<string, string> = {
   "affiliate-portal": "/affiliate-portal",
 };
 
+const linkClass = "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2";
+
 function resolveHref(item: NavMenuItem): string {
   if (item.type === "external") return item.href || item.url || "#";
   if (item.type === "post" && item.postSlug) return `/blog/${item.postSlug}`;
@@ -53,7 +55,7 @@ function NavLink({ item }: { item: NavMenuItem }) {
 
   if (item.type === "label") {
     return (
-      <span className="text-sm text-muted-foreground cursor-default px-3 py-2 font-medium" data-testid={`nav-label-${item.id}`}>
+      <span className="inline-flex items-center text-sm font-medium text-muted-foreground cursor-default h-9 px-4 py-2" data-testid={`nav-label-${item.id}`}>
         {item.label}
       </span>
     );
@@ -65,7 +67,7 @@ function NavLink({ item }: { item: NavMenuItem }) {
         href={href}
         target={item.target || "_blank"}
         rel="noopener noreferrer"
-        className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+        className={linkClass}
         data-testid={`nav-link-${item.id}`}
       >
         {item.label}
@@ -76,7 +78,7 @@ function NavLink({ item }: { item: NavMenuItem }) {
   return (
     <button
       onClick={() => navigate(href)}
-      className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+      className={linkClass}
       data-testid={`nav-link-${item.id}`}
     >
       {item.label}
@@ -103,14 +105,14 @@ function NavDropdown({ item }: { item: NavMenuItem }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 flex items-center gap-1"
+        className={`${linkClass} gap-2`}
         data-testid={`nav-dropdown-${item.id}`}
       >
         {item.label}
         <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 py-1 bg-popover border border-border rounded-md shadow-lg min-w-[180px] z-50" data-testid={`nav-dropdown-menu-${item.id}`}>
+        <div className="absolute top-full right-0 mt-1 py-1 bg-popover border border-border rounded-md shadow-lg min-w-[180px] z-50" data-testid={`nav-dropdown-menu-${item.id}`}>
           {(item.children || []).map((child) => {
             const href = resolveHref(child);
             const isExternal = child.type === "external" || child.target === "_blank";
