@@ -7,14 +7,16 @@ const kebabToPascal = (str: string): string => {
     .join('');
 };
 
-export function getLucideIcon(iconName: string): React.ComponentType<{ className?: string }> | null {
+type IconComponentType = React.ComponentType<React.SVGProps<SVGSVGElement> & { className?: string }>;
+
+export function getLucideIcon(iconName: string): IconComponentType | null {
   if (!iconName) return null;
   
   const pascalName = iconName.includes('-') ? kebabToPascal(iconName) : iconName;
   const icon = (LucideIcons as any)[pascalName] || (LucideIcons as any)[iconName];
   
   if (icon && (typeof icon === 'function' || (typeof icon === 'object' && icon.$$typeof))) {
-    return icon;
+    return icon as IconComponentType;
   }
   
   return null;
@@ -22,8 +24,8 @@ export function getLucideIcon(iconName: string): React.ComponentType<{ className
 
 export function getIconWithFallback(
   iconName: string | undefined, 
-  fallback: React.ComponentType<{ className?: string }>
-): React.ComponentType<{ className?: string }> {
+  fallback: IconComponentType
+): IconComponentType {
   if (!iconName) return fallback;
   return getLucideIcon(iconName) || fallback;
 }

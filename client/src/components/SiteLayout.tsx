@@ -18,7 +18,7 @@ interface CartItem {
 
 export default function SiteLayout({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
-  const { customer, isAuthenticated, loading: authLoading, logout } = useCustomerAuth();
+  const { customer, isAuthenticated, isLoading: authLoading, logout } = useCustomerAuth();
   const { admin, isAuthenticated: isAdminAuthenticated } = useAdmin();
 
   const [cart, setCart] = useState<CartItem[]>(() => {

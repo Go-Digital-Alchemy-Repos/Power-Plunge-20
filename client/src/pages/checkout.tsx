@@ -35,6 +35,7 @@ interface CheckoutFormProps {
   orderId: string;
   cartTotal: number;
   totalWithTax: number;
+  cart: CartItem[];
   billingDetails: {
     name: string;
     email: string;
@@ -47,7 +48,7 @@ interface CheckoutFormProps {
   };
 }
 
-function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingDetails }: CheckoutFormProps) {
+function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, cart, billingDetails }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [, setLocation] = useLocation();
@@ -1027,6 +1028,7 @@ export default function Checkout() {
                         clientSecret={clientSecret}
                         orderId={orderId!}
                         cartTotal={cartTotal}
+                        cart={cart}
                         totalWithTax={taxInfo?.total ?? cartTotal}
                         billingDetails={{
                           name: activeBilling.name,

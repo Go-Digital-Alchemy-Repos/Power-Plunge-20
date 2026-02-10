@@ -47,6 +47,10 @@ Respond with ONLY the generated text - no quotes, no explanations, no formatting
       temperature: 0.7,
     });
 
+    if (!result) {
+      return res.status(500).json({ message: "AI generation returned no content" });
+    }
+
     let content = result.trim();
     if (content.startsWith('"') && content.endsWith('"')) {
       content = content.slice(1, -1);

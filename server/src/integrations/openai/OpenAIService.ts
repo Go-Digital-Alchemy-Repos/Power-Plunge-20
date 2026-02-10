@@ -142,6 +142,41 @@ Respond in JSON format:
     }
   }
 
+  async generateText(
+    prompt: string,
+    options?: {
+      systemPrompt?: string;
+      model?: string;
+      temperature?: number;
+      maxTokens?: number;
+    }
+  ): Promise<string | null> {
+    const client = await this.getClient();
+    if (!client) {
+      return null;
+    }
+
+    const messages: { role: "system" | "user"; content: string }[] = [];
+    if (options?.systemPrompt) {
+      messages.push({ role: "system", content: options.systemPrompt });
+    }
+    messages.push({ role: "user", content: prompt });
+
+    try {
+      const response = await client.chat.completions.create({
+        model: options?.model || "gpt-4o-mini",
+        messages,
+        max_tokens: options?.maxTokens || 500,
+        temperature: options?.temperature ?? 0.7,
+      });
+
+      return response.choices[0]?.message?.content || null;
+    } catch (error) {
+      console.error("OpenAI generateText error:", error);
+      return null;
+    }
+  }
+
   async generatePageSeoRecommendations(
     pageTitle: string,
     pageContent: string,

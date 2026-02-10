@@ -753,7 +753,7 @@ function MenuEditor({
 
       function reorderInParent(list: MenuItemData[]): MenuItemData[] {
         const activeIdx = list.findIndex((i) => i.id === active.id);
-        const overIdx = list.findIndex((i) => i.id === over.id);
+        const overIdx = list.findIndex((i) => i.id === over!.id);
         if (activeIdx >= 0 && overIdx >= 0) {
           return arrayMove(list, activeIdx, overIdx);
         }

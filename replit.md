@@ -57,6 +57,13 @@ The Power Plunge e-commerce platform utilizes a modern full-stack architecture.
 
 ## Recent Changes
 
+### Stabilization Sprint (Feb 10, 2026)
+- **TypeScript:** All 78 errors resolved. `npm run check` passes with 0 errors. tsconfig target set to ES2020. Temporary drizzle-zod patch (`shared/drizzle-zod-patch.d.ts`) for Zod 3.25 compat.
+- **Vitest:** Added `vitest.config.ts` with path aliases. Tests run via `npx vitest run`.
+- **CMS Posts:** Documented dual-stack (see `docs/architecture/CMS_POSTS_CONVERGENCE.md`). Stack B is dead code pending cleanup.
+- **Widget Templates:** Added tab in consolidated Templates page.
+- **Bug fixes:** Auth hook contract (loading→isLoading), checkout cart prop drilling, affiliate payout audit userId, RichTextEditor tiptap API, CMS menus null check, OpenAI generateText method.
+
 ### Checkout Upgrade (Feb 2026)
 - **Stripe AddressElement**: Shipping address captured via Stripe `AddressElement` (mode: "shipping", US-only) instead of custom form. Provides autocomplete and validation by Stripe.
 - **Reprice Endpoint**: `POST /api/reprice-payment-intent` recalculates tax and updates PaymentIntent when shipping address changes after initial creation. Handles PI update or recreation.

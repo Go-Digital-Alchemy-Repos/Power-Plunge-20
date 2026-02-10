@@ -207,7 +207,7 @@ router.post(
         "payout.requested",
         "affiliate_payout",
         payout.id,
-        { amount: payoutAmount, referralCount: referralIds.length, requestedBy: userId }
+        { amount: payoutAmount, referralCount: referralIds.length, requestedBy: customer.id }
       );
 
       res.json({
