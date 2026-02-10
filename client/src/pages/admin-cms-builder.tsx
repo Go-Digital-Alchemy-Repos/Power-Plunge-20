@@ -26,6 +26,7 @@ import { registerAllBlocks } from "@/lib/blockRegistryEntries";
 import { getAllBlocks } from "@/lib/blockRegistry";
 import { getAllBlocks as getCmsBlocks, BLOCK_CATEGORIES } from "@/cms/blocks";
 import { ensureBlocksRegistered } from "@/cms/blocks/init";
+import { ImageFieldRenderer } from "@/cms/blocks/ImageFieldRenderer";
 import { getCategoriesOrdered } from "@/cms/blocks/blockCategories";
 import {
   Dialog,
@@ -85,7 +86,15 @@ function buildPuckConfig(): Config {
 
     const puckFields: Record<string, any> = {};
     const convertField = (field: any, key: string): any => {
-      if (field.type === "text") {
+      if (field.type === "text" && field.isImageField) {
+        return {
+          type: "custom",
+          label: field.label || key,
+          render: ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
+            return <ImageFieldRenderer value={value || ""} onChange={onChange} label={field.label || key} />;
+          },
+        };
+      } else if (field.type === "text") {
         return { type: "text", label: field.label || key };
       } else if (field.type === "textarea") {
         return { type: "textarea", label: field.label || key };

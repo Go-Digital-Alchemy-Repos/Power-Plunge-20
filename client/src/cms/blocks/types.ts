@@ -26,6 +26,7 @@ export interface PuckFieldConfig {
   max?: number;
   arrayFields?: Record<string, PuckFieldConfig>;
   objectFields?: Record<string, PuckFieldConfig>;
+  isImageField?: boolean;
 }
 
 export interface BlockDefinition {

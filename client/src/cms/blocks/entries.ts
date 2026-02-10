@@ -6,6 +6,7 @@ import {
   selectField,
   checkboxField,
   arrayField,
+  imageField,
 } from "./helpers";
 
 import BlogPostFeedBlock from "./BlogPostFeedBlock";
@@ -65,8 +66,8 @@ export function registerCmsV1Blocks() {
       ctaHref: textField("Primary CTA Link"),
       secondaryCtaText: textField("Secondary CTA Text"),
       secondaryCtaHref: textField("Secondary CTA Link"),
-      backgroundImage: textField("Background Image URL"),
-      heroImage: textField("Split Image URL (for split layouts)"),
+      backgroundImage: imageField("Background Image"),
+      heroImage: imageField("Split Image (for split layouts)"),
       layout: selectField("Layout", [
         { label: "Stacked (centered)", value: "stacked" },
         { label: "Split \u2014 Image Right", value: "split-left" },
@@ -129,7 +130,7 @@ export function registerCmsV1Blocks() {
       linkHref: "",
     },
     puckFields: {
-      src: textField("Image URL"),
+      src: imageField("Image"),
       alt: textField("Alt Text"),
       caption: textField("Caption"),
       aspectRatio: selectField("Aspect Ratio", [
@@ -167,7 +168,7 @@ export function registerCmsV1Blocks() {
         { label: "Loose", value: "loose" },
       ]),
       items: arrayField("Images", {
-        src: textField("Image URL"),
+        src: imageField("Image"),
         alt: textField("Alt Text"),
         caption: textField("Caption"),
         linkHref: textField("Link URL"),
@@ -237,7 +238,7 @@ export function registerCmsV1Blocks() {
         quote: textareaField("Quote"),
         name: textField("Name"),
         title: textField("Title / Role"),
-        avatar: textField("Avatar URL"),
+        avatar: imageField("Avatar"),
       }),
     },
   });
@@ -735,7 +736,7 @@ export function registerCmsV1Blocks() {
       title: textField("Section Title"),
       noteText: textField("Note Text"),
       logos: arrayField("Logos", {
-        src: textField("Logo Image URL"),
+        src: imageField("Logo Image"),
         alt: textField("Alt Text"),
         href: textField("Link URL (optional)"),
       }),

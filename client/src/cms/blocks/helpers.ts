@@ -52,3 +52,9 @@ export const objectField = (
   label,
   objectFields,
 });
+
+export const imageField = (label: string): PuckFieldConfig => ({
+  type: "text",
+  label,
+  isImageField: true,
+});
