@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/use-admin";
 import { Building2, Save, Mail, BarChart3, ImageIcon, Upload, Trash2 } from "lucide-react";
@@ -156,213 +157,252 @@ export default function AdminSettings() {
   return (
     <div className="min-h-screen bg-background">
       <AdminNav currentPage="settings" role={role} />
-      <div className="max-w-3xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold">Company Profile</h2>
-          <p className="text-muted-foreground mt-2">Configure your company & website information and other preferences.</p>
+          <h2 className="text-3xl font-bold">Site Settings</h2>
+          <p className="text-muted-foreground mt-2">Configure your website, branding, notifications, and integrations.</p>
         </div>
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Loading settings...</div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  Company Information
-                </CardTitle>
-                <CardDescription>
-                  Basic information about your business displayed to customers
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
-                  <Input
-                    id="companyName"
-                    value={formData.companyName || ""}
-                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                    placeholder="Power Plunge"
-                    data-testid="input-company-name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyTagline">Company Tagline</Label>
-                  <Input
-                    id="companyTagline"
-                    value={formData.companyTagline || ""}
-                    onChange={(e) => setFormData({ ...formData, companyTagline: e.target.value })}
-                    placeholder="Mind + Body + Spirit"
-                    data-testid="input-company-tagline"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyAddress">Business Address</Label>
-                  <Input
-                    id="companyAddress"
-                    value={formData.companyAddress || ""}
-                    onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
-                    placeholder="123 Main St, City, State 12345"
-                    data-testid="input-company-address"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyPhone">Business Phone</Label>
-                  <Input
-                    id="companyPhone"
-                    value={formData.companyPhone || ""}
-                    onChange={(e) => setFormData({ ...formData, companyPhone: e.target.value })}
-                    placeholder="(555) 123-4567"
-                    data-testid="input-company-phone"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+          <Tabs defaultValue="company" className="space-y-6" data-testid="settings-tabs">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="company" className="gap-2" data-testid="tab-company">
+                <Building2 className="w-4 h-4 hidden sm:inline" />
+                Company
+              </TabsTrigger>
+              <TabsTrigger value="branding" className="gap-2" data-testid="tab-branding">
+                <ImageIcon className="w-4 h-4 hidden sm:inline" />
+                Branding
+              </TabsTrigger>
+              <TabsTrigger value="email" className="gap-2" data-testid="tab-email">
+                <Mail className="w-4 h-4 hidden sm:inline" />
+                Email
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="gap-2" data-testid="tab-analytics">
+                <BarChart3 className="w-4 h-4 hidden sm:inline" />
+                Analytics
+              </TabsTrigger>
+            </TabsList>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5" />
-                  Branding
-                </CardTitle>
-                <CardDescription>
-                  Upload your website logo. It will appear in the navigation bar and footer.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Website Logo</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-32 h-16 rounded-lg border border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30" data-testid="logo-preview">
-                      {formData.logoUrl ? (
-                        <img
-                          src={formData.logoUrl}
-                          alt="Current logo"
-                          className="max-w-full max-h-full object-contain"
-                          data-testid="img-current-logo"
-                        />
-                      ) : (
-                        <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <input
-                        ref={logoInputRef}
-                        type="file"
-                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                        className="hidden"
-                        onChange={handleLogoUpload}
-                        data-testid="input-logo-file"
+            <form onSubmit={handleSubmit}>
+              <TabsContent value="company" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5" />
+                      Company Information
+                    </CardTitle>
+                    <CardDescription>
+                      Basic information about your business displayed to customers
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName">Company Name</Label>
+                      <Input
+                        id="companyName"
+                        value={formData.companyName || ""}
+                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                        placeholder="Power Plunge"
+                        data-testid="input-company-name"
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => logoInputRef.current?.click()}
-                        disabled={logoUploading}
-                        data-testid="button-upload-logo"
-                      >
-                        <Upload className="w-4 h-4" />
-                        {logoUploading ? "Uploading..." : "Upload Logo"}
-                      </Button>
-                      {formData.logoUrl && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="gap-2 text-destructive hover:text-destructive"
-                          onClick={handleRemoveLogo}
-                          data-testid="button-remove-logo"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remove
-                        </Button>
-                      )}
                     </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Recommended: PNG or SVG with transparent background. Max 5MB.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="space-y-2">
+                      <Label htmlFor="companyTagline">Company Tagline</Label>
+                      <Input
+                        id="companyTagline"
+                        value={formData.companyTagline || ""}
+                        onChange={(e) => setFormData({ ...formData, companyTagline: e.target.value })}
+                        placeholder="Mind + Body + Spirit"
+                        data-testid="input-company-tagline"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="companyAddress">Business Address</Label>
+                      <Input
+                        id="companyAddress"
+                        value={formData.companyAddress || ""}
+                        onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
+                        placeholder="123 Main St, City, State 12345"
+                        data-testid="input-company-address"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="companyPhone">Business Phone</Label>
+                      <Input
+                        id="companyPhone"
+                        value={formData.companyPhone || ""}
+                        onChange={(e) => setFormData({ ...formData, companyPhone: e.target.value })}
+                        placeholder="(555) 123-4567"
+                        data-testid="input-company-phone"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
-                  Email Notifications
-                </CardTitle>
-                <CardDescription>
-                  Configure where notifications are sent and your support email
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="orderNotificationEmail">Order Notification Email</Label>
-                  <Input
-                    id="orderNotificationEmail"
-                    type="email"
-                    value={formData.orderNotificationEmail || ""}
-                    onChange={(e) => setFormData({ ...formData, orderNotificationEmail: e.target.value })}
-                    placeholder="orders@powerplunge.com"
-                    data-testid="input-notification-email"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    New order notifications will be sent to this email address.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supportEmail">Customer Support Email</Label>
-                  <Input
-                    id="supportEmail"
-                    type="email"
-                    value={formData.supportEmail || ""}
-                    onChange={(e) => setFormData({ ...formData, supportEmail: e.target.value })}
-                    placeholder="support@powerplunge.com"
-                    data-testid="input-support-email"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Displayed to customers as your support contact.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                <Button type="submit" className="w-full gap-2" disabled={updateMutation.isPending} data-testid="button-save-settings">
+                  <Save className="w-4 h-4" />
+                  {updateMutation.isPending ? "Saving..." : "Save Settings"}
+                </Button>
+              </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Google Analytics
-                </CardTitle>
-                <CardDescription>
-                  Connect your Google Analytics 4 property to track visitor behavior and e-commerce performance
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="gaMeasurementId">GA4 Measurement ID</Label>
-                  <Input
-                    id="gaMeasurementId"
-                    value={formData.gaMeasurementId || ""}
-                    onChange={(e) => setFormData({ ...formData, gaMeasurementId: e.target.value })}
-                    placeholder="G-XXXXXXXXXX"
-                    data-testid="input-ga-measurement-id"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Enter your GA4 Measurement ID (starts with "G-"). Find it in your Google Analytics property settings under Data Streams.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              <TabsContent value="branding" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ImageIcon className="w-5 h-5" />
+                      Branding
+                    </CardTitle>
+                    <CardDescription>
+                      Upload your website logo. It will appear in the navigation bar and footer.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Website Logo</Label>
+                      <div className="flex items-center gap-4">
+                        <div className="w-32 h-16 rounded-lg border border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30" data-testid="logo-preview">
+                          {formData.logoUrl ? (
+                            <img
+                              src={formData.logoUrl}
+                              alt="Current logo"
+                              className="max-w-full max-h-full object-contain"
+                              data-testid="img-current-logo"
+                            />
+                          ) : (
+                            <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <input
+                            ref={logoInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                            className="hidden"
+                            onChange={handleLogoUpload}
+                            data-testid="input-logo-file"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => logoInputRef.current?.click()}
+                            disabled={logoUploading}
+                            data-testid="button-upload-logo"
+                          >
+                            <Upload className="w-4 h-4" />
+                            {logoUploading ? "Uploading..." : "Upload Logo"}
+                          </Button>
+                          {formData.logoUrl && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="gap-2 text-destructive hover:text-destructive"
+                              onClick={handleRemoveLogo}
+                              data-testid="button-remove-logo"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Recommended: PNG or SVG with transparent background. Max 5MB.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-            <Button type="submit" className="w-full gap-2" disabled={updateMutation.isPending} data-testid="button-save-settings">
-              <Save className="w-4 h-4" />
-              {updateMutation.isPending ? "Saving..." : "Save Settings"}
-            </Button>
-          </form>
+              <TabsContent value="email" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Mail className="w-5 h-5" />
+                      Email Notifications
+                    </CardTitle>
+                    <CardDescription>
+                      Configure where notifications are sent and your support email
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="orderNotificationEmail">Order Notification Email</Label>
+                      <Input
+                        id="orderNotificationEmail"
+                        type="email"
+                        value={formData.orderNotificationEmail || ""}
+                        onChange={(e) => setFormData({ ...formData, orderNotificationEmail: e.target.value })}
+                        placeholder="orders@powerplunge.com"
+                        data-testid="input-notification-email"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        New order notifications will be sent to this email address.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="supportEmail">Customer Support Email</Label>
+                      <Input
+                        id="supportEmail"
+                        type="email"
+                        value={formData.supportEmail || ""}
+                        onChange={(e) => setFormData({ ...formData, supportEmail: e.target.value })}
+                        placeholder="support@powerplunge.com"
+                        data-testid="input-support-email"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Displayed to customers as your support contact.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Button type="submit" className="w-full gap-2" disabled={updateMutation.isPending} data-testid="button-save-email-settings">
+                  <Save className="w-4 h-4" />
+                  {updateMutation.isPending ? "Saving..." : "Save Settings"}
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="analytics" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5" />
+                      Google Analytics
+                    </CardTitle>
+                    <CardDescription>
+                      Connect your Google Analytics 4 property to track visitor behavior and e-commerce performance
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="gaMeasurementId">GA4 Measurement ID</Label>
+                      <Input
+                        id="gaMeasurementId"
+                        value={formData.gaMeasurementId || ""}
+                        onChange={(e) => setFormData({ ...formData, gaMeasurementId: e.target.value })}
+                        placeholder="G-XXXXXXXXXX"
+                        data-testid="input-ga-measurement-id"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Enter your GA4 Measurement ID (starts with "G-"). Find it in your Google Analytics property settings under Data Streams.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Button type="submit" className="w-full gap-2" disabled={updateMutation.isPending} data-testid="button-save-analytics-settings">
+                  <Save className="w-4 h-4" />
+                  {updateMutation.isPending ? "Saving..." : "Save Settings"}
+                </Button>
+              </TabsContent>
+            </form>
+          </Tabs>
         )}
       </div>
     </div>
