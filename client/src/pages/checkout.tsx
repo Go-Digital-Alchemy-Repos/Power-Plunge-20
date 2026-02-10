@@ -352,7 +352,7 @@ export default function Checkout() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
-  const [taxInfo, setTaxInfo] = useState<{ subtotal: number; taxAmount: number; total: number } | null>(null);
+  const [taxInfo, setTaxInfo] = useState<{ subtotal: number; affiliateDiscount: number; taxAmount: number; total: number } | null>(null);
 
   const [contactData, setContactData] = useState(() => {
     const defaults = { email: "", phone: "" };
@@ -698,6 +698,7 @@ export default function Checkout() {
       setOrderId(data.orderId);
       setTaxInfo({
         subtotal: data.subtotal,
+        affiliateDiscount: data.affiliateDiscount || 0,
         taxAmount: data.taxAmount,
         total: data.total,
       });
@@ -1053,6 +1054,12 @@ export default function Checkout() {
                     <p className="text-muted-foreground">Subtotal</p>
                     <p>${((taxInfo?.subtotal ?? cartTotal) / 100).toLocaleString()}</p>
                   </div>
+                  {taxInfo && taxInfo.affiliateDiscount > 0 && (
+                    <div className="flex justify-between text-green-600" data-testid="text-affiliate-discount">
+                      <p>Affiliate Discount</p>
+                      <p>-${(taxInfo.affiliateDiscount / 100).toFixed(2)}</p>
+                    </div>
+                  )}
                   {taxInfo && taxInfo.taxAmount > 0 && (
                     <div className="flex justify-between" data-testid="text-tax">
                       <p className="text-muted-foreground">Sales Tax</p>

@@ -180,16 +180,32 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
       });
     }
 
+    let affiliateDiscountAmount = 0;
+    if (affiliate && affiliate.status === "active") {
+      const affSettings = await storage.getAffiliateSettings();
+      const discountPercent = affSettings?.customerDiscountPercent || 0;
+      if (discountPercent > 0) {
+        affiliateDiscountAmount = Math.floor(subtotalAmount * (discountPercent / 100));
+      }
+    }
+
+    const discountedSubtotal = Math.max(0, subtotalAmount - affiliateDiscountAmount);
+
     let taxAmount = 0;
     let taxCalculationId: string | null = null;
     
     try {
-      const taxLineItems = orderItems.map((item) => ({
-        amount: item.unitPrice * item.quantity,
-        reference: item.productId,
-        tax_behavior: "exclusive" as const,
-        tax_code: DEFAULT_STRIPE_TAX_CODE,
-      }));
+      const taxableAmount = discountedSubtotal;
+      const taxLineItems = orderItems.map((item) => {
+        const itemTotal = item.unitPrice * item.quantity;
+        const itemShare = subtotalAmount > 0 ? Math.floor(taxableAmount * (itemTotal / subtotalAmount)) : 0;
+        return {
+          amount: itemShare,
+          reference: item.productId,
+          tax_behavior: "exclusive" as const,
+          tax_code: DEFAULT_STRIPE_TAX_CODE,
+        };
+      });
 
       const taxCalculation = await stripeClient.tax.calculations.create({
         currency: "usd",
@@ -221,7 +237,7 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
       });
     }
 
-    const totalAmount = subtotalAmount + taxAmount;
+    const totalAmount = discountedSubtotal + taxAmount;
 
     const order = await storage.createOrder({
       customerId: existingCustomer.id,
@@ -269,6 +285,7 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
         attributionType: affiliateCode ? "coupon" : (affiliateSessionId ? "cookie" : "direct"),
         taxAmount: taxAmount.toString(),
         taxCalculationId: taxCalculationId || "",
+        affiliateDiscountAmount: affiliateDiscountAmount.toString(),
       },
     });
 
@@ -280,6 +297,7 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
       clientSecret: paymentIntent.client_secret,
       orderId: order.id,
       subtotal: subtotalAmount,
+      affiliateDiscount: affiliateDiscountAmount,
       taxAmount,
       total: totalAmount,
     });
@@ -436,16 +454,32 @@ router.post("/reprice-payment-intent", paymentLimiter, async (req: any, res) => 
       });
     }
 
+    let affiliateDiscountAmount = 0;
+    if (affiliate && affiliate.status === "active") {
+      const affSettings = await storage.getAffiliateSettings();
+      const discountPercent = affSettings?.customerDiscountPercent || 0;
+      if (discountPercent > 0) {
+        affiliateDiscountAmount = Math.floor(subtotalAmount * (discountPercent / 100));
+      }
+    }
+
+    const discountedSubtotal = Math.max(0, subtotalAmount - affiliateDiscountAmount);
+
     let taxAmount = 0;
     let taxCalculationId: string | null = null;
 
     try {
-      const taxLineItems = orderItems.map((item) => ({
-        amount: item.unitPrice * item.quantity,
-        reference: item.productId,
-        tax_behavior: "exclusive" as const,
-        tax_code: DEFAULT_STRIPE_TAX_CODE,
-      }));
+      const taxableAmount = discountedSubtotal;
+      const taxLineItems = orderItems.map((item) => {
+        const itemTotal = item.unitPrice * item.quantity;
+        const itemShare = subtotalAmount > 0 ? Math.floor(taxableAmount * (itemTotal / subtotalAmount)) : 0;
+        return {
+          amount: itemShare,
+          reference: item.productId,
+          tax_behavior: "exclusive" as const,
+          tax_code: DEFAULT_STRIPE_TAX_CODE,
+        };
+      });
 
       const taxCalculation = await stripeClient.tax.calculations.create({
         currency: "usd",
@@ -477,7 +511,7 @@ router.post("/reprice-payment-intent", paymentLimiter, async (req: any, res) => 
       });
     }
 
-    const totalAmount = subtotalAmount + taxAmount;
+    const totalAmount = discountedSubtotal + taxAmount;
 
     await storage.updateOrder(orderId, {
       subtotalAmount,
@@ -517,6 +551,7 @@ router.post("/reprice-payment-intent", paymentLimiter, async (req: any, res) => 
           attributionType: affiliateCode ? "coupon" : (affiliateSessionId ? "cookie" : "direct"),
           taxAmount: taxAmount.toString(),
           taxCalculationId: taxCalculationId || "",
+          affiliateDiscountAmount: affiliateDiscountAmount.toString(),
         },
       });
       clientSecret = updatedIntent.client_secret!;
@@ -534,6 +569,7 @@ router.post("/reprice-payment-intent", paymentLimiter, async (req: any, res) => 
           attributionType: affiliateCode ? "coupon" : (affiliateSessionId ? "cookie" : "direct"),
           taxAmount: taxAmount.toString(),
           taxCalculationId: taxCalculationId || "",
+          affiliateDiscountAmount: affiliateDiscountAmount.toString(),
         },
       });
       await storage.updateOrder(orderId, { stripePaymentIntentId: newIntent.id });
@@ -544,6 +580,7 @@ router.post("/reprice-payment-intent", paymentLimiter, async (req: any, res) => 
       clientSecret,
       orderId: order.id,
       subtotal: subtotalAmount,
+      affiliateDiscount: affiliateDiscountAmount,
       taxAmount,
       total: totalAmount,
     });
@@ -690,7 +727,7 @@ router.post("/checkout", checkoutLimiter, async (req: any, res) => {
       if (updated) existingCustomer = updated;
     }
 
-    let totalAmount = 0;
+    let subtotalAmount = 0;
     const orderItems: Array<{
       productId: string;
       productName: string;
@@ -703,7 +740,7 @@ router.post("/checkout", checkoutLimiter, async (req: any, res) => {
       if (!product) {
         return res.status(400).json({ message: `Product ${item.productId} not found` });
       }
-      totalAmount += product.price * item.quantity;
+      subtotalAmount += product.price * item.quantity;
       orderItems.push({
         productId: product.id,
         productName: product.name,
@@ -712,11 +749,24 @@ router.post("/checkout", checkoutLimiter, async (req: any, res) => {
       });
     }
 
+    let affiliateDiscountAmount = 0;
+    const affSettings = await storage.getAffiliateSettings();
+    if (affiliate && affiliate.status === "active") {
+      const discountPercent = affSettings?.customerDiscountPercent || 0;
+      if (discountPercent > 0) {
+        affiliateDiscountAmount = Math.floor(subtotalAmount * (discountPercent / 100));
+      }
+    }
+
+    const discountedSubtotal = Math.max(0, subtotalAmount - affiliateDiscountAmount);
+    const totalAmount = discountedSubtotal;
+
     const checkoutStripeClient = await stripeService.getClient();
     if (!checkoutStripeClient) {
       const order = await storage.createOrder({
         customerId: existingCustomer.id,
         status: "pending",
+        subtotalAmount,
         totalAmount,
         notes: "Stripe not configured - manual payment required",
         affiliateCode: affiliate?.affiliateCode,
@@ -732,14 +782,13 @@ router.post("/checkout", checkoutLimiter, async (req: any, res) => {
       if (affiliate && affiliate.status === "active") {
         const existingReferral = await storage.getAffiliateReferralByOrderId(order.id);
         if (!existingReferral) {
-          const settings = await storage.getAffiliateSettings();
-          const commissionRate = settings?.commissionRate || 10;
-          const commissionAmount = Math.round(totalAmount * (commissionRate / 100));
+          const commissionRate = affSettings?.commissionRate || 10;
+          const commissionAmount = Math.round(subtotalAmount * (commissionRate / 100));
           
           await storage.createAffiliateReferral({
             affiliateId: affiliate.id,
             orderId: order.id,
-            orderAmount: totalAmount,
+            orderAmount: subtotalAmount,
             commissionAmount,
             commissionRate,
             status: "pending",

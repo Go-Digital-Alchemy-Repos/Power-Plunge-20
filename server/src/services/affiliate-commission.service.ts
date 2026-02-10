@@ -204,7 +204,8 @@ export class AffiliateCommissionService {
         .where(eq(affiliateSettings.id, "main"));
 
       const commissionRate = settings?.commissionRate || 10;
-      const commissionAmount = Math.floor(order.totalAmount * (commissionRate / 100));
+      const commissionBase = order.subtotalAmount ?? order.totalAmount;
+      const commissionAmount = Math.floor(commissionBase * (commissionRate / 100));
 
       // Lookup the attributed click if session ID is provided
       // Only link click if its affiliateId matches the order's affiliate
@@ -228,7 +229,7 @@ export class AffiliateCommissionService {
         .values({
           affiliateId: affiliate.id,
           orderId: order.id,
-          orderAmount: order.totalAmount,
+          orderAmount: commissionBase,
           commissionRate,
           commissionAmount,
           status: fraudCheck.isFlagged ? "flagged" : "pending",

@@ -74,6 +74,7 @@ router.get("/affiliate-settings", async (req, res) => {
     if (!settings) {
       settings = await storage.updateAffiliateSettings({
         commissionRate: 10,
+        customerDiscountPercent: 0,
         minimumPayout: 5000,
         cookieDuration: 30,
         agreementText: getDefaultAffiliateAgreement(),
@@ -86,9 +87,22 @@ router.get("/affiliate-settings", async (req, res) => {
   }
 });
 
+const affiliateSettingsPatchSchema = z.object({
+  commissionRate: z.number().int().min(0).max(100).optional(),
+  customerDiscountPercent: z.number().int().min(0).max(100).optional(),
+  minimumPayout: z.number().int().min(0).optional(),
+  cookieDuration: z.number().int().min(1).max(365).optional(),
+  agreementText: z.string().optional(),
+  programActive: z.boolean().optional(),
+});
+
 router.patch("/affiliate-settings", async (req, res) => {
   try {
-    const settings = await storage.updateAffiliateSettings(req.body);
+    const parsed = affiliateSettingsPatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.errors[0]?.message || "Invalid request body" });
+    }
+    const settings = await storage.updateAffiliateSettings(parsed.data);
     res.json(settings);
   } catch (error) {
     res.status(500).json({ message: "Failed to update affiliate settings" });

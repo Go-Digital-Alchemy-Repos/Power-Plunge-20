@@ -319,6 +319,7 @@ export type IntegrationSettings = typeof integrationSettings.$inferSelect;
 export const affiliateSettings = pgTable("affiliate_settings", {
   id: varchar("id").primaryKey().default("main"),
   commissionRate: integer("commission_rate").notNull().default(10), // percentage
+  customerDiscountPercent: integer("customer_discount_percent").notNull().default(0), // percentage discount for customers using affiliate code
   minimumPayout: integer("minimum_payout").notNull().default(5000), // in cents ($50)
   cookieDuration: integer("cookie_duration").notNull().default(30), // days
   approvalDays: integer("approval_days").notNull().default(14), // days before auto-approval

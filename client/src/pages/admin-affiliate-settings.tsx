@@ -21,6 +21,7 @@ import AdminNav from "@/components/admin/AdminNav";
 interface AffiliateSettings {
   id: string;
   commissionRate: number;
+  customerDiscountPercent: number;
   minimumPayout: number;
   cookieDuration: number;
   agreementText: string;
@@ -36,6 +37,7 @@ export default function AdminAffiliateSettings() {
 
   const [formData, setFormData] = useState<Partial<AffiliateSettings>>({
     commissionRate: 10,
+    customerDiscountPercent: 0,
     minimumPayout: 5000,
     cookieDuration: 30,
     agreementText: "",
@@ -59,6 +61,7 @@ export default function AdminAffiliateSettings() {
     if (settings) {
       setFormData({
         commissionRate: settings.commissionRate,
+        customerDiscountPercent: settings.customerDiscountPercent,
         minimumPayout: settings.minimumPayout,
         cookieDuration: settings.cookieDuration,
         agreementText: settings.agreementText,
@@ -241,19 +244,33 @@ export default function AdminAffiliateSettings() {
               <CardDescription>Configure commission rates and payout settings</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="commissionRate">Commission Rate (%)</Label>
                   <Input
                     id="commissionRate"
                     type="number"
-                    min="1"
+                    min="0"
                     max="100"
                     value={formData.commissionRate}
                     onChange={(e) => setFormData({ ...formData, commissionRate: parseInt(e.target.value) || 0 })}
                     data-testid="input-commission-rate"
                   />
-                  <p className="text-xs text-muted-foreground">Percentage of sale affiliates earn</p>
+                  <p className="text-xs text-muted-foreground">Percentage of sale affiliates earn. Commission is calculated on the order total before any discounts.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="customerDiscountPercent">Customer Discount (%)</Label>
+                  <Input
+                    id="customerDiscountPercent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.customerDiscountPercent}
+                    onChange={(e) => setFormData({ ...formData, customerDiscountPercent: parseInt(e.target.value) || 0 })}
+                    data-testid="input-customer-discount-percent"
+                  />
+                  <p className="text-xs text-muted-foreground">Applied at checkout when a valid affiliate code is used. Set to 0 to disable.</p>
                 </div>
 
                 <div className="space-y-2">
