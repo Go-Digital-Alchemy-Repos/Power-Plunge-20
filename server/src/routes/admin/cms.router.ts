@@ -166,6 +166,17 @@ router.post("/pages/:id/migrate-to-blocks", async (req, res) => {
   }
 });
 
+router.delete("/pages/:id", async (req, res) => {
+  try {
+    const success = await cmsService.deletePage(req.params.id);
+    if (!success) return res.status(404).json({ error: "Page not found" });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("Delete page error:", err);
+    res.status(500).json({ error: "Failed to delete page" });
+  }
+});
+
 router.get("/sections", async (_req, res) => {
   const list = await sectionsService.list();
   res.json(list);
