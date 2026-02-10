@@ -55,6 +55,17 @@ The Power Plunge e-commerce platform utilizes a modern full-stack architecture.
 - **CMS Page Builder:** Supports block-based page builder architecture for custom landing pages, home page, and shop page, with uniqueness enforcement for home/shop pages and default page creation on server startup.
 - **App Docs System:** File-system-based read-only documentation browser in the admin area, with auto-generation of API reference docs from Express route files.
 
+## Recent Changes
+
+### Checkout Upgrade (Feb 2026)
+- **Shared Validation**: `shared/validation.ts` provides reusable email, ZIP, phone, address, and state validation utilities used by both client and server.
+- **Reusable AddressForm**: `client/src/components/checkout/AddressForm.tsx` component with name, company, line1, line2, city, state, postalCode fields and inline error display.
+- **Checkout Refactor**: `client/src/pages/checkout.tsx` uses AddressForm for shipping/billing, improved billing toggle (prefills on first uncheck, preserves edits on re-toggle), and maps server validation errors to inline fields.
+- **Express Checkout**: Stripe ExpressCheckoutElement (Apple Pay/Google Pay/Link) added above PaymentElement on payment step.
+- **Expanded Schema**: Orders table now includes `shipping_company`, `shipping_line2`, `billing_company`, `billing_line2` columns for complete address persistence.
+- **Server Validation**: `server/src/routes/public/payments.routes.ts` uses shared validators and returns structured error arrays `{field, code, message}[]`.
+- **Checkout Analytics**: `client/src/lib/checkout-analytics.ts` tracks checkout funnel events (checkout_started, shipping_step_completed, payment_step_started, validation_error, payment_submitted, payment_succeeded, payment_failed) via beacon to `/api/analytics/checkout-event`.
+
 ## External Dependencies
 - **Stripe:** For payment processing.
 - **Mailgun:** For email services.

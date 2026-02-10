@@ -4,6 +4,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
   PaymentElement,
+  ExpressCheckoutElement,
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
@@ -12,10 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { US_STATE_OPTIONS } from "@shared/us-states";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ArrowRight, CreditCard, Loader2, ShoppingBag, Lock, Shield, CheckCircle, XCircle, Users } from "lucide-react";
+import { AddressForm, emptyAddress, type AddressFormData } from "@/components/checkout/AddressForm";
+import { validateEmail, validatePhone, validateAddress, validateRequired, validateState, validateZip } from "@shared/validation";
+import { trackCheckoutEvent } from "@/lib/checkout-analytics";
 import logoImage from "@assets/powerplungelogo_1767907611722.png";
 
 interface CartItem {
@@ -34,11 +36,11 @@ interface CheckoutFormProps {
     name: string;
     email: string;
     phone: string;
-    address: string;
-    address2: string;
+    line1: string;
+    line2: string;
     city: string;
     state: string;
-    zipCode: string;
+    postalCode: string;
   };
 }
 
@@ -57,6 +59,7 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
     }
 
     setIsProcessing(true);
+    trackCheckoutEvent("payment_submitted", { cartValue: totalWithTax });
 
     try {
       const { error, paymentIntent } = await stripe.confirmPayment({
@@ -69,11 +72,11 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
               email: billingDetails.email,
               phone: billingDetails.phone,
               address: {
-                line1: billingDetails.address,
-                line2: billingDetails.address2 || undefined,
+                line1: billingDetails.line1,
+                line2: billingDetails.line2 || undefined,
                 city: billingDetails.city,
                 state: billingDetails.state,
-                postal_code: billingDetails.zipCode,
+                postal_code: billingDetails.postalCode,
                 country: "US",
               },
             },
@@ -83,6 +86,7 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
       });
 
       if (error) {
+        trackCheckoutEvent("payment_failed", { error: error.message });
         toast({
           title: "Payment Failed",
           description: error.message,
@@ -96,7 +100,8 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
         console.log("Payment intent status:", paymentIntent.status);
         
         if (paymentIntent.status === "succeeded") {
-          // Confirm payment on backend
+          trackCheckoutEvent("payment_succeeded", { cartValue: totalWithTax });
+
           const confirmResponse = await fetch("/api/confirm-payment", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -118,7 +123,6 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
             return;
           }
 
-          // Mark cart as recovered for abandonment tracking
           const checkoutSessionId = localStorage.getItem("checkoutSessionId");
           if (checkoutSessionId) {
             fetch("/api/recovery/mark-cart-recovered", {
@@ -132,9 +136,10 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
           localStorage.removeItem("checkoutSessionId");
           sessionStorage.removeItem("checkoutFormData");
           sessionStorage.removeItem("checkoutBillingData");
+          sessionStorage.removeItem("checkoutShippingAddress");
+          sessionStorage.removeItem("checkoutBillingAddress");
           setLocation(`/order-success?order_id=${orderId}`);
         } else if (paymentIntent.status === "requires_action" || paymentIntent.status === "requires_confirmation") {
-          // Payment requires additional action - Stripe should handle redirect
           toast({
             title: "Additional Verification Required",
             description: "Please complete the verification process.",
@@ -152,10 +157,10 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
           });
         }
       } else if (!error) {
-        // No paymentIntent and no error - might have redirected
         console.log("No payment intent returned - likely redirected for authentication");
       }
     } catch (error: any) {
+      trackCheckoutEvent("payment_failed", { error: error.message });
       toast({
         title: "Payment Error",
         description: error.message || "An error occurred during payment",
@@ -166,9 +171,64 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
     }
   };
 
+  const onExpressCheckoutConfirm = async () => {
+    if (!stripe || !elements) return;
+    setIsProcessing(true);
+    trackCheckoutEvent("payment_submitted", { cartValue: totalWithTax, method: "express" });
+
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/order-success?order_id=${orderId}`,
+        },
+      });
+
+      if (error) {
+        trackCheckoutEvent("payment_failed", { error: error.message, method: "express" });
+        toast({
+          title: "Payment Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      trackCheckoutEvent("payment_failed", { error: err.message, method: "express" });
+      toast({
+        title: "Payment Error",
+        description: err.message || "An error occurred during payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       <div className="bg-muted/50 rounded-lg p-4">
+        <div className="mb-4">
+          <p className="text-sm text-muted-foreground mb-3">Express Checkout</p>
+          <ExpressCheckoutElement
+            onConfirm={onExpressCheckoutConfirm}
+            options={{
+              buttonType: {
+                applePay: "buy",
+                googlePay: "buy",
+              },
+            }}
+          />
+        </div>
+
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-muted/50 px-2 text-muted-foreground">Or pay with card</span>
+          </div>
+        </div>
+
         <PaymentElement
           options={{
             layout: "tabs",
@@ -183,7 +243,7 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
             defaultValues: {
               billingDetails: {
                 address: {
-                  postal_code: billingDetails.zipCode,
+                  postal_code: billingDetails.postalCode,
                   country: "US",
                 },
               },
@@ -197,26 +257,28 @@ function CheckoutForm({ clientSecret, orderId, cartTotal, totalWithTax, billingD
         <span>Your payment is secured with 256-bit SSL encryption</span>
       </div>
 
-      <Button
-        type="submit"
-        className="w-full glow-ice-sm"
-        size="lg"
-        disabled={!stripe || isProcessing}
-        data-testid="button-pay-now"
-      >
-        {isProcessing ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          <>
-            <CreditCard className="w-4 h-4 mr-2" />
-            Pay ${(totalWithTax / 100).toLocaleString()}
-          </>
-        )}
-      </Button>
-    </form>
+      <form onSubmit={handleSubmit}>
+        <Button
+          type="submit"
+          className="w-full glow-ice-sm"
+          size="lg"
+          disabled={!stripe || isProcessing}
+          data-testid="button-pay-now"
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <CreditCard className="w-4 h-4 mr-2" />
+              Pay ${(totalWithTax / 100).toLocaleString()}
+            </>
+          )}
+        </Button>
+      </form>
+    </div>
   );
 }
 
@@ -230,118 +292,187 @@ export default function Checkout() {
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
   const [taxInfo, setTaxInfo] = useState<{ subtotal: number; taxAmount: number; total: number } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const [formData, setFormData] = useState(() => {
-    const defaults = { name: "", email: "", phone: "", address: "", address2: "", city: "", state: "", zipCode: "" };
+
+  const [contactData, setContactData] = useState(() => {
+    const defaults = { email: "", phone: "" };
     const saved = sessionStorage.getItem("checkoutFormData");
     if (saved) {
-      try { return { ...defaults, ...JSON.parse(saved) }; } catch {}
+      try {
+        const parsed = JSON.parse(saved);
+        return { email: parsed.email || "", phone: parsed.phone || "" };
+      } catch {}
     }
     return defaults;
   });
-  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
-  const [billingData, setBillingData] = useState(() => {
-    const defaults = { name: "", address: "", address2: "", city: "", state: "", zipCode: "" };
-    const saved = sessionStorage.getItem("checkoutBillingData");
+
+  const [shippingAddress, setShippingAddress] = useState<AddressFormData>(() => {
+    const saved = sessionStorage.getItem("checkoutShippingAddress");
     if (saved) {
-      try { return { ...defaults, ...JSON.parse(saved) }; } catch {}
+      try { return { ...emptyAddress, ...JSON.parse(saved) }; } catch {}
     }
-    return defaults;
+    const oldSaved = sessionStorage.getItem("checkoutFormData");
+    if (oldSaved) {
+      try {
+        const old = JSON.parse(oldSaved);
+        return {
+          ...emptyAddress,
+          name: old.name || "",
+          line1: old.address || "",
+          line2: old.address2 || "",
+          city: old.city || "",
+          state: old.state || "",
+          postalCode: old.zipCode || "",
+        };
+      } catch {}
+    }
+    return emptyAddress;
   });
+
+  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
+  const [billingHasBeenEdited, setBillingHasBeenEdited] = useState(false);
+  const [billingAddress, setBillingAddress] = useState<AddressFormData>(() => {
+    const saved = sessionStorage.getItem("checkoutBillingAddress");
+    if (saved) {
+      try { return { ...emptyAddress, ...JSON.parse(saved) }; } catch {}
+    }
+    const oldSaved = sessionStorage.getItem("checkoutBillingData");
+    if (oldSaved) {
+      try {
+        const old = JSON.parse(oldSaved);
+        return {
+          ...emptyAddress,
+          name: old.name || "",
+          line1: old.address || "",
+          line2: old.address2 || "",
+          city: old.city || "",
+          state: old.state || "",
+          postalCode: old.zipCode || "",
+        };
+      } catch {}
+    }
+    return emptyAddress;
+  });
+
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    sessionStorage.setItem("checkoutFormData", JSON.stringify(formData));
-  }, [formData]);
+    sessionStorage.setItem("checkoutShippingAddress", JSON.stringify(shippingAddress));
+    sessionStorage.setItem("checkoutFormData", JSON.stringify({
+      name: shippingAddress.name,
+      email: contactData.email,
+      phone: contactData.phone,
+      address: shippingAddress.line1,
+      address2: shippingAddress.line2,
+      city: shippingAddress.city,
+      state: shippingAddress.state,
+      zipCode: shippingAddress.postalCode,
+    }));
+  }, [shippingAddress, contactData]);
 
   useEffect(() => {
-    sessionStorage.setItem("checkoutBillingData", JSON.stringify(billingData));
-  }, [billingData]);
+    sessionStorage.setItem("checkoutBillingAddress", JSON.stringify(billingAddress));
+    sessionStorage.setItem("checkoutBillingData", JSON.stringify({
+      name: billingAddress.name,
+      address: billingAddress.line1,
+      address2: billingAddress.line2,
+      city: billingAddress.city,
+      state: billingAddress.state,
+      zipCode: billingAddress.postalCode,
+    }));
+  }, [billingAddress]);
 
-  const validateField = useCallback((field: string, value: string): string | null => {
-    switch (field) {
-      case "name":
-        return value.trim().length < 2 ? "Full name is required (min 2 characters)" : null;
-      case "email":
-        return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()) ? "Valid email is required" : null;
-      case "phone":
-        if (!value.trim()) return null;
-        return !/^[\d\s\-\+\(\)]{7,15}$/.test(value.trim()) ? "Please enter a valid phone number" : null;
-      case "address":
-        return value.trim().length < 3 ? "Street address is required" : null;
-      case "city":
-        return value.trim().length < 2 ? "City is required" : null;
-      case "state":
-        return !value ? "Please select a state" : null;
-      case "zipCode":
-        return !/^\d{5}(-\d{4})?$/.test(value.trim()) ? "Valid ZIP code required (e.g. 12345)" : null;
-      default:
-        return null;
+  const handleBillingSameToggle = useCallback((checked: boolean) => {
+    setBillingSameAsShipping(checked);
+    if (!checked && !billingHasBeenEdited) {
+      setBillingAddress({ ...shippingAddress });
+      setBillingHasBeenEdited(true);
     }
-  }, []);
+  }, [shippingAddress, billingHasBeenEdited]);
 
-  const billingErrorKeyMap: Record<string, string> = {
-    name: "billingName",
-    address: "billingAddress",
-    city: "billingCity",
-    state: "billingState",
-    zipCode: "billingZip",
-  };
-
-  const handleBlur = useCallback((field: string, value: string, isBilling = false) => {
-    const errorKey = isBilling ? (billingErrorKeyMap[field] || field) : field;
-    const error = validateField(field, value);
+  const clearError = useCallback((field: string) => {
     setFieldErrors(prev => {
-      if (error) return { ...prev, [errorKey]: error };
       const next = { ...prev };
-      delete next[errorKey];
+      delete next[field];
       return next;
     });
-  }, [validateField]);
+  }, []);
+
+  const handleBlurValidate = useCallback((field: string, value: string) => {
+    let error: string | null = null;
+    const baseField = field.replace(/^billing/, "").replace(/^[A-Z]/, c => c.toLowerCase());
+
+    switch (baseField) {
+      case "name":
+        error = validateRequired(value, field, "Full name")?.message || null;
+        break;
+      case "line1":
+        error = validateRequired(value, field, "Street address", 3)?.message || null;
+        break;
+      case "city":
+        error = validateRequired(value, field, "City")?.message || null;
+        break;
+      case "state":
+        error = validateState(value)?.message || null;
+        break;
+      case "postalCode":
+        error = validateZip(value)?.message || null;
+        break;
+      case "email":
+        error = validateEmail(value)?.message || null;
+        break;
+      case "phone":
+        error = validatePhone(value)?.message || null;
+        break;
+    }
+
+    setFieldErrors(prev => {
+      if (error) return { ...prev, [field]: error };
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-    const trimmedForm = {
-      ...formData,
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      address: formData.address.trim(),
-      address2: formData.address2.trim(),
-      city: formData.city.trim(),
-      zipCode: formData.zipCode.trim(),
-    };
 
-    if (trimmedForm.name.length < 2) errors.name = "Full name is required (min 2 characters)";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedForm.email)) errors.email = "Valid email is required";
-    if (trimmedForm.phone && !/^[\d\s\-\+\(\)]{7,15}$/.test(trimmedForm.phone)) errors.phone = "Please enter a valid phone number";
-    if (trimmedForm.address.length < 3) errors.address = "Street address is required";
-    if (trimmedForm.city.length < 2) errors.city = "City is required";
-    if (!trimmedForm.state) errors.state = "Please select a state";
-    if (!/^\d{5}(-\d{4})?$/.test(trimmedForm.zipCode)) errors.zipCode = "Valid ZIP code required (e.g. 12345)";
+    const emailErr = validateEmail(contactData.email);
+    if (emailErr) errors.email = emailErr.message;
+
+    const phoneErr = validatePhone(contactData.phone);
+    if (phoneErr) errors.phone = phoneErr.message;
+
+    const shippingErrors = validateAddress({
+      name: shippingAddress.name,
+      line1: shippingAddress.line1,
+      city: shippingAddress.city,
+      state: shippingAddress.state,
+      postalCode: shippingAddress.postalCode,
+    });
+    for (const err of shippingErrors) {
+      errors[err.field] = err.message;
+    }
 
     if (!billingSameAsShipping) {
-      const trimmedBilling = {
-        ...billingData,
-        name: billingData.name.trim(),
-        address: billingData.address.trim(),
-        address2: billingData.address2.trim(),
-        city: billingData.city.trim(),
-        zipCode: billingData.zipCode.trim(),
-      };
-      if (trimmedBilling.name.length < 2) errors.billingName = "Full name is required (min 2 characters)";
-      if (trimmedBilling.address.length < 3) errors.billingAddress = "Street address is required";
-      if (trimmedBilling.city.length < 2) errors.billingCity = "City is required";
-      if (!trimmedBilling.state) errors.billingState = "Please select a state";
-      if (!/^\d{5}(-\d{4})?$/.test(trimmedBilling.zipCode)) errors.billingZip = "Valid ZIP code required (e.g. 12345)";
+      const billingErrors = validateAddress({
+        name: billingAddress.name,
+        line1: billingAddress.line1,
+        city: billingAddress.city,
+        state: billingAddress.state,
+        postalCode: billingAddress.postalCode,
+      }, "billing");
+      for (const err of billingErrors) {
+        errors[err.field] = err.message;
+      }
     }
 
     setFieldErrors(errors);
 
     if (Object.keys(errors).length > 0) {
       const firstErrorKey = Object.keys(errors)[0];
-      const elementId = firstErrorKey === "billingZip" ? "billingZip" : firstErrorKey;
+      trackCheckoutEvent("validation_error", { field: firstErrorKey, code: "client_validation" });
       setTimeout(() => {
-        const el = document.getElementById(elementId);
+        const el = document.getElementById(firstErrorKey);
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "center" });
           el.focus();
@@ -356,7 +487,6 @@ export default function Checkout() {
   const [referralCode, setReferralCode] = useState("");
   const [referralStatus, setReferralStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
 
-  // Initialize referral code from localStorage
   useEffect(() => {
     const storedCode = localStorage.getItem("affiliateCode");
     const codeExpiry = localStorage.getItem("affiliateCodeExpiry");
@@ -366,7 +496,6 @@ export default function Checkout() {
     }
   }, []);
 
-  // Validate referral code
   const validateReferralCode = async (code: string) => {
     if (!code || code.length < 3) {
       setReferralStatus("idle");
@@ -379,7 +508,6 @@ export default function Checkout() {
       if (data.valid) {
         setReferralCode(data.code);
         setReferralStatus("valid");
-        // Save to localStorage for future use
         localStorage.setItem("affiliateCode", data.code);
         localStorage.setItem("affiliateCodeExpiry", String(Date.now() + 30 * 24 * 60 * 60 * 1000));
       } else {
@@ -401,7 +529,12 @@ export default function Checkout() {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   useEffect(() => {
-    // Load Stripe publishable key
+    if (cart.length > 0) {
+      trackCheckoutEvent("checkout_started", { cartValue: cartTotal, itemCount: cart.length });
+    }
+  }, []);
+
+  useEffect(() => {
     fetch("/api/stripe/config")
       .then((res) => res.json())
       .then((data) => {
@@ -411,7 +544,6 @@ export default function Checkout() {
       });
   }, []);
 
-  // Track cart activity for abandonment recovery
   useEffect(() => {
     if (cart.length === 0) return;
 
@@ -435,7 +567,7 @@ export default function Checkout() {
           sessionId,
           cartData: { items: cart, subtotal: cartTotal },
           cartValue: cartTotal,
-          email: formData.email || undefined,
+          email: contactData.email || undefined,
           affiliateCode,
         }),
       }).catch(() => {});
@@ -445,51 +577,43 @@ export default function Checkout() {
     
     const interval = setInterval(trackCart, 60000);
     return () => clearInterval(interval);
-  }, [cart.length, cartTotal, formData.email]);
+  }, [cart.length, cartTotal, contactData.email]);
 
   const handleShippingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    const trimmedForm = {
-      ...formData,
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      address: formData.address.trim(),
-      address2: formData.address2.trim(),
-      city: formData.city.trim(),
-      zipCode: formData.zipCode.trim(),
-    };
-    setFormData(trimmedForm);
-
-    const trimmedBilling = {
-      ...billingData,
-      name: billingData.name.trim(),
-      address: billingData.address.trim(),
-      address2: billingData.address2.trim(),
-      city: billingData.city.trim(),
-      zipCode: billingData.zipCode.trim(),
-    };
-    setBillingData(trimmedBilling);
 
     if (!validateForm()) {
       setIsLoading(false);
       return;
     }
 
-    // Use the manually validated referral code, or fall back to localStorage (from referral link)
+    trackCheckoutEvent("shipping_step_completed", {
+      cartValue: cartTotal,
+      itemCount: cart.length,
+      billingSameAsShipping,
+    });
+
     let affiliateCode: string | null = null;
     if (referralStatus === "valid" && referralCode) {
       affiliateCode = referralCode;
     } else {
-      // Fallback to localStorage for cookie-based tracking
       const storedCode = localStorage.getItem("affiliateCode");
       const codeExpiry = localStorage.getItem("affiliateCodeExpiry");
       if (storedCode && codeExpiry && Date.now() < parseInt(codeExpiry)) {
         affiliateCode = storedCode;
       }
     }
+
+    const billingForSubmit = billingSameAsShipping ? null : {
+      name: billingAddress.name.trim(),
+      company: billingAddress.company.trim() || undefined,
+      address: billingAddress.line1.trim(),
+      line2: billingAddress.line2.trim() || undefined,
+      city: billingAddress.city.trim(),
+      state: billingAddress.state,
+      zipCode: billingAddress.postalCode.trim(),
+    };
 
     try {
       const response = await fetch("/api/create-payment-intent", {
@@ -501,13 +625,17 @@ export default function Checkout() {
             quantity: item.quantity,
           })),
           customer: {
-            ...formData,
-            address: formData.address2 ? `${formData.address}, ${formData.address2}` : formData.address,
+            name: shippingAddress.name.trim(),
+            email: contactData.email.trim(),
+            phone: contactData.phone.trim(),
+            address: shippingAddress.line1.trim(),
+            company: shippingAddress.company.trim() || undefined,
+            line2: shippingAddress.line2.trim() || undefined,
+            city: shippingAddress.city.trim(),
+            state: shippingAddress.state,
+            zipCode: shippingAddress.postalCode.trim(),
           },
-          billingAddress: billingSameAsShipping ? null : {
-            ...billingData,
-            address: billingData.address2 ? `${billingData.address}, ${billingData.address2}` : billingData.address,
-          },
+          billingAddress: billingForSubmit,
           billingSameAsShipping,
           affiliateCode,
         }),
@@ -516,6 +644,52 @@ export default function Checkout() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.errors && Array.isArray(data.errors)) {
+          const newErrors: Record<string, string> = {};
+          for (const err of data.errors) {
+            newErrors[err.field] = err.message;
+            trackCheckoutEvent("validation_error", { field: err.field, code: err.code });
+          }
+          setFieldErrors(newErrors);
+          const firstField = data.errors[0]?.field;
+          if (firstField) {
+            setTimeout(() => {
+              const el = document.getElementById(firstField);
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                el.focus();
+              }
+            }, 100);
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        if (data.field) {
+          const fieldMap: Record<string, string> = {
+            state: "state",
+            zipCode: "postalCode",
+            address: "line1",
+            billingName: "billingName",
+            billingAddress: "billingLine1",
+            billingCity: "billingCity",
+            billingState: "billingState",
+            billingZip: "billingPostalCode",
+          };
+          const mappedField = fieldMap[data.field] || data.field;
+          setFieldErrors(prev => ({ ...prev, [mappedField]: data.message }));
+          trackCheckoutEvent("validation_error", { field: mappedField, code: "server_validation" });
+          setTimeout(() => {
+            const el = document.getElementById(mappedField);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+              el.focus();
+            }
+          }, 100);
+          setIsLoading(false);
+          return;
+        }
+
         throw new Error(data.message || "Failed to initialize payment");
       }
 
@@ -527,6 +701,7 @@ export default function Checkout() {
         total: data.total,
       });
       setStep("payment");
+      trackCheckoutEvent("payment_step_started", { cartValue: data.total, itemCount: cart.length });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -551,6 +726,8 @@ export default function Checkout() {
     );
   }
 
+  const activeBilling = billingSameAsShipping ? shippingAddress : billingAddress;
+
   return (
     <div className="min-h-screen bg-background">
       <nav className="sticky top-0 z-50 bg-card border-b border-border">
@@ -573,7 +750,6 @@ export default function Checkout() {
           </Button>
         </Link>
 
-        {/* Progress Steps */}
         <div className="flex items-center justify-center gap-4 mb-8">
           <div className={`flex items-center gap-2 ${step === "shipping" ? "text-primary" : "text-muted-foreground"}`}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step === "shipping" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
@@ -601,28 +777,13 @@ export default function Checkout() {
                   <form ref={formRef} onSubmit={handleShippingSubmit} className="space-y-4">
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['name']; return next; }); }}
-                          onBlur={(e) => handleBlur("name", e.target.value)}
-                          autoComplete="shipping name"
-                          required
-                          data-testid="input-name"
-                        />
-                        {fieldErrors.name && (
-                          <p className="text-xs text-red-500 mt-1" data-testid="error-name">{fieldErrors.name}</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input
                           id="email"
                           type="email"
-                          value={formData.email}
-                          onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['email']; return next; }); }}
-                          onBlur={(e) => handleBlur("email", e.target.value)}
+                          value={contactData.email}
+                          onChange={(e) => { setContactData({ ...contactData, email: e.target.value }); clearError("email"); }}
+                          onBlur={(e) => handleBlurValidate("email", e.target.value)}
                           autoComplete="email"
                           required
                           data-testid="input-email"
@@ -631,112 +792,33 @@ export default function Checkout() {
                           <p className="text-xs text-red-500 mt-1" data-testid="error-email">{fieldErrors.email}</p>
                         )}
                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['phone']; return next; }); }}
-                        onBlur={(e) => handleBlur("phone", e.target.value)}
-                        autoComplete="tel"
-                        data-testid="input-phone"
-                      />
-                      {fieldErrors.phone && (
-                        <p className="text-xs text-red-500 mt-1" data-testid="error-phone">{fieldErrors.phone}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Street Address</Label>
-                      <Input
-                        id="address"
-                        value={formData.address}
-                        onChange={(e) => { setFormData({ ...formData, address: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['address']; return next; }); }}
-                        onBlur={(e) => handleBlur("address", e.target.value)}
-                        autoComplete="shipping address-line1"
-                        required
-                        data-testid="input-address"
-                      />
-                      {fieldErrors.address && (
-                        <p className="text-xs text-red-500 mt-1" data-testid="error-address">{fieldErrors.address}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="address2">Apt, Suite, Unit <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                      <Input
-                        id="address2"
-                        value={formData.address2}
-                        onChange={(e) => setFormData({ ...formData, address2: e.target.value })}
-                        autoComplete="shipping address-line2"
-                        data-testid="input-address2"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded px-3 py-2">
-                      <span>🇺🇸</span>
-                      <span>Shipping to United States only</span>
-                    </div>
-
-                    <div className="grid sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
+                        <Label htmlFor="phone">Phone <span className="text-muted-foreground font-normal">(optional)</span></Label>
                         <Input
-                          id="city"
-                          value={formData.city}
-                          onChange={(e) => { setFormData({ ...formData, city: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['city']; return next; }); }}
-                          onBlur={(e) => handleBlur("city", e.target.value)}
-                          autoComplete="shipping address-level2"
-                          required
-                          data-testid="input-city"
+                          id="phone"
+                          type="tel"
+                          value={contactData.phone}
+                          onChange={(e) => { setContactData({ ...contactData, phone: e.target.value }); clearError("phone"); }}
+                          onBlur={(e) => handleBlurValidate("phone", e.target.value)}
+                          autoComplete="tel"
+                          data-testid="input-phone"
                         />
-                        {fieldErrors.city && (
-                          <p className="text-xs text-red-500 mt-1" data-testid="error-city">{fieldErrors.city}</p>
+                        {fieldErrors.phone && (
+                          <p className="text-xs text-red-500 mt-1" data-testid="error-phone">{fieldErrors.phone}</p>
                         )}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="state">State</Label>
-                        <Select
-                          value={formData.state}
-                          onValueChange={(value) => { setFormData({ ...formData, state: value }); setFieldErrors(prev => { const next = {...prev}; delete next['state']; return next; }); }}
-                          required
-                        >
-                          <SelectTrigger id="state" data-testid="select-state">
-                            <SelectValue placeholder="Select state" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {US_STATE_OPTIONS.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {fieldErrors.state && (
-                          <p className="text-xs text-red-500 mt-1" data-testid="error-state">{fieldErrors.state}</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="zipCode">ZIP Code</Label>
-                        <Input
-                          id="zipCode"
-                          value={formData.zipCode}
-                          onChange={(e) => { setFormData({ ...formData, zipCode: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['zipCode']; return next; }); }}
-                          onBlur={(e) => handleBlur("zipCode", e.target.value)}
-                          autoComplete="shipping postal-code"
-                          inputMode="numeric"
-                          placeholder="12345"
-                          maxLength={10}
-                          required
-                          data-testid="input-zip"
-                        />
-                        {fieldErrors.zipCode && (
-                          <p className="text-xs text-red-500 mt-1" data-testid="error-zipCode">{fieldErrors.zipCode}</p>
-                        )}
-                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <h4 className="font-medium text-sm mb-3">Shipping Address</h4>
+                      <AddressForm
+                        data={shippingAddress}
+                        onChange={setShippingAddress}
+                        errors={fieldErrors}
+                        onClearError={clearError}
+                        onBlurValidate={handleBlurValidate}
+                        autoCompletePrefix="shipping"
+                      />
                     </div>
 
                     <div className="pt-4 border-t border-border">
@@ -744,7 +826,7 @@ export default function Checkout() {
                         <Checkbox
                           id="billingSame"
                           checked={billingSameAsShipping}
-                          onCheckedChange={(checked) => setBillingSameAsShipping(checked === true)}
+                          onCheckedChange={(checked) => handleBillingSameToggle(checked === true)}
                           data-testid="checkbox-billing-same"
                         />
                         <Label htmlFor="billingSame" className="text-sm font-normal cursor-pointer">
@@ -755,107 +837,16 @@ export default function Checkout() {
                       {!billingSameAsShipping && (
                         <div className="space-y-4 mb-4 p-4 bg-muted/30 rounded-lg">
                           <h4 className="font-medium text-sm">Billing Address</h4>
-                          <div className="space-y-2">
-                            <Label htmlFor="billingName">Full Name</Label>
-                            <Input
-                              id="billingName"
-                              value={billingData.name}
-                              onChange={(e) => { setBillingData({ ...billingData, name: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['billingName']; return next; }); }}
-                              onBlur={(e) => handleBlur("name", e.target.value, true)}
-                              autoComplete="billing name"
-                              required={!billingSameAsShipping}
-                              data-testid="input-billing-name"
-                            />
-                            {fieldErrors.billingName && (
-                              <p className="text-xs text-red-500 mt-1" data-testid="error-billingName">{fieldErrors.billingName}</p>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="billingAddress">Street Address</Label>
-                            <Input
-                              id="billingAddress"
-                              value={billingData.address}
-                              onChange={(e) => { setBillingData({ ...billingData, address: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['billingAddress']; return next; }); }}
-                              onBlur={(e) => handleBlur("address", e.target.value, true)}
-                              autoComplete="billing address-line1"
-                              required={!billingSameAsShipping}
-                              data-testid="input-billing-address"
-                            />
-                            {fieldErrors.billingAddress && (
-                              <p className="text-xs text-red-500 mt-1" data-testid="error-billingAddress">{fieldErrors.billingAddress}</p>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="billingAddress2">Apt, Suite, Unit <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                            <Input
-                              id="billingAddress2"
-                              value={billingData.address2}
-                              onChange={(e) => setBillingData({ ...billingData, address2: e.target.value })}
-                              autoComplete="billing address-line2"
-                              data-testid="input-billing-address2"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded px-3 py-2">
-                            <span>🇺🇸</span>
-                            <span>United States only</span>
-                          </div>
-                          <div className="grid sm:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="billingCity">City</Label>
-                              <Input
-                                id="billingCity"
-                                value={billingData.city}
-                                onChange={(e) => { setBillingData({ ...billingData, city: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['billingCity']; return next; }); }}
-                                onBlur={(e) => handleBlur("city", e.target.value, true)}
-                                autoComplete="billing address-level2"
-                                required={!billingSameAsShipping}
-                                data-testid="input-billing-city"
-                              />
-                              {fieldErrors.billingCity && (
-                                <p className="text-xs text-red-500 mt-1" data-testid="error-billingCity">{fieldErrors.billingCity}</p>
-                              )}
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="billingState">State</Label>
-                              <Select
-                                value={billingData.state}
-                                onValueChange={(value) => { setBillingData({ ...billingData, state: value }); setFieldErrors(prev => { const next = {...prev}; delete next['billingState']; return next; }); }}
-                                required={!billingSameAsShipping}
-                              >
-                                <SelectTrigger id="billingState" data-testid="select-billing-state">
-                                  <SelectValue placeholder="Select state" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {US_STATE_OPTIONS.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {fieldErrors.billingState && (
-                                <p className="text-xs text-red-500 mt-1" data-testid="error-billingState">{fieldErrors.billingState}</p>
-                              )}
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="billingZip">ZIP Code</Label>
-                              <Input
-                                id="billingZip"
-                                value={billingData.zipCode}
-                                onChange={(e) => { setBillingData({ ...billingData, zipCode: e.target.value }); setFieldErrors(prev => { const next = {...prev}; delete next['billingZip']; return next; }); }}
-                                onBlur={(e) => handleBlur("zipCode", e.target.value, true)}
-                                autoComplete="billing postal-code"
-                                inputMode="numeric"
-                                placeholder="12345"
-                                maxLength={10}
-                                required={!billingSameAsShipping}
-                                data-testid="input-billing-zip"
-                              />
-                              {fieldErrors.billingZip && (
-                                <p className="text-xs text-red-500 mt-1" data-testid="error-billingZip">{fieldErrors.billingZip}</p>
-                              )}
-                            </div>
-                          </div>
+                          <AddressForm
+                            data={billingAddress}
+                            onChange={(data) => { setBillingAddress(data); setBillingHasBeenEdited(true); }}
+                            errors={fieldErrors}
+                            onClearError={clearError}
+                            onBlurValidate={handleBlurValidate}
+                            fieldPrefix="billing"
+                            testIdPrefix="billing"
+                            autoCompletePrefix="billing"
+                          />
                         </div>
                       )}
                     </div>
@@ -950,22 +941,23 @@ export default function Checkout() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {/* Shipping Summary */}
                   <div className="bg-muted/30 rounded-lg p-4 mb-6">
                     <p className="text-sm text-muted-foreground mb-1">Shipping to:</p>
-                    <p className="font-medium">{formData.name}</p>
+                    <p className="font-medium">{shippingAddress.name}</p>
+                    {shippingAddress.company && <p className="text-sm text-muted-foreground">{shippingAddress.company}</p>}
                     <p className="text-sm text-muted-foreground">
-                      {formData.address}{formData.address2 ? `, ${formData.address2}` : ""}, {formData.city}, {formData.state} {formData.zipCode}
+                      {shippingAddress.line1}{shippingAddress.line2 ? `, ${shippingAddress.line2}` : ""}, {shippingAddress.city}, {shippingAddress.state} {shippingAddress.postalCode}
                     </p>
-                    <p className="text-sm text-muted-foreground">{formData.email}</p>
+                    <p className="text-sm text-muted-foreground">{contactData.email}</p>
                   </div>
 
                   {!billingSameAsShipping && (
                     <div className="bg-muted/30 rounded-lg p-4 mb-6">
                       <p className="text-sm text-muted-foreground mb-1">Billing to:</p>
-                      <p className="font-medium">{billingData.name}</p>
+                      <p className="font-medium">{billingAddress.name}</p>
+                      {billingAddress.company && <p className="text-sm text-muted-foreground">{billingAddress.company}</p>}
                       <p className="text-sm text-muted-foreground">
-                        {billingData.address}{billingData.address2 ? `, ${billingData.address2}` : ""}, {billingData.city}, {billingData.state} {billingData.zipCode}
+                        {billingAddress.line1}{billingAddress.line2 ? `, ${billingAddress.line2}` : ""}, {billingAddress.city}, {billingAddress.state} {billingAddress.postalCode}
                       </p>
                     </div>
                   )}
@@ -993,15 +985,15 @@ export default function Checkout() {
                         orderId={orderId!}
                         cartTotal={cartTotal}
                         totalWithTax={taxInfo?.total ?? cartTotal}
-                        billingDetails={billingSameAsShipping ? formData : {
-                          name: billingData.name,
-                          email: formData.email,
-                          phone: formData.phone,
-                          address: billingData.address,
-                          address2: billingData.address2,
-                          city: billingData.city,
-                          state: billingData.state,
-                          zipCode: billingData.zipCode,
+                        billingDetails={{
+                          name: activeBilling.name,
+                          email: contactData.email,
+                          phone: contactData.phone,
+                          line1: activeBilling.line1,
+                          line2: activeBilling.line2,
+                          city: activeBilling.city,
+                          state: activeBilling.state,
+                          postalCode: activeBilling.postalCode,
                         }}
                       />
                     </Elements>
@@ -1049,7 +1041,6 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                {/* Trust Badges */}
                 <div className="pt-4 border-t border-border space-y-3">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Shield className="w-4 h-4 text-green-500" />

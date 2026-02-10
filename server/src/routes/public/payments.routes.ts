@@ -5,6 +5,7 @@ import { checkoutLimiter, paymentLimiter } from "../../middleware/rate-limiter";
 import { affiliateCommissionService } from "../../services/affiliate-commission.service";
 import { normalizeEmail } from "../../services/customer-identity.service";
 import { normalizeState } from "@shared/us-states";
+import { validateEmail, validatePhone, validateAddress, validateZip, normalizeAddress, type ValidationError } from "@shared/validation";
 import { stripeService } from "../../integrations/stripe/StripeService";
 
 const router = Router();
@@ -40,7 +41,7 @@ router.get("/validate-referral-code/:code", async (req, res) => {
 
 router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
   try {
-    const { items, customer, affiliateCode, billingAddress, billingSameAsShipping: billingSame } = req.body;
+    const { items, customer, affiliateCode, billingAddress: billingInput, billingSameAsShipping: billingSame } = req.body;
     const isBillingSame = billingSame !== false;
 
     const stripeClient = await stripeService.getClient();
@@ -51,51 +52,60 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
     const parsedCustomer = insertCustomerSchema.parse(customer);
     const customerData = { ...parsedCustomer, email: normalizeEmail(parsedCustomer.email) };
 
-    const normalizedState = normalizeState(customerData.state || "");
-    if (!normalizedState) {
-      return res.status(400).json({
-        message: "Invalid shipping state. Please select a valid US state.",
-        field: "state",
-      });
+    const allErrors: ValidationError[] = [];
+
+    const emailErr = validateEmail(customerData.email);
+    if (emailErr) allErrors.push(emailErr);
+
+    const phoneErr = validatePhone(customerData.phone || "");
+    if (phoneErr) allErrors.push(phoneErr);
+
+    const shippingAddr = {
+      name: customerData.name || "",
+      company: (customer.company || "").trim(),
+      line1: customerData.address || "",
+      line2: (customer.line2 || "").trim(),
+      city: customerData.city || "",
+      state: customerData.state || "",
+      postalCode: customerData.zipCode || "",
+      country: "US",
+    };
+    const shippingErrors = validateAddress(shippingAddr);
+    allErrors.push(...shippingErrors);
+
+    const normalizedShipping = normalizeAddress(shippingAddr);
+    customerData.state = normalizedShipping.state;
+    customerData.zipCode = normalizedShipping.postalCode;
+
+    let validatedBilling: { name: string; company?: string; address: string; line2?: string; city: string; state: string; zipCode: string } | null = null;
+    if (!isBillingSame && billingInput) {
+      const billingAddr = {
+        name: billingInput.name || "",
+        company: (billingInput.company || "").trim(),
+        line1: billingInput.address || "",
+        line2: (billingInput.line2 || "").trim(),
+        city: billingInput.city || "",
+        state: billingInput.state || "",
+        postalCode: billingInput.zipCode || "",
+        country: "US",
+      };
+      const billingErrors = validateAddress(billingAddr, "billing");
+      allErrors.push(...billingErrors);
+
+      const normalizedBilling = normalizeAddress(billingAddr);
+      validatedBilling = {
+        name: normalizedBilling.name,
+        company: normalizedBilling.company,
+        address: normalizedBilling.line1,
+        line2: normalizedBilling.line2,
+        city: normalizedBilling.city,
+        state: normalizedBilling.state,
+        zipCode: normalizedBilling.postalCode,
+      };
     }
-    customerData.state = normalizedState;
 
-    if (!customerData.zipCode || !/^\d{5}(-\d{4})?$/.test(customerData.zipCode.trim())) {
-      return res.status(400).json({
-        message: "Invalid ZIP code. Please enter a valid 5-digit US ZIP code.",
-        field: "zipCode",
-      });
-    }
-    customerData.zipCode = customerData.zipCode.trim();
-
-    let normalizedBillingState: string | null = null;
-    let validatedBilling: { name: string; address: string; city: string; state: string; zipCode: string } | null = null;
-    if (!isBillingSame && billingAddress) {
-      const bName = (billingAddress.name || "").trim();
-      const bAddress = (billingAddress.address || "").trim();
-      const bCity = (billingAddress.city || "").trim();
-      const bZip = (billingAddress.zipCode || "").trim();
-
-      if (bName.length < 2) {
-        return res.status(400).json({ message: "Billing name is required (min 2 characters).", field: "billingName" });
-      }
-      if (bAddress.length < 3) {
-        return res.status(400).json({ message: "Billing street address is required.", field: "billingAddress" });
-      }
-      if (bCity.length < 2) {
-        return res.status(400).json({ message: "Billing city is required.", field: "billingCity" });
-      }
-
-      normalizedBillingState = normalizeState(billingAddress.state || "");
-      if (!normalizedBillingState) {
-        return res.status(400).json({ message: "Invalid billing state. Please select a valid US state.", field: "billingState" });
-      }
-
-      if (!/^\d{5}(-\d{4})?$/.test(bZip)) {
-        return res.status(400).json({ message: "Invalid billing ZIP code.", field: "billingZip" });
-      }
-
-      validatedBilling = { name: bName, address: bAddress, city: bCity, state: normalizedBillingState, zipCode: bZip };
+    if (allErrors.length > 0) {
+      return res.status(400).json({ errors: allErrors });
     }
 
     let affiliateSessionId: string | null = null;
@@ -184,7 +194,7 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
           address: {
             line1: customerData.address || "",
             city: customerData.city || "",
-            state: normalizedState,
+            state: normalizedShipping.state,
             postal_code: customerData.zipCode,
             country: "US",
           },
@@ -194,9 +204,9 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
 
       taxAmount = taxCalculation.tax_amount_exclusive;
       taxCalculationId = taxCalculation.id;
-      console.log(`[TAX] Calculated: $${(taxAmount / 100).toFixed(2)} for ${normalizedState} ${customerData.zipCode}`);
+      console.log(`[TAX] Calculated: $${(taxAmount / 100).toFixed(2)} for ${normalizedShipping.state} ${customerData.zipCode}`);
     } catch (taxError: any) {
-      console.error(`[TAX] Calculation failed for ${normalizedState} ${customerData.zipCode}:`, taxError.message);
+      console.error(`[TAX] Calculation failed for ${normalizedShipping.state} ${customerData.zipCode}:`, taxError.message);
       return res.status(422).json({
         message: "Unable to calculate tax. Please verify your shipping state and ZIP code.",
         field: "address",
@@ -214,14 +224,18 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
       stripeTaxCalculationId: taxCalculationId,
       affiliateCode: affiliate?.affiliateCode,
       shippingName: customerData.name,
+      shippingCompany: shippingAddr.company || null,
       shippingAddress: customerData.address,
+      shippingLine2: shippingAddr.line2 || null,
       shippingCity: customerData.city,
-      shippingState: normalizedState,
+      shippingState: normalizedShipping.state,
       shippingZip: customerData.zipCode,
       shippingCountry: "US",
       billingSameAsShipping: isBillingSame,
       billingName: validatedBilling?.name || null,
+      billingCompany: validatedBilling?.company || null,
       billingAddress: validatedBilling?.address || null,
+      billingLine2: validatedBilling?.line2 || null,
       billingCity: validatedBilling?.city || null,
       billingState: validatedBilling?.state || null,
       billingZip: validatedBilling?.zipCode || null,
@@ -714,5 +728,17 @@ export async function sendOrderNotification(orderId: string) {
     console.error("Failed to send order notification:", error);
   }
 }
+
+router.post("/analytics/checkout-event", (req, res) => {
+  try {
+    const { event, ...metadata } = req.body;
+    if (event) {
+      console.log(`[CHECKOUT_ANALYTICS] ${event}`, JSON.stringify(metadata));
+    }
+    res.status(204).end();
+  } catch {
+    res.status(204).end();
+  }
+});
 
 export default router;
