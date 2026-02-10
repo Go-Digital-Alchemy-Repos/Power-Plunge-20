@@ -311,6 +311,12 @@ export default function AdminCustomers() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-muted-foreground">Client ID:</span>
+                    <span className="text-xs font-mono font-semibold text-cyan-400" data-testid="text-quickview-client-id">
+                      {customerDetail.customer.id.substring(0, 8).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-muted-foreground" />
                     <span>{customerDetail.customer.email}</span>
                   </div>
