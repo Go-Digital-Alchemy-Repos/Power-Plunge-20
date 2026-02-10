@@ -242,8 +242,20 @@ router.get("/themes/active", async (_req, res) => {
   try {
     const [settings] = await db.select({ activeThemeId: siteSettings.activeThemeId }).from(siteSettings).where(eq(siteSettings.id, "main"));
     const activeId = settings?.activeThemeId || "arctic-default";
-    const preset = themePresets.find((t) => t.id === activeId) || themePresets[0];
-    res.json(preset);
+    const preset = themePresets.find((t) => t.id === activeId);
+    if (preset) return res.json(preset);
+    const pack = themePackPresets.find((p) => p.id === activeId);
+    if (pack) {
+      const { resolveAllVariantStyles } = await import("@shared/componentVariants");
+      const variantVars = resolveAllVariantStyles(pack.componentVariants);
+      return res.json({
+        id: pack.id,
+        name: pack.name,
+        description: pack.description,
+        variables: { ...pack.themeTokens, ...variantVars },
+      });
+    }
+    res.json(themePresets[0]);
   } catch {
     res.json(themePresets[0]);
   }

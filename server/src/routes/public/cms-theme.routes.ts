@@ -15,6 +15,8 @@ router.get("/", async (_req: Request, res: Response) => {
 router.get("/active", async (_req: Request, res: Response) => {
   try {
     const { themePresets } = await import("@shared/themePresets");
+    const { themePackPresets } = await import("@shared/themePackPresets");
+    const { resolveAllVariantStyles } = await import("@shared/componentVariants");
     const { siteSettings } = await import("@shared/schema");
     const { eq } = await import("drizzle-orm");
     const { db } = await import("../../db");
@@ -23,9 +25,27 @@ router.get("/active", async (_req: Request, res: Response) => {
       .from(siteSettings)
       .where(eq(siteSettings.id, "main"));
     const activeId = settings?.activeThemeId || "arctic-default";
-    const preset =
-      themePresets.find((t: any) => t.id === activeId) || themePresets[0];
-    res.json(preset);
+
+    const legacyPreset = themePresets.find((t: any) => t.id === activeId);
+    if (legacyPreset) {
+      return res.json(legacyPreset);
+    }
+
+    const pack = themePackPresets.find((p: any) => p.id === activeId);
+    if (pack) {
+      const variantVars = resolveAllVariantStyles(pack.componentVariants);
+      return res.json({
+        id: pack.id,
+        name: pack.name,
+        description: pack.description,
+        variables: { ...pack.themeTokens, ...variantVars },
+        _isPack: true,
+        componentVariants: pack.componentVariants,
+        blockStyleDefaults: pack.blockStyleDefaults,
+      });
+    }
+
+    res.json(themePresets[0]);
   } catch {
     const { themePresets } = await import("@shared/themePresets");
     res.json(themePresets[0]);
