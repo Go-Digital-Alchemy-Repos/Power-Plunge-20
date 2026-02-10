@@ -5,14 +5,22 @@ import ImageExtension from "@tiptap/extension-image";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   List, ListOrdered, Quote, Code, Link as LinkIcon, Image as ImageIcon,
   AlignLeft, AlignCenter, AlignRight, Heading1, Heading2, Heading3,
-  Undo, Redo, RemoveFormatting, Minus,
+  Undo, Redo, RemoveFormatting, Minus, Upload, FolderOpen,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useUpload } from "@/hooks/use-upload";
+import { useToast } from "@/hooks/use-toast";
+import { MediaPickerDialog } from "@/components/admin/MediaPickerDialog";
 
 interface RichTextEditorProps {
   value: string;
@@ -119,13 +127,59 @@ export default function RichTextEditor({
     }
   }, [editor]);
 
-  const addImage = useCallback(() => {
-    if (!editor) return;
-    const url = window.prompt("Image URL");
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [imageUrlInput, setImageUrlInput] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { uploadFile, isUploading } = useUpload();
+  const { toast } = useToast();
+
+  const insertImage = useCallback((url: string) => {
+    if (!editor || !url) return;
+    editor.chain().focus().setImage({ src: url }).run();
   }, [editor]);
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await uploadFile(file);
+    if (result) {
+      const publicUrl = (result.metadata as any)?.publicUrl || result.objectPath;
+
+      await fetch("/api/admin/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          storagePath: result.objectPath,
+          publicUrl,
+          mimeType: file.type || "application/octet-stream",
+          fileSize: file.size,
+          folder: "uploads",
+        }),
+      });
+
+      insertImage(publicUrl);
+      setShowImageDialog(false);
+      toast({ title: "Image uploaded and inserted" });
+    }
+    e.target.value = "";
+  }, [uploadFile, insertImage, toast]);
+
+  const handleMediaSelect = useCallback((url: string) => {
+    insertImage(url);
+    setShowMediaPicker(false);
+    setShowImageDialog(false);
+  }, [insertImage]);
+
+  const handleUrlInsert = useCallback(() => {
+    if (imageUrlInput.trim()) {
+      insertImage(imageUrlInput.trim());
+      setImageUrlInput("");
+      setShowImageDialog(false);
+    }
+  }, [imageUrlInput, insertImage]);
 
   if (!editor) return null;
 
@@ -257,7 +311,7 @@ export default function RichTextEditor({
         <ToolbarButton onClick={addLink} active={editor.isActive("link")} title="Link">
           <LinkIcon className="w-4 h-4" />
         </ToolbarButton>
-        <ToolbarButton onClick={addImage} title="Image">
+        <ToolbarButton onClick={() => setShowImageDialog(true)} title="Image">
           <ImageIcon className="w-4 h-4" />
         </ToolbarButton>
 
@@ -286,6 +340,96 @@ export default function RichTextEditor({
       </div>
 
       <EditorContent editor={editor} />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+        data-testid="rte-image-file-input"
+      />
+
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent className="max-w-md bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-cyan-400" />
+              Insert Image
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-14 border-gray-700 bg-gray-800/50 hover:bg-gray-800 text-white hover:text-white"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              data-testid="rte-image-upload-btn"
+            >
+              {isUploading ? (
+                <Loader2 className="w-5 h-5 text-cyan-400 animate-spin flex-shrink-0" />
+              ) : (
+                <Upload className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+              )}
+              <div className="text-left">
+                <p className="text-sm font-medium">{isUploading ? "Uploading..." : "Upload Image"}</p>
+                <p className="text-xs text-gray-400">Choose a file from your computer</p>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-14 border-gray-700 bg-gray-800/50 hover:bg-gray-800 text-white hover:text-white"
+              onClick={() => { setShowMediaPicker(true); setShowImageDialog(false); }}
+              data-testid="rte-image-library-btn"
+            >
+              <FolderOpen className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+              <div className="text-left">
+                <p className="text-sm font-medium">Media Library</p>
+                <p className="text-xs text-gray-400">Select from uploaded images</p>
+              </div>
+            </Button>
+
+            <div className="relative pt-2">
+              <div className="absolute inset-0 flex items-center pt-2">
+                <span className="w-full border-t border-gray-700" />
+              </div>
+              <div className="relative flex justify-center pt-2">
+                <span className="bg-gray-900 px-2 text-xs text-gray-500">or paste a URL</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                value={imageUrlInput}
+                onChange={(e) => setImageUrlInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleUrlInsert(); }}
+                placeholder="https://example.com/image.jpg"
+                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
+                data-testid="rte-image-url-input"
+              />
+              <Button
+                onClick={handleUrlInsert}
+                disabled={!imageUrlInput.trim()}
+                size="sm"
+                className="bg-cyan-600 hover:bg-cyan-700 text-white px-4"
+                data-testid="rte-image-url-insert"
+              >
+                Insert
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <MediaPickerDialog
+        open={showMediaPicker}
+        onOpenChange={setShowMediaPicker}
+        onSelect={handleMediaSelect}
+        accept="image/*"
+        title="Select Image"
+      />
     </div>
   );
 }
