@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Check, ShoppingCart, Zap, Shield, Snowflake, Timer, X, Plus, Minus, Truck, Award, HeartPulse, Dumbbell, Building2, Sparkles, ThermometerSnowflake, Volume2, Filter, Gauge, User, LogOut, Settings, Link2, Headphones, Package, LayoutDashboard } from "lucide-react";
 import DynamicNav from "@/components/DynamicNav";
@@ -108,6 +108,16 @@ export default function Home() {
   const [quantity, setQuantity] = useState(1);
   const { customer, isLoading: authLoading, isAuthenticated, logout, getAuthHeader } = useCustomerAuth();
   const { admin, isAuthenticated: isAdminAuthenticated } = useAdmin();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (isAuthenticated && customer?.id) {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/affiliate-portal"] });
+    }
+    if (!isAuthenticated) {
+      queryClient.removeQueries({ queryKey: ["/api/customer/affiliate-portal"] });
+    }
+  }, [isAuthenticated, customer?.id, queryClient]);
 
   const { data: homePage, isLoading: isHomePageLoading } = useQuery<HomePage>({
     queryKey: ["/api/pages/home"],
@@ -115,7 +125,7 @@ export default function Home() {
   });
 
   const { data: affiliateData } = useQuery<{ affiliate: { id: string; status: string } | null }>({
-    queryKey: ["/api/customer/affiliate-portal"],
+    queryKey: ["/api/customer/affiliate-portal", customer?.id],
     queryFn: async () => {
       const res = await fetch("/api/customer/affiliate-portal", { 
         headers: { ...getAuthHeader() }
@@ -124,6 +134,8 @@ export default function Home() {
       return res.json();
     },
     enabled: isAuthenticated,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const isAffiliate = !!affiliateData?.affiliate;
