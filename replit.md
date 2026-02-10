@@ -57,6 +57,11 @@ The Power Plunge e-commerce platform utilizes a modern full-stack architecture.
 
 ## Recent Changes
 
+### Admin Settings & Branding (Feb 10, 2026)
+- **Themes Moved to Settings**: Themes page moved from CMS sidebar to main admin Settings dropdown. Route changed from `/admin/cms/themes` to `/admin/settings/themes`. Old route redirects automatically.
+- **Logo Branding**: Added `logoUrl` column to `site_settings`. Company Profile settings page now includes a Branding card with logo upload, preview, and remove functionality. Logos uploaded via R2 storage (with Object Storage fallback).
+- **Dynamic Logo**: All pages use `useBranding()` hook (`client/src/hooks/use-branding.ts`) which fetches logo from `/api/site-settings`. Falls back to the bundled default logo if no custom logo is set. Applied to SiteLayout nav/footer and all standalone pages (checkout, login, register, etc.).
+
 ### Stabilization Sprint (Feb 10, 2026)
 - **TypeScript:** All 78 errors resolved. `npm run check` passes with 0 errors. tsconfig target set to ES2020. Temporary drizzle-zod patch (`shared/drizzle-zod-patch.d.ts`) for Zod 3.25 compat.
 - **Vitest:** Added `vitest.config.ts` with path aliases. Tests run via `npx vitest run`.

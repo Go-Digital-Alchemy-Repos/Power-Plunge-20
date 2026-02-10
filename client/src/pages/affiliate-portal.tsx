@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, LogOut, User, Link2, DollarSign, Users, Copy, CheckCircle, ExternalLink, Loader2, CreditCard, AlertCircle, Crown, Calendar, AlertTriangle, Clock, Download, Edit3, X, Save } from "lucide-react";
 import DynamicNav from "@/components/DynamicNav";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 
 interface AffiliateData {
   affiliate: {
@@ -69,6 +69,7 @@ interface VipData {
 export default function AffiliatePortal() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { logoSrc, companyName } = useBranding();
   const queryClient = useQueryClient();
   const { customer: authCustomer, isLoading: authLoading, isAuthenticated, logout, getAuthHeader } = useCustomerAuth();
   const [copied, setCopied] = useState(false);
@@ -329,7 +330,7 @@ export default function AffiliatePortal() {
               <Button variant="ghost" size="icon" onClick={() => setLocation("/")} data-testid="button-back">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <img src={logoImage} alt="Power Plunge" className="h-8" />
+              <img src={logoSrc} alt={companyName} className="h-8" />
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
@@ -372,7 +373,7 @@ export default function AffiliatePortal() {
             <Button variant="ghost" size="icon" onClick={() => setLocation("/")} data-testid="button-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <img src={logoImage} alt="Power Plunge" className="h-8" />
+            <img src={logoSrc} alt={companyName} className="h-8" />
             <DynamicNav location="main" />
             <div className="hidden sm:flex items-center gap-2 ml-4">
               <Link2 className="w-5 h-5 text-primary" />

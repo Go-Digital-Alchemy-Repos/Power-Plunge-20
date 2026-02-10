@@ -16,7 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 
 type WizardStep = "welcome" | "account" | "agreement" | "payout" | "complete";
 
@@ -81,6 +81,7 @@ export default function BecomeAffiliate() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { toast } = useToast();
+  const { logoSrc, companyName } = useBranding();
   const queryClient = useQueryClient();
   const { isAuthenticated, isLoading: authLoading, login, logout, customer: authCustomer, getAuthHeader, refreshSession } = useCustomerAuth();
 
@@ -701,7 +702,7 @@ export default function BecomeAffiliate() {
     <div className="w-full max-w-2xl space-y-8">
       <div className="text-center space-y-4">
         <div className="flex justify-center">
-          <img src={logoImage} alt="Power Plunge" className="h-16" data-testid="img-logo" />
+          <img src={logoSrc} alt={companyName} className="h-16" data-testid="img-logo" />
         </div>
         <h1 className="text-3xl md:text-4xl font-bold" data-testid="text-title">
           Join Our Affiliate Program

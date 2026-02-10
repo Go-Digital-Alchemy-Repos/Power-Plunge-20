@@ -16,6 +16,8 @@ router.get("/", async (_req: Request, res: Response) => {
       ctaText: null,
       ctaLink: null,
       gaMeasurementId: settings?.gaMeasurementId || null,
+      logoUrl: settings?.logoUrl || null,
+      companyName: settings?.companyName || null,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch site settings" });

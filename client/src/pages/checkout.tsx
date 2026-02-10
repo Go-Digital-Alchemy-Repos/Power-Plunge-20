@@ -21,7 +21,7 @@ import { AddressForm, emptyAddress, type AddressFormData } from "@/components/ch
 import { validateEmail, validatePhone, validateRequired } from "@shared/validation";
 import { trackCheckoutEvent } from "@/lib/checkout-analytics";
 import { trackBeginCheckout, trackPurchase } from "@/lib/analytics";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 
 interface CartItem {
   id: string;
@@ -360,6 +360,7 @@ function ShippingAddressCapture({
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { logoSrc, companyName } = useBranding();
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<"shipping" | "payment">("shipping");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -775,7 +776,7 @@ export default function Checkout() {
       <nav className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/">
-            <img src={logoImage} alt="Power Plunge" className="h-8" />
+            <img src={logoSrc} alt={companyName} className="h-8" />
           </Link>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Shield className="w-4 h-4 text-green-500" />

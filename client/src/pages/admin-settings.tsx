@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/use-admin";
-import { Building2, Save, Mail, BarChart3 } from "lucide-react";
+import { Building2, Save, Mail, BarChart3, ImageIcon, Upload, Trash2 } from "lucide-react";
 import AdminNav from "@/components/admin/AdminNav";
 
 interface SiteSettings {
@@ -19,6 +19,7 @@ interface SiteSettings {
   companyPhone?: string;
   supportEmail?: string;
   gaMeasurementId?: string;
+  logoUrl?: string;
 }
 
 export default function AdminSettings() {
@@ -27,6 +28,8 @@ export default function AdminSettings() {
   const queryClient = useQueryClient();
   const { role, hasFullAccess, isLoading: adminLoading } = useAdmin();
   const [formData, setFormData] = useState<Partial<SiteSettings>>({});
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings, isLoading } = useQuery<SiteSettings>({
     queryKey: ["/api/admin/settings"],
@@ -64,6 +67,70 @@ export default function AdminSettings() {
       toast({ title: "Settings saved" });
     },
   });
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please upload an image file (PNG, JPG, SVG, or WebP).", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Logo must be under 5MB.", variant: "destructive" });
+      return;
+    }
+
+    setLogoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "branding");
+      let uploadRes = await fetch("/api/r2/upload", { method: "POST", body: fd, credentials: "include" });
+      if (!uploadRes.ok) {
+        uploadRes = await fetch("/api/uploads/upload", { method: "POST", body: fd, credentials: "include" });
+      }
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      const { objectPath } = await uploadRes.json();
+
+      const saveRes = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoUrl: objectPath }),
+        credentials: "include",
+      });
+      if (!saveRes.ok) throw new Error("Failed to save logo");
+      const updated = await saveRes.json();
+      setFormData((prev) => ({ ...prev, logoUrl: updated.logoUrl }));
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/site-settings"] });
+      toast({ title: "Logo uploaded", description: "Your website logo has been updated." });
+    } catch {
+      toast({ title: "Upload failed", description: "Could not upload logo. Please try again.", variant: "destructive" });
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoUrl: null }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to remove logo");
+      setFormData((prev) => ({ ...prev, logoUrl: undefined }));
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/site-settings"] });
+      toast({ title: "Logo removed", description: "The default logo will be used." });
+    } catch {
+      toast({ title: "Error", description: "Could not remove logo.", variant: "destructive" });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +219,75 @@ export default function AdminSettings() {
                     placeholder="(555) 123-4567"
                     data-testid="input-company-phone"
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5" />
+                  Branding
+                </CardTitle>
+                <CardDescription>
+                  Upload your website logo. It will appear in the navigation bar and footer.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Website Logo</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-32 h-16 rounded-lg border border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30" data-testid="logo-preview">
+                      {formData.logoUrl ? (
+                        <img
+                          src={formData.logoUrl}
+                          alt="Current logo"
+                          className="max-w-full max-h-full object-contain"
+                          data-testid="img-current-logo"
+                        />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                        data-testid="input-logo-file"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => logoInputRef.current?.click()}
+                        disabled={logoUploading}
+                        data-testid="button-upload-logo"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {logoUploading ? "Uploading..." : "Upload Logo"}
+                      </Button>
+                      {formData.logoUrl && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2 text-destructive hover:text-destructive"
+                          onClick={handleRemoveLogo}
+                          data-testid="button-remove-logo"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Recommended: PNG or SVG with transparent background. Max 5MB.
+                  </p>
                 </div>
               </CardContent>
             </Card>

@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Mail, Lock, User, ArrowLeft } from "lucide-react";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 
 export default function BetterAuthRegister() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { logoSrc, companyName } = useBranding();
   const { signUp, isAuthenticated, isLoading: authLoading } = useBetterAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -89,7 +90,7 @@ export default function BetterAuthRegister() {
         <Card className="w-full max-w-md" data-testid="card-better-auth-register">
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
-              <img src={logoImage} alt="Power Plunge" className="h-12" data-testid="img-logo" />
+              <img src={logoSrc} alt={companyName} className="h-12" data-testid="img-logo" />
             </div>
             <div>
               <CardTitle className="text-2xl font-bold" data-testid="text-register-title">

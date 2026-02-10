@@ -8,13 +8,14 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { Mail, Lock, ArrowLeft, Send, Loader2 } from "lucide-react";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 
 type AuthMode = "login" | "magic-link" | "magic-link-sent";
 
 export default function CustomerLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { logoSrc, companyName } = useBranding();
   const { login, requestMagicLink, verifyMagicLink, isAuthenticated, isLoading: authLoading } = useCustomerAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
@@ -136,7 +137,7 @@ export default function CustomerLogin() {
         <Card className="w-full max-w-md" data-testid="card-login">
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
-              <img src={logoImage} alt="Power Plunge" className="h-12" data-testid="img-logo" />
+              <img src={logoSrc} alt={companyName} className="h-12" data-testid="img-logo" />
             </div>
             <div>
               <CardTitle className="text-2xl font-bold" data-testid="text-login-title">

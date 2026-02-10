@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAdmin } from "@/hooks/use-admin";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import CmsLayout from "@/components/admin/CmsLayout";
+import AdminNav from "@/components/admin/AdminNav";
 import { Check, Eye, RotateCcw, Package, Palette, Layers, Grid3X3, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -213,7 +213,7 @@ function PackMetaBadges({ pack }: { pack: ThemePackPreset }) {
 }
 
 export default function AdminCmsThemes() {
-  const { hasFullAccess, isLoading: adminLoading } = useAdmin();
+  const { hasFullAccess, isLoading: adminLoading, role } = useAdmin();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -307,15 +307,17 @@ export default function AdminCmsThemes() {
 
   if (adminLoading || !hasFullAccess) {
     return (
-      <CmsLayout activeNav="themes" breadcrumbs={[{ label: "Themes" }]}>
+      <div className="min-h-screen bg-background">
+        <AdminNav currentPage="themes" role={role} />
         <div className="p-8 text-center text-muted-foreground">{adminLoading ? "Loading..." : "Access Denied"}</div>
-      </CmsLayout>
+      </div>
     );
   }
 
   return (
-    <CmsLayout activeNav="themes" breadcrumbs={[{ label: "Themes" }]}>
-      <div className="max-w-6xl mx-auto" data-testid="admin-cms-themes-page">
+    <div className="min-h-screen bg-background">
+      <AdminNav currentPage="themes" role={role} />
+      <div className="max-w-6xl mx-auto px-6 py-8" data-testid="admin-cms-themes-page">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2" data-testid="text-themes-heading">
@@ -527,6 +529,6 @@ export default function AdminCmsThemes() {
           </div>
         )}
       </div>
-    </CmsLayout>
+    </div>
   );
 }

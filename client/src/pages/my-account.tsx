@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Package, Truck, CheckCircle, Clock, ArrowLeft, LogOut, User, Link2, DollarSign, Users, Copy, QrCode, ExternalLink, FileText, Loader2, Settings, Save, MapPin, Mail, Phone, Lock, AlertCircle, Crown, Gift, Zap, Sparkles, CreditCard, AlertTriangle, Calendar, MapPinned, PackageCheck, Headset, Send, MessageSquare } from "lucide-react";
 import DynamicNav from "@/components/DynamicNav";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 
 interface OrderItem {
   id: string;
@@ -231,6 +231,7 @@ const statusConfig: Record<string, { icon: any; label: string; color: string }> 
 export default function MyAccount() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { logoSrc, companyName } = useBranding();
   const queryClient = useQueryClient();
   const { customer: authCustomer, isLoading: authLoading, isAuthenticated, logout, getAuthHeader } = useCustomerAuth();
   const [activeTab, setActiveTab] = useState("orders");
@@ -526,7 +527,7 @@ export default function MyAccount() {
             <Button variant="ghost" size="icon" onClick={() => setLocation("/")} data-testid="button-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <img src={logoImage} alt="Power Plunge" className="h-8" />
+            <img src={logoSrc} alt={companyName} className="h-8" />
             <DynamicNav location="main" />
           </div>
           <div className="flex items-center gap-4">

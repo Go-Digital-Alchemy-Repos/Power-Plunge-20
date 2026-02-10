@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Package, ArrowRight, Loader2, User, Gift, History } from "lucide-react";
 import PostPurchaseOffer from "@/components/PostPurchaseOffer";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { trackPurchase } from "@/lib/analytics";
 
@@ -30,6 +30,7 @@ interface OrderData {
 
 export default function OrderSuccess() {
   const search = useSearch();
+  const { logoSrc, companyName } = useBranding();
   const params = new URLSearchParams(search);
   const sessionId = params.get("session_id");
   const orderId = params.get("order_id");
@@ -115,7 +116,7 @@ export default function OrderSuccess() {
       <nav className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-center">
           <Link href="/">
-            <img src={logoImage} alt="Power Plunge" className="h-8" />
+            <img src={logoSrc} alt={companyName} className="h-8" />
           </Link>
         </div>
       </nav>

@@ -24,6 +24,7 @@ import {
   Headset,
   LayoutGrid,
   ImageIcon,
+  Palette,
   Sun,
   Moon,
 } from "lucide-react";
@@ -46,7 +47,7 @@ export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps)
   const isActive = (page: string) => currentPage === page;
   const isClientManagement = currentPage === "customers" || currentPage === "affiliates" || currentPage === "support" || currentPage === "affiliate-invite-sender";
   const isCms = currentPage === "media" || currentPage === "cms-settings" || currentPage === "cms" || currentPage?.startsWith("cms-");
-  const isSettings = currentPage === "settings" || currentPage === "team" || currentPage === "email-templates" || currentPage === "integrations" || currentPage === "docs";
+  const isSettings = currentPage === "settings" || currentPage === "team" || currentPage === "email-templates" || currentPage === "integrations" || currentPage === "docs" || currentPage === "themes";
 
   const hasFullAccess = role === "admin" || role === "store_manager";
 
@@ -200,6 +201,12 @@ export default function AdminNav({ currentPage, role = "admin" }: AdminNavProps)
                     <Link href="/admin/integrations" className="flex items-center gap-2 cursor-pointer">
                       <Key className="w-4 h-4" />
                       Integrations
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/settings/themes" className="flex items-center gap-2 cursor-pointer">
+                      <Palette className="w-4 h-4" />
+                      Themes
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

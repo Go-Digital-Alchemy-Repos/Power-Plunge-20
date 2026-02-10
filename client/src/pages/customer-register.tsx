@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 
 export default function CustomerRegister() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { logoSrc, companyName } = useBranding();
   const { register, isAuthenticated, isLoading: authLoading } = useCustomerAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -89,7 +90,7 @@ export default function CustomerRegister() {
         <Card className="w-full max-w-md" data-testid="card-register">
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
-              <img src={logoImage} alt="Power Plunge" className="h-12" data-testid="img-logo" />
+              <img src={logoSrc} alt={companyName} className="h-12" data-testid="img-logo" />
             </div>
             <div>
               <CardTitle className="text-2xl font-bold" data-testid="text-register-title">

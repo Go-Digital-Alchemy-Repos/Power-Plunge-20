@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import DynamicNav from "@/components/DynamicNav";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { useAdmin } from "@/hooks/use-admin";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 
 interface CartItem {
   id: string;
@@ -20,6 +20,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const { customer, isAuthenticated, isLoading: authLoading, logout } = useCustomerAuth();
   const { admin, isAuthenticated: isAdminAuthenticated } = useAdmin();
+  const { logoSrc, companyName } = useBranding();
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window !== "undefined") {
@@ -47,7 +48,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center">
             <button onClick={() => setLocation("/")} className="flex-shrink-0" data-testid="nav-logo-link">
-              <img src={logoImage} alt="Power Plunge" className="h-10" data-testid="img-logo" />
+              <img src={logoSrc} alt={companyName} className="h-10" data-testid="img-logo" />
             </button>
           </div>
           <div className="flex items-center gap-2">
@@ -148,7 +149,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center">
-              <img src={logoImage} alt="Power Plunge" className="h-8" />
+              <img src={logoSrc} alt={companyName} className="h-8" />
             </div>
             <div className="flex items-center gap-6">
               <p className="text-muted-foreground text-sm">

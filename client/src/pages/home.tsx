@@ -14,7 +14,7 @@ import { useAdmin } from "@/hooks/use-admin";
 import { trackAddToCart, trackViewItem, trackViewItemList } from "@/lib/analytics";
 import chillerImage from "@assets/power_plunge_1hp_chiller_mockup_1767902865789.png";
 import tubImage from "@assets/power_plunge_portable_tub_mockup_1767902865790.png";
-import logoImage from "@assets/powerplungelogo_1767907611722.png";
+import { useBranding } from "@/hooks/use-branding";
 import heroImage from "@assets/hero_1767910221674.jpg";
 
 interface PageContentJson {
@@ -96,6 +96,7 @@ const fallbackProduct = {
 
 export default function Home() {
   const [, setLocation] = useLocation();
+  const { logoSrc, companyName } = useBranding();
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window !== "undefined") {
       const savedCart = localStorage.getItem("cart");
@@ -236,7 +237,7 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center">
-            <img src={logoImage} alt="Power Plunge" className="h-10" data-testid="img-logo" />
+            <img src={logoSrc} alt={companyName} className="h-10" data-testid="img-logo" />
           </div>
           <div className="flex items-center gap-2">
             <DynamicNav location="main" />
@@ -720,7 +721,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center">
-              <img src={logoImage} alt="Power Plunge" className="h-8" />
+              <img src={logoSrc} alt={companyName} className="h-8" />
             </div>
             <div className="flex items-center gap-6">
               <p className="text-muted-foreground text-sm">
