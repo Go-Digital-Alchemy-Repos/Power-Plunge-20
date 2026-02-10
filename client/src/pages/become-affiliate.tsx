@@ -12,22 +12,21 @@ import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import {
   Mail, Lock, User, ArrowLeft, ArrowRight, Loader2, PenTool,
   DollarSign, Users, Share2, Gift, ShieldAlert, Check, CheckCircle,
-  CreditCard, Code, Sparkles, ExternalLink, SkipForward, RefreshCw,
-  AlertCircle, Copy,
+  CreditCard, ExternalLink, SkipForward, RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import logoImage from "@assets/powerplungelogo_1767907611722.png";
 
-type WizardStep = "welcome" | "account" | "agreement" | "payout" | "code" | "complete";
+type WizardStep = "welcome" | "account" | "agreement" | "payout" | "complete";
 
-const STEPS: WizardStep[] = ["welcome", "account", "agreement", "payout", "code", "complete"];
+const STEPS: WizardStep[] = ["welcome", "account", "agreement", "payout", "complete"];
 
 const STEP_LABELS: Record<WizardStep, string> = {
   welcome: "Welcome",
   account: "Account Details",
   agreement: "Agreement",
   payout: "Payout Setup",
-  code: "Affiliate Code",
   complete: "Complete",
 };
 
@@ -106,7 +105,6 @@ export default function BecomeAffiliate() {
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  const [customCode, setCustomCode] = useState("");
 
   const [existingAccountError, setExistingAccountError] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
@@ -217,7 +215,6 @@ export default function BecomeAffiliate() {
       }
       setAffiliateCode(data.affiliate.code);
       setAffiliateId(data.affiliate.id);
-      setCustomCode(data.affiliate.code);
       if (data.onboarding) {
         setOnboardingMeta(data.onboarding);
       }
@@ -267,7 +264,6 @@ export default function BecomeAffiliate() {
     onSuccess: (data) => {
       setAffiliateCode(data.affiliate.code);
       setAffiliateId(data.affiliate.id);
-      setCustomCode(data.affiliate.code);
       if (data.onboarding) {
         setOnboardingMeta(data.onboarding);
       }
@@ -315,32 +311,6 @@ export default function BecomeAffiliate() {
     },
   });
 
-  const updateCodeMutation = useMutation({
-    mutationFn: async (code: string) => {
-      const res = await fetch("/api/customer/affiliate-portal/code", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeader(),
-        },
-        body: JSON.stringify({ code }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || "Failed to update code");
-      }
-      return res.json();
-    },
-    onSuccess: (data: { code: string }) => {
-      setAffiliateCode(data.code);
-      setCustomCode(data.code);
-      toast({ title: "Code updated!", description: `Your affiliate code is now ${data.code}` });
-      trackEvent("code_saved", { code: data.code, affiliateId });
-    },
-    onError: (error: any) => {
-      toast({ title: "Code update failed", description: error.message, variant: "destructive" });
-    },
-  });
 
   const goToStep = (step: WizardStep) => {
     setCurrentStep(step);
@@ -415,8 +385,6 @@ export default function BecomeAffiliate() {
       case "agreement":
         return agreedToTerms && !!formData.signatureName.trim();
       case "payout":
-        return true;
-      case "code":
         return true;
       case "complete":
         return false;
@@ -671,7 +639,6 @@ export default function BecomeAffiliate() {
       { label: "Account created", done: accountCreated },
       { label: "Agreement signed", done: accountCreated },
       { label: "Payout setup", done: connectStatus?.payoutsEnabled || false, partial: connectStatus?.isConnected && !connectStatus?.payoutsEnabled },
-      { label: "Affiliate code reviewed", done: currentStepIndex >= STEPS.indexOf("complete") },
     ];
 
     return (
@@ -1219,141 +1186,7 @@ export default function BecomeAffiliate() {
     );
   };
 
-  const renderCodeStep = () => {
-    const referralLink = `${window.location.origin}?ref=${affiliateCode}`;
-    const isCodeLong = affiliateCode.length > 12;
-
-    return (
-      <Card className="w-full max-w-lg" data-testid="card-code-step">
-        <CardHeader className="text-center space-y-2">
-          <div className="flex justify-center">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Code className="w-6 h-6 text-primary" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold">Your Affiliate Code</CardTitle>
-          <CardDescription>
-            This is the code customers will enter at checkout for their discount
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="p-4 rounded-lg border space-y-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Your current code</p>
-            <div className="flex items-center justify-center gap-2">
-              <div className="px-4 py-2 bg-muted rounded-lg border">
-                <span className={`font-bold font-mono tracking-wider ${isCodeLong ? "text-sm break-all" : "text-2xl"}`} data-testid="text-affiliate-code">{affiliateCode}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(affiliateCode);
-                  toast({ title: "Copied!", description: "Code copied to clipboard." });
-                }}
-                data-testid="button-copy-code"
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-            {isCodeLong && (
-              <div className="flex items-start gap-2 p-3 rounded-md bg-amber-500/10 border border-amber-500/20">
-                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-200/80">
-                  This auto-generated code is hard to remember or say out loud. We recommend setting a short, custom code below — like your name or brand.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 rounded-lg border space-y-3">
-            <div className="flex items-center gap-2 justify-center">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <p className="text-sm font-medium">Set a custom code</p>
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Pick something short and memorable — like <span className="font-mono font-semibold text-foreground">SARAH20</span> or <span className="font-mono font-semibold text-foreground">FITJOHN</span> — so customers can easily use it.
-            </p>
-            <div className="space-y-2">
-              <Input
-                id="customCode"
-                value={customCode}
-                onChange={(e) => setCustomCode(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
-                placeholder="MYCODE"
-                maxLength={20}
-                className="font-mono text-center text-lg uppercase"
-                data-testid="input-custom-code"
-              />
-              <p className="text-xs text-muted-foreground text-center">3-20 characters, letters & numbers only</p>
-              {customCode.length > 0 && customCode.length < 3 && (
-                <p className="text-xs text-destructive text-center">Code must be at least 3 characters</p>
-              )}
-            </div>
-            {customCode && customCode !== affiliateCode && customCode.length >= 3 && (
-              <Button
-                onClick={() => updateCodeMutation.mutate(customCode)}
-                disabled={customCode.length > 20 || updateCodeMutation.isPending}
-                className="w-full"
-                data-testid="button-save-code"
-              >
-                {updateCodeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : `Save "${customCode.toUpperCase()}" as My Code`}
-              </Button>
-            )}
-          </div>
-
-          <div className="p-4 rounded-lg border border-dashed space-y-2">
-            <div className="flex items-center gap-2 justify-center">
-              <Share2 className="w-4 h-4 text-muted-foreground" />
-              <p className="text-xs font-medium text-muted-foreground">Your shareable referral link</p>
-            </div>
-            <p className="text-[11px] text-muted-foreground text-center">
-              Send this link via email or QR code — it includes your code automatically, so customers don't need to type anything.
-            </p>
-            <div className="flex items-center gap-2 justify-center">
-              <p className="text-xs text-muted-foreground break-all font-mono bg-muted/50 px-2 py-1 rounded" data-testid="text-referral-link">{referralLink}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0"
-                onClick={() => {
-                  navigator.clipboard.writeText(referralLink);
-                  toast({ title: "Copied!", description: "Referral link copied to clipboard." });
-                }}
-                data-testid="button-copy-link"
-              >
-                <Copy className="w-3 h-3" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={handleBack} className="flex-1 gap-2" data-testid="button-back-code">
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
-            <Button
-              onClick={() => {
-                trackEvent("code_step_completed", { code: affiliateCode, customized: affiliateCode !== customCode, affiliateId });
-                handleNext();
-              }}
-              className="flex-1 gap-2"
-              data-testid="button-next-code"
-            >
-              Next
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <p className="text-xs text-center text-muted-foreground">
-            You can change your code anytime from your affiliate portal.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  };
-
   const renderCompleteStep = () => {
-    const referralLink = `${window.location.origin}?ref=${affiliateCode}`;
-
     return (
       <Card className="w-full max-w-lg" data-testid="card-complete-step">
         <CardHeader className="text-center space-y-4">
@@ -1369,29 +1202,6 @@ export default function BecomeAffiliate() {
         </CardHeader>
         <CardContent className="space-y-6">
           {renderChecklist()}
-
-          <div className="p-4 bg-muted rounded-lg space-y-2">
-            <p className="text-sm font-medium">Your referral link</p>
-            <div className="flex gap-2">
-              <Input
-                value={referralLink}
-                readOnly
-                className="font-mono text-sm"
-                data-testid="input-referral-link"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(referralLink);
-                  toast({ title: "Copied!", description: "Referral link copied to clipboard." });
-                }}
-                data-testid="button-copy-link-complete"
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
 
           {!connectStatus?.payoutsEnabled && (
             <div className="p-3 bg-yellow-50 dark:bg-yellow-500/10 rounded-lg border border-yellow-200 dark:border-yellow-500/20">
@@ -1421,7 +1231,6 @@ export default function BecomeAffiliate() {
       case "account": return renderAccountStep();
       case "agreement": return renderAgreementStep();
       case "payout": return renderPayoutStep();
-      case "code": return renderCodeStep();
       case "complete": return renderCompleteStep();
       default: return renderWelcomeStep();
     }
