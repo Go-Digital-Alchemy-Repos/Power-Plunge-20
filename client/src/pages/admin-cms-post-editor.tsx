@@ -52,6 +52,7 @@ export default function AdminCmsPostEditor() {
   const [canonicalUrl, setCanonicalUrl] = useState("");
   const [ogImageId, setOgImageId] = useState("");
   const [coverImageId, setCoverImageId] = useState("");
+  const [coverImageUrl, setCoverImageUrl] = useState("");
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [allowIndex, setAllowIndex] = useState(true);
   const [allowFollow, setAllowFollow] = useState(true);
@@ -102,6 +103,14 @@ export default function AdminCmsPostEditor() {
       setCanonicalUrl(post.canonicalUrl || "");
       setOgImageId(post.ogImageId || "");
       setCoverImageId(post.coverImageId || "");
+      if (post.coverImageId) {
+        fetch(`/api/admin/media/${post.coverImageId}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(media => { if (media?.publicUrl) setCoverImageUrl(media.publicUrl); })
+          .catch(() => {});
+      } else {
+        setCoverImageUrl("");
+      }
       setAllowIndex(post.allowIndex ?? true);
       setAllowFollow(post.allowFollow ?? true);
       setFeatured(post.featured ?? false);
@@ -458,11 +467,11 @@ export default function AdminCmsPostEditor() {
                 <CardTitle className="text-sm text-foreground/80">Featured Image</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {coverImageId ? (
+                {coverImageId && coverImageUrl ? (
                   <div className="relative group">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted border border-border">
                       <img
-                        src={`/api/object-storage/${coverImageId}`}
+                        src={coverImageUrl}
                         alt="Featured image"
                         className="w-full h-full object-cover"
                         data-testid="img-cover-preview"
@@ -483,7 +492,7 @@ export default function AdminCmsPostEditor() {
                         size="sm"
                         variant="outline"
                         className="border-border text-destructive hover:text-destructive h-8 px-2"
-                        onClick={() => { setCoverImageId(""); setDirty(true); }}
+                        onClick={() => { setCoverImageId(""); setCoverImageUrl(""); setDirty(true); }}
                         data-testid="button-remove-cover"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -664,9 +673,10 @@ export default function AdminCmsPostEditor() {
       <MediaPickerDialog
         open={showMediaPicker}
         onOpenChange={setShowMediaPicker}
-        onSelect={(_url, media) => {
+        onSelect={(url, media) => {
           if (media) {
             setCoverImageId(String(media.id));
+            setCoverImageUrl(media.publicUrl || url);
             setDirty(true);
           }
         }}
