@@ -138,9 +138,12 @@ router.post("/posts/:id/archive", async (req, res) => {
 
 // ── Categories CRUD ──────────────────────────────────────────
 
-router.get("/post-categories", async (_req, res) => {
+router.get("/post-categories", async (req, res) => {
   try {
-    const categories = await postsService.listCategories();
+    const withCounts = req.query.counts === "true";
+    const categories = withCounts
+      ? await postsService.listCategoriesWithCounts()
+      : await postsService.listCategories();
     res.json(categories);
   } catch (err: any) {
     handleError(res, err, "List categories");
@@ -190,9 +193,12 @@ router.delete("/post-categories/:id", async (req, res) => {
 
 // ── Tags CRUD ────────────────────────────────────────────────
 
-router.get("/post-tags", async (_req, res) => {
+router.get("/post-tags", async (req, res) => {
   try {
-    const tags = await postsService.listTags();
+    const withCounts = req.query.counts === "true";
+    const tags = withCounts
+      ? await postsService.listTagsWithCounts()
+      : await postsService.listTags();
     res.json(tags);
   } catch (err: any) {
     handleError(res, err, "List tags");

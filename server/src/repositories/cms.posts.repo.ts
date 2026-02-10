@@ -232,6 +232,23 @@ class PostsRepository {
     return db.select().from(postCategories).orderBy(postCategories.name);
   }
 
+  async findAllCategoriesWithCounts() {
+    const rows = await db
+      .select({
+        id: postCategories.id,
+        name: postCategories.name,
+        slug: postCategories.slug,
+        description: postCategories.description,
+        createdAt: postCategories.createdAt,
+        postCount: sql<number>`count(${postCategoryMap.postId})::int`,
+      })
+      .from(postCategories)
+      .leftJoin(postCategoryMap, eq(postCategories.id, postCategoryMap.categoryId))
+      .groupBy(postCategories.id)
+      .orderBy(postCategories.name);
+    return rows;
+  }
+
   async findCategoryById(id: string) {
     const [cat] = await db.select().from(postCategories).where(eq(postCategories.id, id));
     return cat || undefined;
@@ -265,6 +282,22 @@ class PostsRepository {
   // Tags CRUD
   async findAllTags() {
     return db.select().from(postTags).orderBy(postTags.name);
+  }
+
+  async findAllTagsWithCounts() {
+    const rows = await db
+      .select({
+        id: postTags.id,
+        name: postTags.name,
+        slug: postTags.slug,
+        createdAt: postTags.createdAt,
+        postCount: sql<number>`count(${postTagMap.postId})::int`,
+      })
+      .from(postTags)
+      .leftJoin(postTagMap, eq(postTags.id, postTagMap.tagId))
+      .groupBy(postTags.id)
+      .orderBy(postTags.name);
+    return rows;
   }
 
   async findTagById(id: string) {

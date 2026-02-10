@@ -186,6 +186,10 @@ class PostsService {
     return postsRepository.findAllCategories();
   }
 
+  async listCategoriesWithCounts() {
+    return postsRepository.findAllCategoriesWithCounts();
+  }
+
   async getCategoryById(id: string) {
     return postsRepository.findCategoryById(id);
   }
@@ -216,6 +220,10 @@ class PostsService {
 
   async listTags() {
     return postsRepository.findAllTags();
+  }
+
+  async listTagsWithCounts() {
+    return postsRepository.findAllTagsWithCounts();
   }
 
   async getTagById(id: string) {
