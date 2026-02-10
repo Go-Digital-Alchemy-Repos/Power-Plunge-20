@@ -407,61 +407,6 @@ export default function AffiliatePortal() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Your Affiliate Dashboard</CardTitle>
-                <Badge className={
-                  affiliateData.affiliate.status === "active" 
-                    ? "bg-green-500/20 text-green-500" 
-                    : affiliateData.affiliate.status === "pending"
-                    ? "bg-yellow-500/20 text-yellow-500"
-                    : "bg-red-500/20 text-red-500"
-                }>
-                  {affiliateData.affiliate.status.charAt(0).toUpperCase() + affiliateData.affiliate.status.slice(1)}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-                <div className="p-3 md:p-4 bg-muted rounded-lg text-center">
-                  <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-primary mx-auto mb-2" />
-                  <p className="text-xl md:text-2xl font-bold">${(affiliateData.affiliate.totalEarnings / 100).toLocaleString()}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">Total Earnings</p>
-                </div>
-                <div className="p-3 md:p-4 bg-yellow-500/10 rounded-lg text-center border border-yellow-500/20">
-                  <Clock className="w-5 h-5 md:w-6 md:h-6 text-yellow-500 mx-auto mb-2" />
-                  <p className="text-xl md:text-2xl font-bold text-yellow-600">${(affiliateData.affiliate.pendingEarnings / 100).toLocaleString()}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
-                  <p className="text-[10px] md:text-xs text-muted-foreground mt-1">{affiliateData.approvalDays} day hold</p>
-                </div>
-                <div className="p-3 md:p-4 bg-blue-500/10 rounded-lg text-center border border-blue-500/20">
-                  <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-blue-500 mx-auto mb-2" />
-                  <p className="text-xl md:text-2xl font-bold text-blue-600">${((affiliateData.affiliate.approvedEarnings || 0) / 100).toLocaleString()}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">Ready to Pay</p>
-                </div>
-                <div className="p-3 md:p-4 bg-green-500/10 rounded-lg text-center border border-green-500/20">
-                  <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-green-500 mx-auto mb-2" />
-                  <p className="text-xl md:text-2xl font-bold text-green-600">${(affiliateData.affiliate.paidEarnings / 100).toLocaleString()}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">Paid Out</p>
-                </div>
-                <div className="p-3 md:p-4 bg-muted rounded-lg text-center col-span-2 sm:col-span-1">
-                  <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-500 mx-auto mb-2" />
-                  <p className="text-xl md:text-2xl font-bold">{affiliateData.affiliate.totalConversions}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">Conversions</p>
-                </div>
-              </div>
-              
-              <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
-                <p className="text-sm text-muted-foreground">Total Revenue Generated</p>
-                <p className="text-3xl font-bold text-primary">${((affiliateData.affiliate.totalRevenue || 0) / 100).toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  From {affiliateData.affiliate.totalReferrals} referrals at {affiliateData.commissionRate}% commission
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle className="text-lg">Your Referral Link</CardTitle>
             </CardHeader>
             <CardContent>
@@ -670,6 +615,61 @@ export default function AffiliatePortal() {
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Your Affiliate Dashboard</CardTitle>
+                <Badge className={
+                  affiliateData.affiliate.status === "active" 
+                    ? "bg-green-500/20 text-green-500" 
+                    : affiliateData.affiliate.status === "pending"
+                    ? "bg-yellow-500/20 text-yellow-500"
+                    : "bg-red-500/20 text-red-500"
+                }>
+                  {affiliateData.affiliate.status.charAt(0).toUpperCase() + affiliateData.affiliate.status.slice(1)}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+                <div className="p-3 md:p-4 bg-muted rounded-lg text-center">
+                  <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-primary mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold">${(affiliateData.affiliate.totalEarnings / 100).toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total Earnings</p>
+                </div>
+                <div className="p-3 md:p-4 bg-yellow-500/10 rounded-lg text-center border border-yellow-500/20">
+                  <Clock className="w-5 h-5 md:w-6 md:h-6 text-yellow-500 mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold text-yellow-600">${(affiliateData.affiliate.pendingEarnings / 100).toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
+                  <p className="text-[10px] md:text-xs text-muted-foreground mt-1">{affiliateData.approvalDays} day hold</p>
+                </div>
+                <div className="p-3 md:p-4 bg-blue-500/10 rounded-lg text-center border border-blue-500/20">
+                  <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-blue-500 mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold text-blue-600">${((affiliateData.affiliate.approvedEarnings || 0) / 100).toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Ready to Pay</p>
+                </div>
+                <div className="p-3 md:p-4 bg-green-500/10 rounded-lg text-center border border-green-500/20">
+                  <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-green-500 mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold text-green-600">${(affiliateData.affiliate.paidEarnings / 100).toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Paid Out</p>
+                </div>
+                <div className="p-3 md:p-4 bg-muted rounded-lg text-center col-span-2 sm:col-span-1">
+                  <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-500 mx-auto mb-2" />
+                  <p className="text-xl md:text-2xl font-bold">{affiliateData.affiliate.totalConversions}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Conversions</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
+                <p className="text-sm text-muted-foreground">Total Revenue Generated</p>
+                <p className="text-3xl font-bold text-primary">${((affiliateData.affiliate.totalRevenue || 0) / 100).toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  From {affiliateData.affiliate.totalReferrals} referrals at {affiliateData.commissionRate}% commission
+                </p>
+              </div>
             </CardContent>
           </Card>
 
