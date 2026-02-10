@@ -589,29 +589,15 @@ function DetachSectionButton({ pageId, pageTitle, onDone }: { pageId: string; pa
   );
 }
 
-function PreviewButton({ pageId, pageTitle }: { pageId: string; pageTitle: string }) {
-  const { appState } = usePuck();
-  
+function PreviewButton({ pageSlug, isHomePage, isShopPage }: { pageSlug?: string; isHomePage?: boolean; isShopPage?: boolean }) {
   const handlePreview = () => {
-    // For now we use the slug if available or just open the home/shop if marked
-    // In a real scenario we'd hit a preview endpoint or use a temporary local storage state
-    // but since we want to open in a new tab, we'll try to find the actual public URL
-    
-    // We can't easily pass the CURRENT puck state to a new tab without a backend storage or query param
-    // But typically "Preview" implies seeing the LAST SAVED state in the actual site layout
-    // For this implementation, we'll assume the user wants to see the page as it exists at its route.
-    
-    // However, the prompt says "opens this page in a new tab to preview it". 
-    // If the page isn't published, it might 404. 
-    // Let's look for the page metadata or use a placeholder if we can't determine route.
-    
-    // Since I don't have the full route mapping here, I'll use a heuristic or a dedicated preview route if it exists.
-    // Given the context of the project, pages are served at /pages/:slug or / if home.
-    
-    // For now, I'll alert that it opens the live route, or a special preview route if we had one.
-    // Actually, I'll just open the route based on common patterns in this app.
-    
-    window.open(`/admin/cms/pages/${pageId}/preview`, '_blank');
+    if (isHomePage) {
+      window.open('/', '_blank');
+    } else if (isShopPage) {
+      window.open('/shop', '_blank');
+    } else if (pageSlug) {
+      window.open(`/page/${pageSlug}`, '_blank');
+    }
   };
 
   return (
@@ -620,6 +606,7 @@ function PreviewButton({ pageId, pageTitle }: { pageId: string; pageTitle: strin
       variant="outline"
       className="border-primary/30 text-primary hover:bg-primary/10 h-7 text-xs"
       onClick={handlePreview}
+      disabled={!isHomePage && !pageSlug}
       data-testid="button-preview-page"
     >
       <Globe className="w-3.5 h-3.5 mr-1" />
@@ -1245,7 +1232,7 @@ export default function AdminCmsBuilder() {
             headerActions: ({ children }) => (
               <>
                 {children}
-                <PreviewButton pageId={pageId!} pageTitle={page?.title || ""} />
+                <PreviewButton pageSlug={page?.slug} isHomePage={page?.isHome} isShopPage={page?.isShop} />
                 <DetachSectionButton pageId={pageId!} pageTitle={page?.title || ""} onDone={invalidateQueries} />
                 <SaveDraftButton pageId={pageId!} pageTitle={page?.title || ""} seoData={seoData} onDone={invalidateQueries} />
                 <PublishButton pageId={pageId!} pageTitle={page?.title || ""} seoData={seoData} onDone={invalidateQueries} />
