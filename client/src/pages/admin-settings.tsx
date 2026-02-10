@@ -32,7 +32,7 @@ export default function AdminSettings() {
     queryKey: ["/api/admin/settings"],
     enabled: hasFullAccess,
     queryFn: async () => {
-      const res = await fetch("/api/admin/settings");
+      const res = await fetch("/api/admin/settings", { credentials: "include" });
       if (res.status === 401) {
         setLocation("/admin/login");
         return null;
@@ -54,6 +54,7 @@ export default function AdminSettings() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to update settings");
       return res.json();
