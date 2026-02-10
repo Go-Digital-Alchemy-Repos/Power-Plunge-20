@@ -8,6 +8,10 @@ import { normalizeState } from "@shared/us-states";
 import { validateEmail, validatePhone, validateAddress, validateZip, normalizeAddress, type ValidationError } from "@shared/validation";
 import { stripeService } from "../../integrations/stripe/StripeService";
 
+const DEFAULT_STRIPE_TAX_CODE = "txcd_99999999";
+
+const TAXABLE_STATES_WARN_ON_ZERO = ["NC"];
+
 const router = Router();
 
 router.get("/stripe/config", async (req, res) => {
@@ -184,7 +188,7 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
         amount: item.unitPrice * item.quantity,
         reference: item.productId,
         tax_behavior: "exclusive" as const,
-        tax_code: "txcd_99999999",
+        tax_code: DEFAULT_STRIPE_TAX_CODE,
       }));
 
       const taxCalculation = await stripeClient.tax.calculations.create({
@@ -204,9 +208,13 @@ router.post("/create-payment-intent", paymentLimiter, async (req: any, res) => {
 
       taxAmount = taxCalculation.tax_amount_exclusive;
       taxCalculationId = taxCalculation.id;
-      console.log(`[TAX] Calculated: $${(taxAmount / 100).toFixed(2)} for ${normalizedShipping.state} ${customerData.zipCode}`);
+      console.log(`[TAX] Calculated: $${(taxAmount / 100).toFixed(2)} | state=${normalizedShipping.state} zip=${customerData.zipCode} calcId=${taxCalculationId}`);
+
+      if (taxAmount === 0 && TAXABLE_STATES_WARN_ON_ZERO.includes(normalizedShipping.state)) {
+        console.warn(`[TAX][WARN] Zero tax returned for taxable state ${normalizedShipping.state} (zip=${customerData.zipCode}, calcId=${taxCalculationId}). Verify Stripe Tax registration.`);
+      }
     } catch (taxError: any) {
-      console.error(`[TAX] Calculation failed for ${normalizedShipping.state} ${customerData.zipCode}:`, taxError.message);
+      console.error(`[TAX] Calculation failed | state=${normalizedShipping.state} zip=${customerData.zipCode}:`, taxError.message);
       return res.status(422).json({
         message: "Unable to calculate tax. Please verify your shipping state and ZIP code.",
         field: "address",
@@ -436,7 +444,7 @@ router.post("/reprice-payment-intent", paymentLimiter, async (req: any, res) => 
         amount: item.unitPrice * item.quantity,
         reference: item.productId,
         tax_behavior: "exclusive" as const,
-        tax_code: "txcd_99999999",
+        tax_code: DEFAULT_STRIPE_TAX_CODE,
       }));
 
       const taxCalculation = await stripeClient.tax.calculations.create({
@@ -456,9 +464,13 @@ router.post("/reprice-payment-intent", paymentLimiter, async (req: any, res) => 
 
       taxAmount = taxCalculation.tax_amount_exclusive;
       taxCalculationId = taxCalculation.id;
-      console.log(`[TAX] Repriced: $${(taxAmount / 100).toFixed(2)} for ${normalizedShipping.state} ${customerData.zipCode}`);
+      console.log(`[TAX] Repriced: $${(taxAmount / 100).toFixed(2)} | state=${normalizedShipping.state} zip=${customerData.zipCode} calcId=${taxCalculationId}`);
+
+      if (taxAmount === 0 && TAXABLE_STATES_WARN_ON_ZERO.includes(normalizedShipping.state)) {
+        console.warn(`[TAX][WARN] Zero tax returned for taxable state ${normalizedShipping.state} (zip=${customerData.zipCode}, calcId=${taxCalculationId}). Verify Stripe Tax registration.`);
+      }
     } catch (taxError: any) {
-      console.error(`[TAX] Reprice calculation failed for ${normalizedShipping.state} ${customerData.zipCode}:`, taxError.message);
+      console.error(`[TAX] Reprice calculation failed | state=${normalizedShipping.state} zip=${customerData.zipCode}:`, taxError.message);
       return res.status(422).json({
         message: "Unable to calculate tax. Please verify your shipping state and ZIP code.",
         field: "address",
