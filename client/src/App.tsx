@@ -63,6 +63,7 @@ const AdminMediaLibrary = lazy(() => import("@/pages/admin-media-library"));
 const AdminAffiliateInviteSender = lazy(() => import("@/pages/admin-affiliate-invite-sender"));
 const AdminCms = lazy(() => import("@/pages/admin-cms"));
 const AdminCmsPages = lazy(() => import("@/pages/admin-cms-pages"));
+const AdminCmsPageEdit = lazy(() => import("@/pages/admin-cms-page-edit"));
 const AdminCmsSections = lazy(() => import("@/pages/admin-cms-sections"));
 const AdminCmsTemplates = lazy(() => import("@/pages/admin-cms-templates"));
 const AdminCmsThemes = lazy(() => import("@/pages/admin-cms-themes"));
@@ -182,6 +183,7 @@ function Router() {
         <Route path="/admin/cms/generator/campaigns">{() => <CmsErrorBoundary><AdminCmsGeneratorCampaigns /></CmsErrorBoundary>}</Route>
         <Route path="/admin/cms/generator/landing">{() => <CmsErrorBoundary><AdminCmsGeneratorLanding /></CmsErrorBoundary>}</Route>
         <Route path="/admin/cms/pages/:id/builder">{() => <CmsErrorBoundary><AdminCmsBuilder /></CmsErrorBoundary>}</Route>
+        <Route path="/admin/cms/pages/:id/edit">{() => <CmsErrorBoundary><AdminCmsPageEdit /></CmsErrorBoundary>}</Route>
         <Route path="/admin/cms/pages">{() => <CmsErrorBoundary><AdminCmsPages /></CmsErrorBoundary>}</Route>
         <Route path="/admin/cms/sections">{() => <CmsErrorBoundary><AdminCmsSections /></CmsErrorBoundary>}</Route>
         <Route path="/admin/cms/templates">{() => <CmsErrorBoundary><AdminCmsTemplates /></CmsErrorBoundary>}</Route>

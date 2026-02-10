@@ -4,7 +4,7 @@ import { Link, useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import CmsLayout from "@/components/admin/CmsLayout";
-import { FileText, Home, ShoppingBag, Plus, Globe, GlobeLock, MoreHorizontal, Pencil, Eye, ArrowRightLeft, Search, Filter, Sparkles, Layers, Trash2 } from "lucide-react";
+import { FileText, Home, ShoppingBag, Plus, Globe, GlobeLock, MoreHorizontal, Pencil, Eye, ArrowRightLeft, Search, Filter, Sparkles, Layers, Trash2, Blocks } from "lucide-react";
 import { CMS_TEMPLATES, templateToContentJson, type CmsTemplate } from "@/cms/templates/templateLibrary";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -96,7 +96,7 @@ export default function AdminCmsPages() {
       toast({ title: "Page created", description: `"${page.title}" is ready to edit.` });
       setCreateOpen(false);
       resetForm();
-      navigate(`/admin/cms/pages/${page.id}/builder`);
+      navigate(`/admin/cms/pages/${page.id}/edit`);
     },
     onError: (err: Error) => {
       toast({ title: "Failed to create page", description: err.message, variant: "destructive" });
@@ -282,7 +282,7 @@ export default function AdminCmsPages() {
                   <tr
                     key={page.id}
                     className="border-b border-border/30 hover:bg-card/40 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/admin/cms/pages/${page.id}/builder`)}
+                    onClick={() => navigate(`/admin/cms/pages/${page.id}/edit`)}
                     data-testid={`row-page-${page.id}`}
                   >
                     <td className="px-4 py-3">
@@ -328,7 +328,7 @@ export default function AdminCmsPages() {
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <Link href={`/admin/cms/pages/${page.id}/builder`}>
+                        <Link href={`/admin/cms/pages/${page.id}/edit`}>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -353,11 +353,19 @@ export default function AdminCmsPages() {
                           <DropdownMenuContent align="end" className="bg-gray-900 border-gray-700 text-foreground">
                             <DropdownMenuItem
                               className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground text-xs"
+                              onClick={() => navigate(`/admin/cms/pages/${page.id}/edit`)}
+                              data-testid={`action-edit-page-${page.id}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5 mr-2" />
+                              Edit Page
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer hover:!bg-gray-700/70 focus:!bg-gray-700/70 hover:!text-foreground focus:!text-foreground text-xs"
                               onClick={() => navigate(`/admin/cms/pages/${page.id}/builder`)}
                               data-testid={`action-open-builder-${page.id}`}
                             >
-                              <Pencil className="w-3.5 h-3.5 mr-2" />
-                              Open Builder
+                              <Blocks className="w-3.5 h-3.5 mr-2" />
+                              Open Page Builder
                             </DropdownMenuItem>
                             {page.status === "published" && page.slug && (
                               <DropdownMenuItem
