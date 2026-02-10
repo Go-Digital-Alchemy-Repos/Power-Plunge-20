@@ -1,0 +1,503 @@
+.puck-builder-container {
+  --puck-color-grey-01: #f0f0f0;
+  --puck-color-grey-02: #d4d4d4;
+  --puck-color-grey-03: #b0b0b0;
+  --puck-color-grey-04: #8a8a8a;
+  --puck-color-grey-05: #6b6b6b;
+  --puck-color-grey-06: #525252;
+  --puck-color-grey-07: #404040;
+  --puck-color-grey-08: #2e2e2e;
+  --puck-color-grey-09: #222228;
+  --puck-color-grey-10: #1a1a20;
+  --puck-color-grey-11: #131318;
+  --puck-color-grey-12: #0d0d12;
+  --puck-color-white: #0d0d12;
+
+  --puck-color-azure-01: #67e8f9;
+  --puck-color-azure-02: #67e8f9;
+  --puck-color-azure-03: #22d3ee;
+  --puck-color-azure-04: #06b6d4;
+  --puck-color-azure-05: #0891b2;
+  --puck-color-azure-06: #0e7490;
+  --puck-color-azure-07: #155e75;
+  --puck-color-azure-08: #164e63;
+  --puck-color-azure-09: #1e3a4a;
+  --puck-color-azure-10: #172030;
+  --puck-color-azure-11: #111825;
+  --puck-color-azure-12: #0d1520;
+
+  --puck-color-rose-09: #2a1a22;
+  --puck-color-rose-10: #1f1218;
+  --puck-color-rose-11: #180e13;
+  --puck-color-rose-12: #120a0e;
+}
+
+.puck-builder-container [class*="_Puck_"],
+.puck-builder-container [class*="_PuckLayout"] {
+  background-color: #0a0a10;
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_PuckLayout-inner"] {
+  background-color: #0a0a10;
+}
+
+.puck-builder-container [class*="_PuckHeader"] {
+  background-color: #0d0d14;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_PuckHeader-title"] {
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_PuckHeader-toggle"],
+.puck-builder-container [class*="_PuckHeader-leftSideBarToggle"],
+.puck-builder-container [class*="_PuckHeader-rightSideBarToggle"],
+.puck-builder-container [class*="_PuckHeader-menuButton"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_PuckHeader-toggle"]:hover,
+.puck-builder-container [class*="_PuckHeader-leftSideBarToggle"]:hover,
+.puck-builder-container [class*="_PuckHeader-rightSideBarToggle"]:hover,
+.puck-builder-container [class*="_PuckHeader-menuButton"]:hover {
+  color: #e2e8f0;
+  background-color: rgba(148, 163, 184, 0.08);
+}
+
+.puck-builder-container [class*="_PuckHeader-tools"] button {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_PuckHeader-tools"] button:hover {
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_Sidebar"] {
+  background-color: #0d0d14;
+  border-color: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_Sidebar-resizeHandle"] {
+  background-color: rgba(148, 163, 184, 0.12);
+}
+
+.puck-builder-container [class*="_Sidebar-resizeHandle"]:hover {
+  background-color: rgba(103, 232, 249, 0.3);
+}
+
+.puck-builder-container [class*="_SidebarSection"] {
+  border-color: rgba(148, 163, 184, 0.1);
+}
+
+.puck-builder-container [class*="_SidebarSection-heading"] {
+  background-color: #0d0d14;
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_SidebarSection-title"] {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.puck-builder-container [class*="_SidebarSection-breadcrumb"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_SidebarSection-breadcrumbLabel"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_SidebarSection-content"] {
+  background-color: #0d0d14;
+}
+
+.puck-builder-container [class*="_PuckCanvas"] {
+  background-color: #0a0a10;
+}
+
+.puck-builder-container [class*="_PuckCanvas-inner"] {
+  background-color: #111118;
+}
+
+.puck-builder-container [class*="_PuckCanvas-root"] {
+  background-color: #111118;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+}
+
+.puck-builder-container [class*="_PuckCanvas-controls"] {
+  background-color: #0d0d14;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.puck-builder-container [class*="_ViewportControls"] {
+  background-color: #131318;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.puck-builder-container [class*="_ViewportControls-divider"] {
+  background-color: rgba(148, 163, 184, 0.12);
+}
+
+.puck-builder-container [class*="_ViewportButton-inner"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_ViewportButton-inner"]:hover {
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_ViewportControls-zoom"],
+.puck-builder-container [class*="_ViewportControls-zoomSelect"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_PuckFields"] {
+  background-color: #0d0d14;
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_PuckFields-field"] {
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_Control"] label,
+.puck-builder-container [class*="_PuckFields"] label {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.puck-builder-container [class*="_Control"] input,
+.puck-builder-container [class*="_Control"] textarea,
+.puck-builder-container [class*="_Control"] select,
+.puck-builder-container [class*="_PuckFields"] input,
+.puck-builder-container [class*="_PuckFields"] textarea,
+.puck-builder-container [class*="_PuckFields"] select {
+  background-color: #131320;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+  border-radius: 6px;
+}
+
+.puck-builder-container [class*="_Control"] input:focus,
+.puck-builder-container [class*="_Control"] textarea:focus,
+.puck-builder-container [class*="_Control"] select:focus,
+.puck-builder-container [class*="_PuckFields"] input:focus,
+.puck-builder-container [class*="_PuckFields"] textarea:focus,
+.puck-builder-container [class*="_PuckFields"] select:focus {
+  border-color: rgba(103, 232, 249, 0.4);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.1);
+}
+
+.puck-builder-container [class*="_Control"] input::placeholder,
+.puck-builder-container [class*="_Control"] textarea::placeholder,
+.puck-builder-container [class*="_PuckFields"] input::placeholder,
+.puck-builder-container [class*="_PuckFields"] textarea::placeholder {
+  color: #475569;
+}
+
+.puck-builder-container [class*="_Select"] {
+  background-color: #131320;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_Select-button"] {
+  background-color: #131320;
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_Select-button"]:hover {
+  background-color: #1a1a28;
+}
+
+.puck-builder-container [class*="_Select-buttonIcon"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_Select-items"] {
+  background-color: #131320;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.puck-builder-container [class*="_SelectItem"] {
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_SelectItem"]:hover {
+  background-color: rgba(103, 232, 249, 0.08);
+}
+
+.puck-builder-container [class*="_ArrayField"] {
+  background-color: transparent;
+}
+
+.puck-builder-container [class*="_ArrayField-inner"] {
+  background-color: rgba(20, 20, 30, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 8px;
+}
+
+.puck-builder-container [class*="_ArrayFieldItem"] {
+  background-color: #131320;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_ArrayFieldItem"]:hover {
+  border-color: rgba(103, 232, 249, 0.2);
+}
+
+.puck-builder-container [class*="_ArrayFieldItem-summary"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_ArrayFieldItem-fieldset"] {
+  background-color: #0d0d14;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.puck-builder-container [class*="_ArrayFieldItem-actions"] button,
+.puck-builder-container [class*="_ArrayFieldItem-rhs"] button {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_ArrayFieldItem-actions"] button:hover,
+.puck-builder-container [class*="_ArrayFieldItem-rhs"] button:hover {
+  color: #e2e8f0;
+  background-color: rgba(148, 163, 184, 0.08);
+}
+
+.puck-builder-container [class*="_ArrayField-addButton"] {
+  background-color: rgba(103, 232, 249, 0.08);
+  border: 1px dashed rgba(103, 232, 249, 0.3);
+  color: #67e8f9;
+}
+
+.puck-builder-container [class*="_ArrayField-addButton"]:hover {
+  background-color: rgba(103, 232, 249, 0.15);
+  border-color: rgba(103, 232, 249, 0.5);
+}
+
+.puck-builder-container [class*="_ComponentList"] {
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_ComponentList-title"] {
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.puck-builder-container [class*="_ComponentList-titleIcon"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_ComponentList-content"] {
+  background-color: transparent;
+}
+
+.puck-builder-container [class*="_Drawer"] {
+  background-color: #0d0d14;
+}
+
+.puck-builder-container [class*="_DrawerItem"] {
+  background-color: #131320;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  color: #e2e8f0;
+  border-radius: 6px;
+}
+
+.puck-builder-container [class*="_DrawerItem"]:hover {
+  background-color: #1a1a28;
+  border-color: rgba(103, 232, 249, 0.2);
+}
+
+.puck-builder-container [class*="_DrawerItem-name"] {
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_Drawer-draggable"] {
+  background-color: #131320;
+}
+
+.puck-builder-container [class*="_Drawer-draggableBg"] {
+  background-color: rgba(103, 232, 249, 0.05);
+  border: 2px dashed rgba(103, 232, 249, 0.3);
+}
+
+.puck-builder-container [class*="_DragIcon"] {
+  color: #475569;
+}
+
+.puck-builder-container [class*="_DraggableComponent-overlay"] {
+  border-color: rgba(103, 232, 249, 0.5);
+}
+
+.puck-builder-container [class*="_DraggableComponent-actionsOverlay"] {
+  background-color: #0d0d14;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.puck-builder-container [class*="_DraggableComponent-loadingOverlay"] {
+  background-color: rgba(10, 10, 16, 0.6);
+}
+
+.puck-builder-container [class*="_ActionBar"] {
+  background-color: #131320;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  color: #e2e8f0;
+  border-radius: 8px;
+}
+
+.puck-builder-container [class*="_ActionBar-label"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_ActionBar-separator"] {
+  background-color: rgba(148, 163, 184, 0.12);
+}
+
+.puck-builder-container [class*="_ActionBarAction"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_ActionBarAction"]:hover {
+  color: #67e8f9;
+  background-color: rgba(103, 232, 249, 0.08);
+}
+
+.puck-builder-container [class*="_DropZone"] {
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.puck-builder-container [class*="_DropZone-hitbox"] {
+  border-color: rgba(103, 232, 249, 0.3);
+  background-color: rgba(103, 232, 249, 0.05);
+}
+
+.puck-builder-container [class*="_Breadcrumbs"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_Breadcrumbs-breadcrumb"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_Breadcrumbs-breadcrumb"]:hover {
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_Breadcrumbs-breadcrumbLabel"] {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_Button"] {
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_PuckPluginTab"] {
+  background-color: #0d0d14;
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_PuckPluginTab-body"] {
+  background-color: #0d0d14;
+}
+
+.puck-builder-container [class*="_ExternalInput"] {
+  background-color: #131320;
+  border-color: rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_ExternalInput-button"] {
+  background-color: #131320;
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.15);
+}
+
+.puck-builder-container [class*="_ExternalInputModal"] {
+  background-color: #0d0d14;
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_ExternalInputModal-masthead"] {
+  background-color: #131320;
+}
+
+.puck-builder-container [class*="_ExternalInputModal-search"] input {
+  background-color: #131320;
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.15);
+}
+
+.puck-builder-container [class*="_PuckFields-loadingOverlay"],
+.puck-builder-container [class*="_SidebarSection-loadingOverlay"] {
+  background-color: rgba(10, 10, 16, 0.7);
+}
+
+.puck-builder-container [class*="_PuckPreview"] {
+  background-color: #0a0a10;
+}
+
+.puck-builder-container [class*="_PuckCanvas-loader"] {
+  color: #67e8f9;
+}
+
+.puck-builder-container [class*="_ResizeHandle"] {
+  background-color: rgba(148, 163, 184, 0.12);
+}
+
+.puck-builder-container [class*="_ResizeHandle"]:hover {
+  background-color: rgba(103, 232, 249, 0.3);
+}
+
+.puck-builder-container [class*="_RichTextEditor"] {
+  background-color: #131320;
+  color: #e2e8f0;
+}
+
+.puck-builder-container [class*="_RichTextEditor-menu"],
+.puck-builder-container [class*="_RichTextMenu"] {
+  background-color: #0d0d14;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.puck-builder-container [class*="_RichTextMenu-group"] button {
+  color: #94a3b8;
+}
+
+.puck-builder-container [class*="_RichTextMenu-group"] button:hover {
+  color: #e2e8f0;
+  background-color: rgba(148, 163, 184, 0.08);
+}
+
+.puck-builder-container * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.15) transparent;
+}
+
+.puck-builder-container *::-webkit-scrollbar {
+  width: 6px;
+}
+
+.puck-builder-container *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.puck-builder-container *::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.15);
+  border-radius: 3px;
+}
+
+.puck-builder-container *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.25);
+}
