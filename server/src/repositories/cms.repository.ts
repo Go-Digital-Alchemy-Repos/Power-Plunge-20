@@ -29,21 +29,16 @@ export class CmsRepository {
   }
 
   async create(data: InsertPage) {
-    try {
-      return await db.transaction(async (tx) => {
-        if (data.isHome) {
-          await tx.update(pages).set({ isHome: false }).where(eq(pages.isHome, true));
-        }
-        if (data.isShop) {
-          await tx.update(pages).set({ isShop: false }).where(eq(pages.isShop, true));
-        }
-        const [created] = await tx.insert(pages).values(data).returning();
-        return created;
-      });
-    } catch (error) {
-      console.error("[CmsRepository] Error in create:", error);
-      throw error;
-    }
+    return db.transaction(async (tx) => {
+      if (data.isHome) {
+        await tx.update(pages).set({ isHome: false }).where(eq(pages.isHome, true));
+      }
+      if (data.isShop) {
+        await tx.update(pages).set({ isShop: false }).where(eq(pages.isShop, true));
+      }
+      const [created] = await tx.insert(pages).values(data).returning();
+      return created;
+    });
   }
 
   async update(id: string, data: Partial<InsertPage>) {

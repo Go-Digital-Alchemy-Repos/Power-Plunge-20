@@ -60,11 +60,9 @@ router.post("/pages", async (req, res) => {
       req.body.content = sanitizeHtml(req.body.content);
     }
     const parsed = insertPageSchema.parse(req.body);
-    console.log("[CMS] Creating page with data:", JSON.stringify(parsed, null, 2));
     const page = await cmsService.createPage(parsed);
     res.status(201).json(page);
   } catch (err: any) {
-    console.error("[CMS] Create page error:", err);
     if (err.name === "ZodError") {
       return res.status(400).json({ error: "Validation failed", details: err.errors });
     }
